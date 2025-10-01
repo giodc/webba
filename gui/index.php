@@ -9,6 +9,9 @@ $sites = getAllSites($db);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>WebBadeploy - Easy App Deployment</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
@@ -82,20 +85,18 @@ $sites = getAllSites($db);
                                     <?php if ($site['ssl']): ?><i class="bi bi-shield-check text-success ms-1"></i><?php endif; ?>
                                 </div>
                                 <div class="btn-group w-100" role="group">
-                                    <button class="btn btn-outline-primary btn-sm" onclick="viewSite('<?= $site['domain'] ?>', <?= $site['ssl'] ? 'true' : 'false' ?>)">
+                                    <button class="btn btn-outline-primary btn-sm" onclick="viewSite('<?= $site['domain'] ?>', <?= $site['ssl'] ? 'true' : 'false' ?>)" title="View Site">
                                         <i class="bi bi-eye"></i>
                                     </button>
-                                    <button class="btn btn-outline-secondary btn-sm" onclick="editSite(<?= $site['id'] ?>)">
-                                        <i class="bi bi-pencil"></i>
-                                    </button>
-                                    <button class="btn btn-outline-info btn-sm" onclick="manageSite(<?= $site['id'] ?>)">
+                                    <button class="btn btn-outline-info btn-sm" onclick="window.location.href='edit-site.php?id=<?= $site['id'] ?>'" title="Settings & Management">
                                         <i class="bi bi-gear"></i>
                                     </button>
-                                    <button class="btn btn-outline-danger btn-sm" onclick="deleteSite(<?= $site['id'] ?>)">
+                                    <button class="btn btn-outline-danger btn-sm" onclick="deleteSite(<?= $site['id'] ?>)" title="Delete Site">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </div>
                             </div>
+                        </div>
                     </div>
                     <?php endforeach; ?>
                     <?php endif; ?>
@@ -294,46 +295,92 @@ $sites = getAllSites($db);
     <div class="modal fade" id="editModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Edit Application</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i>Edit Application</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <form id="editForm" onsubmit="updateSite(event)">
                     <input type="hidden" name="site_id" id="editSiteId">
+                    <input type="hidden" name="type" id="editType">
+                    <input type="hidden" name="container_name" id="editContainerName">
+                    
                     <div class="modal-body">
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label">Application Name</label>
-                                <input type="text" class="form-control" name="name" id="editName" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Domain</label>
-                                <input type="text" class="form-control" name="domain" id="editDomain" required>
-                            </div>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label">SSL Certificate</label>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="ssl" id="editSsl">
-                                    <label class="form-check-label" for="editSsl">
-                                        Enable SSL (Let's Encrypt)
-                                    </label>
+                        <!-- Site Information -->
+                        <div class="mb-4">
+                            <h6 class="text-muted mb-3"><i class="bi bi-info-circle me-2"></i>Site Information</h6>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Application Name</label>
+                                    <input type="text" class="form-control" name="name" id="editName" required>
+                                    <div class="form-text">Display name for your application</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Application Type</label>
+                                    <input type="text" class="form-control" id="editTypeDisplay" disabled>
+                                    <div class="form-text">Type cannot be changed after creation</div>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Status</label>
-                                <select class="form-select" name="status" id="editStatus">
-                                    <option value="running">Running</option>
-                                    <option value="stopped">Stopped</option>
-                                </select>
+                        </div>
+
+                        <!-- Domain Configuration -->
+                        <div class="mb-4">
+                            <h6 class="text-muted mb-3"><i class="bi bi-globe me-2"></i>Domain Configuration</h6>
+                            <div class="mb-3">
+                                <label class="form-label">Domain</label>
+                                <input type="text" class="form-control" name="domain" id="editDomain" required>
+                                <div class="form-text">
+                                    <i class="bi bi-exclamation-triangle text-warning me-1"></i>
+                                    <strong>Warning:</strong> Changing the domain will update Traefik routing. Make sure to update your DNS/hosts file.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SSL & Status -->
+                        <div class="mb-4">
+                            <h6 class="text-muted mb-3"><i class="bi bi-shield-check me-2"></i>Security & Status</h6>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">SSL Certificate</label>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" name="ssl" id="editSsl" role="switch">
+                                        <label class="form-check-label" for="editSsl">
+                                            Enable HTTPS (Let's Encrypt)
+                                        </label>
+                                    </div>
+                                    <div class="form-text">Requires custom domain with valid DNS</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Container Status</label>
+                                    <select class="form-select" name="status" id="editStatus" disabled>
+                                        <option value="running">Running</option>
+                                        <option value="stopped">Stopped</option>
+                                    </select>
+                                    <div class="form-text">Status is managed automatically</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Container Info -->
+                        <div class="alert alert-secondary">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <small class="text-muted">Container Name:</small><br>
+                                    <code id="editContainerNameDisplay" class="text-dark"></code>
+                                </div>
+                                <div class="col-md-6">
+                                    <small class="text-muted">Created:</small><br>
+                                    <span id="editCreatedAt"></span>
+                                </div>
                             </div>
                         </div>
                     </div>
+                    
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="bi bi-x-circle me-2"></i>Cancel
+                        </button>
                         <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-check-circle me-2"></i>Update Application
+                            <i class="bi bi-check-circle me-2"></i>Save Changes
                         </button>
                     </div>
                 </form>
@@ -342,6 +389,6 @@ $sites = getAllSites($db);
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="js/app.js"></script>
+    <script src="js/app.js?v=3.0.<?= time() ?>"></script>
 </body>
 </html>

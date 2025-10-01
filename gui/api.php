@@ -26,6 +26,38 @@ switch ($action) {
     case "site_status":
         getSiteStatus($db, $_GET["id"]);
         break;
+    
+    case "restart_container":
+        restartContainer($db, $_GET["id"]);
+        break;
+    
+    case "start_container":
+        startContainer($db, $_GET["id"]);
+        break;
+    
+    case "stop_container":
+        stopContainer($db, $_GET["id"]);
+        break;
+    
+    case "get_logs":
+        getContainerLogs($db, $_GET["id"]);
+        break;
+    
+    case "get_stats":
+        getContainerStats($db, $_GET["id"]);
+        break;
+    
+    case "enable_sftp":
+        enableSFTPHandler($db, $_GET["id"]);
+        break;
+    
+    case "disable_sftp":
+        disableSFTPHandler($db, $_GET["id"]);
+        break;
+    
+    case "regenerate_sftp_password":
+        regenerateSFTPPassword($db, $_GET["id"]);
+        break;
         
     default:
         http_response_code(400);
@@ -131,16 +163,25 @@ function createSiteHandler($db) {
         
         
         // Deploy the application based on type
-        switch ($data["type"]) {
-            case "wordpress":
-                deployWordPress($site, $data);
-                break;
-            case "php":
-                deployPHP($site, $data);
-                break;
-            case "laravel":
-                deployLaravel($site, $data);
-                break;
+        $deploymentSuccess = false;
+        $deploymentError = null;
+        
+        try {
+            switch ($data["type"]) {
+                case "wordpress":
+                    deployWordPress($site, $data);
+                    break;
+                case "php":
+                    deployPHP($site, $data);
+                    break;
+                case "laravel":
+                    deployLaravel($site, $data);
+                    break;
+            }
+            $deploymentSuccess = true;
+        } catch (Exception $deployError) {
+            $deploymentError = $deployError->getMessage();
+            // Don't throw, we'll report it but keep the site record
         }
 
         // Traefik will automatically discover the container via labels
@@ -148,16 +189,30 @@ function createSiteHandler($db) {
 
         // Request SSL if needed
         if ($site["ssl"] && $data["domain_suffix"] === "custom") {
-            requestSSLCertificate($site["domain"], $data["wp_email"] ?? "admin@" . $site["domain"]);
+            try {
+                requestSSLCertificate($site["domain"], $data["wp_email"] ?? "admin@" . $site["domain"]);
+            } catch (Exception $sslError) {
+                // SSL errors are non-fatal
+            }
         }
 
-        updateSiteStatus($db, $siteId, "running");
-
-        echo json_encode([
-            "success" => true,
-            "message" => "Site created successfully",
-            "site" => $site
-        ]);
+        if ($deploymentSuccess) {
+            updateSiteStatus($db, $siteId, "running");
+            echo json_encode([
+                "success" => true,
+                "message" => "Site created and deployed successfully",
+                "site" => $site
+            ]);
+        } else {
+            updateSiteStatus($db, $siteId, "stopped");
+            echo json_encode([
+                "success" => true,
+                "warning" => true,
+                "message" => "Site created but deployment failed. You can try redeploying from the dashboard.",
+                "error_details" => $deploymentError,
+                "site" => $site
+            ]);
+        }
 
     } catch (Exception $e) {
         http_response_code(400);
@@ -484,6 +539,8 @@ function updateSiteData($db) {
             throw new Exception("Site not found");
         }
 
+        $domainChanged = ($site['domain'] !== $input["domain"]);
+        
         // Update basic site information
         $stmt = $db->prepare("UPDATE sites SET name = ?, domain = ?, ssl = ? WHERE id = ?");
         $stmt->execute([
@@ -493,9 +550,20 @@ function updateSiteData($db) {
             $siteId
         ]);
 
+        $message = "Site updated successfully";
+        $needsRestart = false;
+        
+        // If domain changed, we need to update the container labels
+        if ($domainChanged) {
+            $message .= ". Domain changed - container needs to be redeployed for Traefik to update routing.";
+            $needsRestart = true;
+        }
+
         echo json_encode([
             "success" => true,
-            "message" => "Site updated successfully"
+            "message" => $message,
+            "needs_restart" => $needsRestart,
+            "domain_changed" => $domainChanged
         ]);
 
     } catch (Exception $e) {
@@ -543,6 +611,243 @@ function deleteSiteById($db, $id) {
             "success" => true,
             "message" => $message,
             "volume_kept" => $keepData
+        ]);
+
+    } catch (Exception $e) {
+        http_response_code(400);
+        echo json_encode([
+            "success" => false,
+            "error" => $e->getMessage()
+        ]);
+    }
+}
+
+function restartContainer($db, $id) {
+    try {
+        $site = getSiteById($db, $id);
+        if (!$site) {
+            throw new Exception("Site not found");
+        }
+
+        $result = executeDockerCommand("restart {$site['container_name']}");
+        
+        if ($result['success']) {
+            updateSiteStatus($db, $id, "running");
+            echo json_encode([
+                "success" => true,
+                "message" => "Container restarted successfully"
+            ]);
+        } else {
+            throw new Exception("Failed to restart container: " . $result['output']);
+        }
+
+    } catch (Exception $e) {
+        http_response_code(400);
+        echo json_encode([
+            "success" => false,
+            "error" => $e->getMessage()
+        ]);
+    }
+}
+
+function startContainer($db, $id) {
+    try {
+        $site = getSiteById($db, $id);
+        if (!$site) {
+            throw new Exception("Site not found");
+        }
+
+        $result = executeDockerCommand("start {$site['container_name']}");
+        
+        if ($result['success']) {
+            updateSiteStatus($db, $id, "running");
+            echo json_encode([
+                "success" => true,
+                "message" => "Container started successfully"
+            ]);
+        } else {
+            throw new Exception("Failed to start container: " . $result['output']);
+        }
+
+    } catch (Exception $e) {
+        http_response_code(400);
+        echo json_encode([
+            "success" => false,
+            "error" => $e->getMessage()
+        ]);
+    }
+}
+
+function stopContainer($db, $id) {
+    try {
+        $site = getSiteById($db, $id);
+        if (!$site) {
+            throw new Exception("Site not found");
+        }
+
+        $result = executeDockerCommand("stop {$site['container_name']}");
+        
+        if ($result['success']) {
+            updateSiteStatus($db, $id, "stopped");
+            echo json_encode([
+                "success" => true,
+                "message" => "Container stopped successfully"
+            ]);
+        } else {
+            throw new Exception("Failed to stop container: " . $result['output']);
+        }
+
+    } catch (Exception $e) {
+        http_response_code(400);
+        echo json_encode([
+            "success" => false,
+            "error" => $e->getMessage()
+        ]);
+    }
+}
+
+function getContainerLogs($db, $id) {
+    try {
+        $site = getSiteById($db, $id);
+        if (!$site) {
+            throw new Exception("Site not found");
+        }
+
+        $lines = $_GET['lines'] ?? 100;
+        $result = executeDockerCommand("logs --tail {$lines} {$site['container_name']}");
+        
+        echo json_encode([
+            "success" => true,
+            "logs" => $result['output']
+        ]);
+
+    } catch (Exception $e) {
+        http_response_code(400);
+        echo json_encode([
+            "success" => false,
+            "error" => $e->getMessage()
+        ]);
+    }
+}
+
+function getContainerStats($db, $id) {
+    try {
+        $site = getSiteById($db, $id);
+        if (!$site) {
+            throw new Exception("Site not found");
+        }
+
+        // Get container uptime
+        $uptimeResult = executeDockerCommand("inspect --format='{{.State.StartedAt}}' {$site['container_name']}");
+        $startedAt = trim($uptimeResult['output']);
+        
+        // Get volume size
+        $volumeName = $site['type'] === 'wordpress' ? "wp_{$site['container_name']}_data" : "{$site['container_name']}_data";
+        $sizeResult = executeDockerCommand("system df -v | grep {$volumeName} || echo 'N/A'");
+        
+        // Calculate uptime
+        $uptime = 'N/A';
+        if (!empty($startedAt) && $startedAt !== 'N/A') {
+            try {
+                $start = new DateTime($startedAt);
+                $now = new DateTime();
+                $diff = $now->diff($start);
+                
+                if ($diff->days > 0) {
+                    $uptime = $diff->days . 'd ' . $diff->h . 'h';
+                } else if ($diff->h > 0) {
+                    $uptime = $diff->h . 'h ' . $diff->i . 'm';
+                } else {
+                    $uptime = $diff->i . 'm ' . $diff->s . 's';
+                }
+            } catch (Exception $e) {
+                $uptime = 'N/A';
+            }
+        }
+        
+        echo json_encode([
+            "success" => true,
+            "stats" => [
+                "uptime" => $uptime,
+                "volume_size" => trim($sizeResult['output']) ?: 'N/A',
+                "status" => getDockerContainerStatus($site['container_name'])
+            ]
+        ]);
+
+    } catch (Exception $e) {
+        http_response_code(400);
+        echo json_encode([
+            "success" => false,
+            "error" => $e->getMessage()
+        ]);
+    }
+}
+
+function enableSFTPHandler($db, $id) {
+    try {
+        $site = enableSFTP($db, $id);
+        
+        echo json_encode([
+            "success" => true,
+            "message" => "SFTP enabled successfully",
+            "sftp" => [
+                "username" => $site['sftp_username'],
+                "password" => $site['sftp_password'],
+                "port" => $site['sftp_port'],
+                "host" => $_SERVER['SERVER_ADDR'] ?? 'localhost'
+            ]
+        ]);
+
+    } catch (Exception $e) {
+        http_response_code(400);
+        echo json_encode([
+            "success" => false,
+            "error" => $e->getMessage()
+        ]);
+    }
+}
+
+function disableSFTPHandler($db, $id) {
+    try {
+        disableSFTP($db, $id);
+        
+        echo json_encode([
+            "success" => true,
+            "message" => "SFTP disabled successfully"
+        ]);
+
+    } catch (Exception $e) {
+        http_response_code(400);
+        echo json_encode([
+            "success" => false,
+            "error" => $e->getMessage()
+        ]);
+    }
+}
+
+function regenerateSFTPPassword($db, $id) {
+    try {
+        $site = getSiteById($db, $id);
+        if (!$site) {
+            throw new Exception("Site not found");
+        }
+        
+        // Generate new password
+        $newPassword = bin2hex(random_bytes(12));
+        
+        $stmt = $db->prepare("UPDATE sites SET sftp_password = ? WHERE id = ?");
+        $stmt->execute([$newPassword, $id]);
+        
+        // Redeploy SFTP container with new password
+        if ($site['sftp_enabled']) {
+            $site['sftp_password'] = $newPassword;
+            deploySFTPContainer($site);
+        }
+        
+        echo json_encode([
+            "success" => true,
+            "message" => "SFTP password regenerated successfully",
+            "password" => $newPassword
         ]);
 
     } catch (Exception $e) {

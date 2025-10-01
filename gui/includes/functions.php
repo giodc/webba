@@ -16,7 +16,11 @@ function initDatabase() {
         status TEXT DEFAULT 'stopped',
         container_name TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        config TEXT
+        config TEXT,
+        sftp_enabled INTEGER DEFAULT 0,
+        sftp_username TEXT,
+        sftp_password TEXT,
+        sftp_port INTEGER
     )");
 
     return $pdo;
@@ -133,29 +137,6 @@ function createNginxSiteConfig($site) {
     return $config;
 }
 
-function createWordPressDockerCompose($site, $config) {
-    $siteId = generateSiteId($site['name']);
-    $dbUser = 'wp_' . substr(md5($site['name']), 0, 8);
-    $dbPass = generateRandomString(16);
-    $tablePrefix = 'wp_' . substr(md5($site['name']), 0, 4) . '_';
-
-    $template = file_get_contents('/app/apps/wordpress/docker-compose.template.yml');
-    $template = str_replace('{SITE_ID}', $siteId, $template);
-    $template = str_replace('{DB_USER}', $dbUser, $template);
-    $template = str_replace('{DB_PASS}', $dbPass, $template);
-    $template = str_replace('{TABLE_PREFIX}', $tablePrefix, $template);
-
-    return [
-        'compose' => $template,
-        'site_id' => $siteId,
-        'db_config' => [
-            'user' => $dbUser,
-            'password' => $dbPass,
-            'prefix' => $tablePrefix
-        ]
-    ];
-}
-
 function requestSSLCertificate($domain, $email) {
     $command = "certbot certonly --webroot -w /var/www/html -d $domain --email $email --agree-tos --non-interactive";
     $output = [];
@@ -190,5 +171,170 @@ function getDockerContainerStatus($containerName) {
 
 function reloadNginx() {
     return executeDockerCommand("exec webbadeploy_nginx nginx -s reload");
+}
+
+function generateSFTPCredentials($siteName) {
+    $username = 'sftp_' . preg_replace('/[^a-z0-9]/', '', strtolower($siteName));
+    $password = bin2hex(random_bytes(12)); // 24 character password
+    return [
+        'username' => substr($username, 0, 32), // Limit username length
+        'password' => $password
+    ];
+}
+
+function getNextAvailableSFTPPort($pdo) {
+    $stmt = $pdo->query("SELECT MAX(sftp_port) as max_port FROM sites WHERE sftp_enabled = 1");
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    $maxPort = $result['max_port'] ?? 2221;
+    return max(2222, $maxPort + 1);
+}
+
+function enableSFTP($pdo, $siteId) {
+    $site = getSiteById($pdo, $siteId);
+    if (!$site) {
+        throw new Exception("Site not found");
+    }
+    
+    // Generate credentials if not exists
+    if (empty($site['sftp_username'])) {
+        $credentials = generateSFTPCredentials($site['name']);
+        $port = getNextAvailableSFTPPort($pdo);
+        
+        $stmt = $pdo->prepare("UPDATE sites SET sftp_enabled = 1, sftp_username = ?, sftp_password = ?, sftp_port = ? WHERE id = ?");
+        $stmt->execute([$credentials['username'], $credentials['password'], $port, $siteId]);
+        
+        // Reload site data with new credentials
+        $site = getSiteById($pdo, $siteId);
+    } else {
+        $stmt = $pdo->prepare("UPDATE sites SET sftp_enabled = 1 WHERE id = ?");
+        $stmt->execute([$siteId]);
+        
+        // Reload site data
+        $site = getSiteById($pdo, $siteId);
+    }
+    
+    // Deploy SFTP container with updated site data
+    deploySFTPContainer($site);
+    
+    return $site;
+}
+
+function disableSFTP($pdo, $siteId) {
+    $site = getSiteById($pdo, $siteId);
+    if (!$site) {
+        throw new Exception("Site not found");
+    }
+    
+    // Stop SFTP container
+    stopSFTPContainer($site);
+    
+    $stmt = $pdo->prepare("UPDATE sites SET sftp_enabled = 0 WHERE id = ?");
+    $stmt->execute([$siteId]);
+    
+    return getSiteById($pdo, $siteId);
+}
+
+function deploySFTPContainer($site) {
+    $containerName = $site['container_name'] . '_sftp';
+    
+    // Try to find the actual volume name by listing docker volumes
+    $volumeSearchPattern = $site['container_name'];
+    $result = executeDockerCommand("volume ls --format '{{.Name}}'");
+    
+    $volumeName = null;
+    $useBindMount = false;
+    
+    if ($result['success'] && !empty($result['output'])) {
+        $allVolumes = explode("\n", trim($result['output']));
+        foreach ($allVolumes as $vol) {
+            if (strpos($vol, $volumeSearchPattern) !== false && strpos($vol, '_data') !== false) {
+                $volumeName = $vol;
+                break;
+            }
+        }
+    }
+    
+    // If no volume found, use bind mount to container's /var/www/html
+    if (empty($volumeName)) {
+        $useBindMount = true;
+        // Create a directory for this site's files
+        $bindPath = "/app/apps/{$site['type']}/sites/{$site['container_name']}/html";
+        if (!is_dir($bindPath)) {
+            if (!mkdir($bindPath, 0777, true)) {
+                throw new Exception("Failed to create SFTP directory: {$bindPath}");
+            }
+            // Set proper permissions using chmod instead of chown (which may fail in container)
+            chmod($bindPath, 0777);
+        }
+    }
+    
+    // Create SFTP docker-compose file
+    $composePath = "/app/apps/{$site['type']}/sites/{$site['container_name']}/sftp-compose.yml";
+    $composeContent = createSFTPDockerCompose($site, $containerName, $volumeName, $useBindMount);
+    
+    $dir = dirname($composePath);
+    if (!is_dir($dir)) {
+        mkdir($dir, 0755, true);
+    }
+    
+    file_put_contents($composePath, $composeContent);
+    
+    // Start SFTP container
+    $result = executeDockerCompose($composePath, "up -d");
+    if (!$result['success']) {
+        throw new Exception("Failed to start SFTP container: " . $result['output']);
+    }
+    
+    return true;
+}
+
+function stopSFTPContainer($site) {
+    $composePath = "/app/apps/{$site['type']}/sites/{$site['container_name']}/sftp-compose.yml";
+    if (file_exists($composePath)) {
+        executeDockerCompose($composePath, "down");
+        unlink($composePath);
+    }
+}
+
+function createSFTPDockerCompose($site, $containerName, $volumeName, $useBindMount = false) {
+    $username = $site['sftp_username'];
+    $password = $site['sftp_password'];
+    $port = $site['sftp_port'];
+    $puid = 33; // www-data UID
+    $pgid = 33; // www-data GID
+    
+    // Determine volume mount
+    if ($useBindMount) {
+        $bindPath = "/app/apps/{$site['type']}/sites/{$site['container_name']}/html";
+        $volumeMount = "      - {$bindPath}:/config/files";
+        $volumeSection = "";
+    } else {
+        $volumeMount = "      - {$volumeName}:/config/files";
+        $volumeSection = "\nvolumes:\n  {$volumeName}:\n    external: true\n";
+    }
+    
+    return "services:
+  {$containerName}:
+    image: linuxserver/openssh-server:latest
+    container_name: {$containerName}
+    hostname: {$containerName}
+    ports:
+      - \"{$port}:2222\"
+    volumes:
+{$volumeMount}
+    environment:
+      - PUID={$puid}
+      - PGID={$pgid}
+      - TZ=UTC
+      - USER_NAME={$username}
+      - USER_PASSWORD={$password}
+      - PASSWORD_ACCESS=true
+    restart: unless-stopped
+    networks:
+      - webbadeploy_webbadeploy
+{$volumeSection}
+networks:
+  webbadeploy_webbadeploy:
+    external: true";
 }
 ?>

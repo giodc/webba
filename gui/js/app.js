@@ -1,5 +1,8 @@
 let createModal, editModal;
 
+// Version check - if you see this in console, the new JS is loaded
+console.log("WebBadeploy JS v2.0 loaded - Settings page is active!");
+
 document.addEventListener("DOMContentLoaded", function() {
     createModal = new bootstrap.Modal(document.getElementById("createModal"));
     editModal = new bootstrap.Modal(document.getElementById("editModal"));
@@ -146,9 +149,15 @@ async function createSite(event) {
         const result = await response.json();
 
         if (result.success) {
-            showAlert("success", "Application deployed successfully!");
-            createModal.hide();
-            setTimeout(() => location.reload(), 1500);
+            if (result.warning) {
+                showAlert("warning", result.message + (result.error_details ? "<br><small>Error: " + result.error_details + "</small>" : ""));
+                createModal.hide();
+                setTimeout(() => location.reload(), 3000);
+            } else {
+                showAlert("success", result.message || "Application deployed successfully!");
+                createModal.hide();
+                setTimeout(() => location.reload(), 1500);
+            }
         } else {
             showAlert("danger", result.error || "Failed to create application");
         }
@@ -167,11 +176,25 @@ async function editSite(id) {
 
         if (result.success) {
             const site = result.site;
+            
+            // Basic fields
             document.getElementById("editSiteId").value = site.id;
             document.getElementById("editName").value = site.name;
             document.getElementById("editDomain").value = site.domain;
             document.getElementById("editSsl").checked = site.ssl == 1;
             document.getElementById("editStatus").value = site.status;
+            
+            // Type fields
+            document.getElementById("editType").value = site.type;
+            document.getElementById("editTypeDisplay").value = site.type.charAt(0).toUpperCase() + site.type.slice(1);
+            
+            // Container info
+            document.getElementById("editContainerName").value = site.container_name;
+            document.getElementById("editContainerNameDisplay").textContent = site.container_name;
+            
+            // Created date
+            const createdDate = new Date(site.created_at);
+            document.getElementById("editCreatedAt").textContent = createdDate.toLocaleString();
             
             editModal.show();
         } else {
@@ -206,9 +229,13 @@ async function updateSite(event) {
         const result = await response.json();
 
         if (result.success) {
-            showAlert("success", "Application updated successfully!");
+            if (result.needs_restart || result.domain_changed) {
+                showAlert("warning", result.message);
+            } else {
+                showAlert("success", result.message || "Application updated successfully!");
+            }
             editModal.hide();
-            setTimeout(() => location.reload(), 1500);
+            setTimeout(() => location.reload(), 2000);
         } else {
             showAlert("danger", result.error || "Failed to update application");
         }
@@ -237,10 +264,6 @@ function viewSite(domain, ssl) {
     }
     
     window.open(url, "_blank");
-}
-
-function manageSite(id) {
-    showAlert("info", "Site management coming soon! This will include container logs, restart options, and more.");
 }
 
 async function deleteSite(id) {
