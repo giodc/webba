@@ -1,0 +1,84 @@
+
+services:
+  traefik:
+    image: traefik:v3.0
+    container_name: webbadeploy_traefik
+    command:
+      - "--api.dashboard=true"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.letsencrypt.acme.email=admin@example.com"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      # Access logs
+      - "--accesslog=true"
+      - "--accesslog.format=json"
+      # Metrics
+      - "--metrics.prometheus=true"
+      - "--metrics.prometheus.addEntryPointsLabels=true"
+      - "--metrics.prometheus.addServicesLabels=true"
+      - "--metrics.prometheus.addRoutersLabels=true"
+      - "--entrypoints.metrics.address=:9090"
+      - "--metrics.prometheus.entrypoint=metrics"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"  # Traefik dashboard
+      - "9090:9090"  # Prometheus metrics
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./ssl:/letsencrypt
+      - ./logs/traefik:/var/log
+    restart: unless-stopped
+    networks:
+      - webbadeploy
+
+  web-gui:
+    build: ./gui
+    container_name: webbadeploy_gui
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /usr/bin/docker:/usr/bin/docker:ro
+      - /usr/local/bin/docker-compose:/usr/local/bin/docker-compose:ro
+      - ./data:/app/data
+      - ./ssl:/app/ssl
+      - ./apps:/app/apps
+    environment:
+      - DB_PATH=/app/data/database.sqlite
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.webbadeploy.rule=Host(`192.168.64.4`) || Host(`localhost`)"
+      - "traefik.http.routers.webbadeploy.entrypoints=web"
+      - "traefik.http.services.webbadeploy.loadbalancer.server.port=80"
+    networks:
+      - webbadeploy
+    restart: unless-stopped
+
+  db:
+    image: mariadb:latest
+    container_name: webbadeploy_db
+    environment:
+      - MYSQL_ROOT_PASSWORD=webbadeploy_root_pass
+      - MYSQL_DATABASE=webbadeploy
+      - MYSQL_USER=webbadeploy
+      - MYSQL_PASSWORD=webbadeploy_pass
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./db/init:/docker-entrypoint-initdb.d
+    networks:
+      - webbadeploy
+    restart: unless-stopped
+
+volumes:
+  db_data:
+
+networks:
+  webbadeploy:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

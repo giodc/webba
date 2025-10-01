@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  wordpress_{SITE_ID}:
+    build: /opt/webbadeploy/apps/wordpress
+    container_name: wp_{SITE_ID}
+    environment:
+      - WORDPRESS_DB_HOST=webbadeploy_db
+      - WORDPRESS_DB_NAME=wp_{SITE_ID}
+      - WORDPRESS_DB_USER={DB_USER}
+      - WORDPRESS_DB_PASSWORD={DB_PASS}
+      - WORDPRESS_TABLE_PREFIX={TABLE_PREFIX}
+    volumes:
+      - wp_{SITE_ID}_data:/var/www/html
+      - /opt/webbadeploy/apps/wordpress/uploads.ini:/usr/local/etc/php/conf.d/uploads.ini
+    networks:
+      - webbadeploy
+    restart: unless-stopped
+
+  redis_{SITE_ID}:
+    image: redis:7-alpine
+    container_name: redis_{SITE_ID}
+    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
+    networks:
+      - webbadeploy
+    restart: unless-stopped
+
+volumes:
+  wp_{SITE_ID}_data:
+
+networks:
+  webbadeploy:
+    external: true
