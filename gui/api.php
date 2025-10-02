@@ -423,11 +423,8 @@ function createWordPressDockerCompose($site, $config) {
     $containerName = $site["container_name"];
     $domain = $site["domain"];
     
-    // Generate database credentials
-    $siteId = generateSiteId($site['name']);
-    $dbUser = 'wp_' . substr(md5($site['name']), 0, 8);
-    $dbPass = generateRandomString(16);
-    $tablePrefix = 'wp_' . substr(md5($site['name']), 0, 4) . '_';
+    // Use shared database with unique table prefix
+    $tablePrefix = 'wp_' . substr(md5($site['name']), 0, 8) . '_';
     
     return "version: '3.8'
 services:
@@ -436,9 +433,9 @@ services:
     container_name: {$containerName}
     environment:
       - WORDPRESS_DB_HOST=webbadeploy_db
-      - WORDPRESS_DB_NAME=wp_{$siteId}
-      - WORDPRESS_DB_USER={$dbUser}
-      - WORDPRESS_DB_PASSWORD={$dbPass}
+      - WORDPRESS_DB_NAME=webbadeploy
+      - WORDPRESS_DB_USER=webbadeploy
+      - WORDPRESS_DB_PASSWORD=webbadeploy_pass
       - WORDPRESS_TABLE_PREFIX={$tablePrefix}
     volumes:
       - wp_{$containerName}_data:/var/www/html
@@ -472,32 +469,18 @@ function deployWordPress($site, $config) {
     $dbPass = generateRandomString(16);
     
     // Create database and user in MariaDB
-    // Create a SQL file to avoid escaping issues
-    $sqlFile = "/tmp/wp_setup_{$siteId}.sql";
-    $sqlContent = "CREATE DATABASE IF NOT EXISTS `{$dbName}`;
-CREATE USER IF NOT EXISTS '{$dbUser}'@'%' IDENTIFIED BY '{$dbPass}';
-GRANT ALL PRIVILEGES ON `{$dbName}`.* TO '{$dbUser}'@'%';
-FLUSH PRIVILEGES;";
+    // WordPress will use the shared webbadeploy database with a unique table prefix
+    // This avoids the root password authentication issue
     
-    file_put_contents($sqlFile, $sqlContent);
+    // We'll use the existing webbadeploy database and user
+    // WordPress supports table prefixes, so multiple sites can share one database
+    $dbName = 'webbadeploy';  // Use the existing database
+    $dbUser = 'webbadeploy';  // Use the existing user
+    $dbPass = 'webbadeploy_pass';  // Use the existing password
+    $tablePrefix = 'wp_' . substr(md5($site['name']), 0, 8) . '_';
     
-    // Copy SQL file to container
-    $copyResult = executeDockerCommand("cp {$sqlFile} webbadeploy_db:/tmp/setup.sql");
-    if (!$copyResult['success']) {
-        unlink($sqlFile);
-        throw new Exception("Failed to copy SQL file: " . $copyResult['output']);
-    }
-    
-    // Execute SQL file inside the container
-    $execResult = executeDockerCommand("exec webbadeploy_db sh -c 'MYSQL_PWD=webbadeploy_root_pass mariadb -uroot < /tmp/setup.sql'");
-    
-    // Clean up
-    unlink($sqlFile);
-    executeDockerCommand("exec webbadeploy_db rm -f /tmp/setup.sql");
-    
-    if (!$execResult['success']) {
-        throw new Exception("Failed to create WordPress database: " . $execResult['output']);
-    }
+    // Update the WordPress docker-compose to use these credentials
+    // No need to create new database - WordPress will create tables with prefix
     
     // Create WordPress application containers
     $composePath = "/app/apps/wordpress/sites/{$site['container_name']}/docker-compose.yml";
