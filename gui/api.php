@@ -471,13 +471,14 @@ function deployWordPress($site, $config) {
     $dbUser = 'wp_' . substr(md5($site['name']), 0, 8);
     $dbPass = generateRandomString(16);
     
-    // Create database and user in MariaDB
-    // Execute commands one by one to avoid escaping issues
+    // Create database and user in MariaDB using environment variable for password
+    $escapedDbPass = addslashes($dbPass);
+    
     $commands = [
-        "exec webbadeploy_db mariadb -uroot -pwebbadeploy_root_pass -e 'CREATE DATABASE IF NOT EXISTS {$dbName};'",
-        "exec webbadeploy_db mariadb -uroot -pwebbadeploy_root_pass -e \"CREATE USER IF NOT EXISTS '{$dbUser}'@'%' IDENTIFIED BY '{$dbPass}';\"",
-        "exec webbadeploy_db mariadb -uroot -pwebbadeploy_root_pass -e \"GRANT ALL PRIVILEGES ON {$dbName}.* TO '{$dbUser}'@'%';\"",
-        "exec webbadeploy_db mariadb -uroot -pwebbadeploy_root_pass -e 'FLUSH PRIVILEGES;'"
+        "exec -e MYSQL_PWD=webbadeploy_root_pass webbadeploy_db mariadb -uroot -e 'CREATE DATABASE IF NOT EXISTS {$dbName};'",
+        "exec -e MYSQL_PWD=webbadeploy_root_pass webbadeploy_db mariadb -uroot -e \"CREATE USER IF NOT EXISTS '{$dbUser}'@'%' IDENTIFIED BY '{$escapedDbPass}';\"",
+        "exec -e MYSQL_PWD=webbadeploy_root_pass webbadeploy_db mariadb -uroot -e \"GRANT ALL PRIVILEGES ON {$dbName}.* TO '{$dbUser}'@'%';\"",
+        "exec -e MYSQL_PWD=webbadeploy_root_pass webbadeploy_db mariadb -uroot -e 'FLUSH PRIVILEGES;'"
     ];
     
     foreach ($commands as $cmd) {
