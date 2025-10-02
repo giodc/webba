@@ -479,7 +479,7 @@ function deployWordPress($site, $config) {
         FLUSH PRIVILEGES;
     ";
     
-    $createDbResult = executeDockerCommand("exec webbadeploy_db mysql -uroot -pwebbadeploy_root_pass -e \"{$dbCommands}\"");
+    $createDbResult = executeDockerCommand("exec webbadeploy_db mariadb -uroot -pwebbadeploy_root_pass -e \"{$dbCommands}\"");
     if (!$createDbResult['success']) {
         throw new Exception("Failed to create WordPress database: " . $createDbResult['output']);
     }
