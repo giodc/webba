@@ -1,7 +1,12 @@
 <?php
 require_once 'includes/functions.php';
+require_once 'includes/auth.php';
+
+// Require authentication
+requireAuth();
 
 $db = initDatabase();
+$currentUser = getCurrentUser();
 
 // Get site ID from URL
 $siteId = $_GET['id'] ?? null;

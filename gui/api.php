@@ -1,7 +1,14 @@
 <?php
-require_once "includes/functions.php";
+header('Content-Type: application/json');
+require_once 'includes/functions.php';
+require_once 'includes/auth.php';
 
-header("Content-Type: application/json");
+// Require authentication for all API calls
+if (!isLoggedIn()) {
+    http_response_code(401);
+    echo json_encode(['error' => 'Unauthorized']);
+    exit;
+}
 
 $db = initDatabase();
 $action = $_GET["action"] ?? "";

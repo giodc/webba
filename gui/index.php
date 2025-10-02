@@ -1,7 +1,12 @@
 <?php
 require_once 'includes/functions.php';
+require_once 'includes/auth.php';
+
+// Require authentication
+requireAuth();
 
 $db = initDatabase();
+$currentUser = getCurrentUser();
 $sites = getAllSites($db);
 ?>
 <!DOCTYPE html>
@@ -18,15 +23,17 @@ $sites = getAllSites($db);
     <link href="css/custom.css" rel="stylesheet">
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
             <a class="navbar-brand" href="/">
                 <i class="bi bi-cloud-arrow-up me-2"></i>WebBadeploy
             </a>
             <div class="navbar-nav ms-auto">
-                <a class="nav-link" href="#apps">Apps</a>
-                <a class="nav-link" href="#domains">Domains</a>
-                <a class="nav-link" href="#ssl">SSL</a>
+                <span class="nav-link text-light">
+                    <i class="bi bi-person-circle me-1"></i><?= htmlspecialchars($currentUser['username']) ?>
+                </span>
+                <a class="nav-link" href="/logout.php">
+                    <i class="bi bi-box-arrow-right me-1"></i>Logout
+                </a>
             </div>
         </div>
     </nav>
