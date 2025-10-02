@@ -472,21 +472,19 @@ function deployWordPress($site, $config) {
     $dbPass = generateRandomString(16);
     
     // Create database and user in MariaDB
-    // Try different root passwords (installer might use 'rootpassword')
-    $rootPasswords = ['webbadeploy_root_pass', 'rootpassword'];
-    $createDbResult = null;
+    // Execute commands one by one to avoid escaping issues
+    $commands = [
+        "exec webbadeploy_db mariadb -uroot -pwebbadeploy_root_pass -e 'CREATE DATABASE IF NOT EXISTS {$dbName};'",
+        "exec webbadeploy_db mariadb -uroot -pwebbadeploy_root_pass -e \"CREATE USER IF NOT EXISTS '{$dbUser}'@'%' IDENTIFIED BY '{$dbPass}';\"",
+        "exec webbadeploy_db mariadb -uroot -pwebbadeploy_root_pass -e \"GRANT ALL PRIVILEGES ON {$dbName}.* TO '{$dbUser}'@'%';\"",
+        "exec webbadeploy_db mariadb -uroot -pwebbadeploy_root_pass -e 'FLUSH PRIVILEGES;'"
+    ];
     
-    foreach ($rootPasswords as $rootPass) {
-        $dbCommands = "CREATE DATABASE IF NOT EXISTS \`{$dbName}\`; CREATE USER IF NOT EXISTS '{$dbUser}'@'%' IDENTIFIED BY '{$dbPass}'; GRANT ALL PRIVILEGES ON \`{$dbName}\`.* TO '{$dbUser}'@'%'; FLUSH PRIVILEGES;";
-        
-        $createDbResult = executeDockerCommand("exec webbadeploy_db mariadb -uroot -p{$rootPass} -e \"{$dbCommands}\"");
-        
-        if ($createDbResult['success']) {
-            break; // Success, stop trying
+    foreach ($commands as $cmd) {
+        $result = executeDockerCommand($cmd);
+        if (!$result['success'] && strpos($result['output'], 'already exists') === false) {
+            throw new Exception("Failed to create WordPress database: " . $result['output']);
         }
-    }
-    if (!$createDbResult['success']) {
-        throw new Exception("Failed to create WordPress database: " . $createDbResult['output']);
     }
     
     // Create WordPress application containers
