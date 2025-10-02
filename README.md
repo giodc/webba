@@ -29,8 +29,9 @@ sudo -u webbadeploy docker-compose up -d
 ```
 
 3. **Access the web interface**:
-   - Open your browser and navigate to `http://your-server-ip`
-   - Start deploying applications immediately!
+   - Open your browser and navigate to `http://your-server-ip:3000`
+   - Complete the initial setup (create admin account)
+   - Start deploying applications!
 
 ### First Application
 

@@ -223,7 +223,7 @@ if command -v ufw &> /dev/null; then
     ufw allow 22/tcp comment 'SSH'
     ufw allow 80/tcp comment 'HTTP'
     ufw allow 443/tcp comment 'HTTPS'
-    ufw allow 8080/tcp comment 'Traefik Dashboard'
+    ufw allow 3000/tcp comment 'WebBadeploy Dashboard'
     ufw allow 2222:2299/tcp comment 'SFTP Range'
     echo -e "${GREEN}✓ Firewall configured${NC}"
 fi
@@ -275,8 +275,7 @@ echo "╚═══════════════════════�
 echo -e "${NC}"
 
 echo -e "${GREEN}Access your WebBadeploy dashboard:${NC}"
-echo -e "  Main Dashboard:    http://$SERVER_IP"
-echo -e "  Traefik Dashboard: http://$SERVER_IP:8080"
+echo -e "  Main Dashboard:    http://$SERVER_IP:3000"
 echo ""
 echo -e "${YELLOW}Important Notes:${NC}"
 echo "  • Installation directory: $INSTALL_DIR"
