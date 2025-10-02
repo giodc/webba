@@ -249,7 +249,12 @@ docker-compose up -d
 
 # Wait for services to start
 echo -e "${YELLOW}Waiting for services to initialize...${NC}"
-sleep 10
+sleep 15
+
+# Ensure database user has proper permissions
+echo -e "${YELLOW}Configuring database permissions...${NC}"
+docker exec webbadeploy_db mariadb -uroot -pwebbadeploy_root_pass -e "GRANT ALL PRIVILEGES ON *.* TO 'webbadeploy'@'%'; FLUSH PRIVILEGES;" 2>/dev/null || true
+echo -e "${GREEN}✓ Database permissions configured${NC}"
 
 # Check if services are running
 if docker ps | grep -q webbadeploy_gui; then
