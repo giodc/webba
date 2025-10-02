@@ -122,14 +122,24 @@ cd "$INSTALL_DIR"
 # Download WebBadeploy files
 echo -e "\n${YELLOW}Downloading WebBadeploy files...${NC}"
 
-# Option 1: If you have a git repository
-# git clone https://github.com/yourrepo/webbadeploy.git .
+# Clone from GitHub repository
+if command -v git &> /dev/null; then
+    echo -e "${YELLOW}Cloning from GitHub...${NC}"
+    git clone https://github.com/giodc/webba.git "$INSTALL_DIR"
+    cd "$INSTALL_DIR"
+    echo -e "${GREEN}✓ Files downloaded from repository${NC}"
+else
+    echo -e "${RED}Error: git is not installed${NC}"
+    exit 1
+fi
 
-# Option 2: Create structure manually (for now)
-mkdir -p {data,apps/{php/sites,laravel/sites,wordpress/sites},ssl,gui}
+# Create additional directories if they don't exist
+mkdir -p {data,apps/{php/sites,laravel/sites,wordpress/sites},ssl}
 
-# Create docker-compose.yml
-cat > docker-compose.yml << 'EOF'
+# Create docker-compose.yml if it doesn't exist
+if [ ! -f "docker-compose.yml" ]; then
+    echo -e "${YELLOW}Creating docker-compose.yml...${NC}"
+    cat > docker-compose.yml << 'EOF'
 version: '3.8'
 
 services:
@@ -194,42 +204,17 @@ networks:
 volumes:
   db_data:
 EOF
+else
+    echo -e "${GREEN}✓ Using existing docker-compose.yml${NC}"
+fi
 
-# Create GUI Dockerfile
-mkdir -p gui
-cat > gui/Dockerfile << 'EOF'
-FROM php:8.2-apache
+# Verify GUI files exist
+if [ ! -f "gui/index.php" ]; then
+    echo -e "${RED}Error: GUI files not found. Repository may be incomplete.${NC}"
+    exit 1
+fi
 
-# Install dependencies
-RUN apt-get update && apt-get install -y \
-    libpng-dev \
-    libjpeg-dev \
-    libfreetype6-dev \
-    zip \
-    unzip \
-    git \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install gd pdo pdo_mysql \
-    && a2enmod rewrite
-
-# Set working directory
-WORKDIR /var/www/html
-
-# Copy application files
-COPY . /var/www/html/
-
-# Set permissions
-RUN chown -R www-data:www-data /var/www/html \
-    && chmod -R 755 /var/www/html
-
-# Add www-data to docker group (GID 988 - adjust if needed)
-RUN groupadd -g 988 docker || true \
-    && usermod -aG docker www-data || true
-
-EXPOSE 80
-EOF
-
-echo -e "${GREEN}✓ WebBadeploy structure created${NC}"
+echo -e "${GREEN}✓ WebBadeploy files verified${NC}"
 
 # Set up firewall
 echo -e "\n${YELLOW}Configuring firewall...${NC}"

@@ -19,7 +19,7 @@ WebBadeploy is an open-source platform that makes deploying WordPress, PHP, and 
 
 1. **Download and run the installer** (requires root privileges):
 ```bash
-curl -fsSL https://raw.githubusercontent.com/your-repo/webbadeploy/main/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/giodc/webba/main/install-production.sh | sudo bash
 ```
 
 2. **Start WebBadeploy**:
