@@ -471,21 +471,31 @@ function deployWordPress($site, $config) {
     $dbUser = 'wp_' . substr(md5($site['name']), 0, 8);
     $dbPass = generateRandomString(16);
     
-    // Create database and user in MariaDB using environment variable for password
-    $escapedDbPass = addslashes($dbPass);
+    // Create database and user in MariaDB
+    // Create a SQL file to avoid escaping issues
+    $sqlFile = "/tmp/wp_setup_{$siteId}.sql";
+    $sqlContent = "CREATE DATABASE IF NOT EXISTS `{$dbName}`;
+CREATE USER IF NOT EXISTS '{$dbUser}'@'%' IDENTIFIED BY '{$dbPass}';
+GRANT ALL PRIVILEGES ON `{$dbName}`.* TO '{$dbUser}'@'%';
+FLUSH PRIVILEGES;";
     
-    $commands = [
-        "exec -e MYSQL_PWD=webbadeploy_root_pass webbadeploy_db mariadb -uroot -e 'CREATE DATABASE IF NOT EXISTS {$dbName};'",
-        "exec -e MYSQL_PWD=webbadeploy_root_pass webbadeploy_db mariadb -uroot -e \"CREATE USER IF NOT EXISTS '{$dbUser}'@'%' IDENTIFIED BY '{$escapedDbPass}';\"",
-        "exec -e MYSQL_PWD=webbadeploy_root_pass webbadeploy_db mariadb -uroot -e \"GRANT ALL PRIVILEGES ON {$dbName}.* TO '{$dbUser}'@'%';\"",
-        "exec -e MYSQL_PWD=webbadeploy_root_pass webbadeploy_db mariadb -uroot -e 'FLUSH PRIVILEGES;'"
-    ];
+    file_put_contents($sqlFile, $sqlContent);
     
-    foreach ($commands as $cmd) {
-        $result = executeDockerCommand($cmd);
-        if (!$result['success'] && strpos($result['output'], 'already exists') === false) {
-            throw new Exception("Failed to create WordPress database: " . $result['output']);
-        }
+    // Copy SQL file to container and execute
+    $copyResult = executeDockerCommand("cp {$sqlFile} webbadeploy_db:/tmp/setup.sql");
+    if (!$copyResult['success']) {
+        throw new Exception("Failed to copy SQL file: " . $copyResult['output']);
+    }
+    
+    // Execute SQL file
+    $execResult = executeDockerCommand("exec -e MYSQL_PWD=webbadeploy_root_pass webbadeploy_db mariadb -uroot < /tmp/setup.sql");
+    
+    // Clean up
+    unlink($sqlFile);
+    executeDockerCommand("exec webbadeploy_db rm /tmp/setup.sql");
+    
+    if (!$execResult['success']) {
+        throw new Exception("Failed to create WordPress database: " . $execResult['output']);
     }
     
     // Create WordPress application containers
