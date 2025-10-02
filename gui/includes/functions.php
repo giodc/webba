@@ -165,17 +165,28 @@ function getDockerContainerStatus($containerName) {
     // Use docker inspect for exact container name match
     $output = [];
     $returnCode = 0;
-    exec("docker inspect -f '{{.State.Status}}' " . escapeshellarg($containerName) . " 2>&1", $output, $returnCode);
     
-    if ($returnCode === 0 && !empty($output)) {
-        $status = trim($output[0]);
-        if ($status === 'running') {
-            return 'running';
-        } elseif ($status === 'exited' || $status === 'created') {
-            return 'stopped';
+    // Try with full path first (more reliable)
+    $dockerPaths = ['/usr/bin/docker', '/usr/local/bin/docker', 'docker'];
+    
+    foreach ($dockerPaths as $dockerCmd) {
+        exec("$dockerCmd inspect -f '{{.State.Status}}' " . escapeshellarg($containerName) . " 2>&1", $output, $returnCode);
+        
+        if ($returnCode === 0 && !empty($output)) {
+            $status = trim($output[0]);
+            if ($status === 'running') {
+                return 'running';
+            } elseif ($status === 'exited' || $status === 'created') {
+                return 'stopped';
+            }
+            return $status;
         }
-        return $status;
+        
+        // Reset for next attempt
+        $output = [];
+        $returnCode = 0;
     }
+    
     return 'unknown';
 }
 
