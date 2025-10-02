@@ -1,0 +1,382 @@
+/* WebBadeploy Custom Monochrome Theme */
+
+:root {
+    /* Monochrome Color Palette */
+    --primary: #2d3748;
+    --secondary: #4a5568;
+    --dark: #1a202c;
+    --light: #f7fafc;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-400: #9ca3af;
+    --gray-500: #6b7280;
+    --gray-600: #4b5563;
+    --gray-700: #374151;
+    --gray-800: #1f2937;
+    --gray-900: #111827;
+    
+    /* Accent Colors (monochrome) */
+    --success: #4b5563;
+    --warning: #6b7280;
+    --danger: #374151;
+    --info: #4a5568;
+    
+    /* Border & Shadow */
+    --border-color: var(--gray-300);
+    --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Global Overrides */
+body {
+    background-color: var(--gray-50);
+    color: var(--gray-800);
+}
+
+/* Hero Section */
+.hero {
+    background: linear-gradient(135deg, var(--gray-800) 0%, var(--gray-900) 100%);
+    color: white;
+}
+
+/* Buttons - Smaller and Monochrome */
+.btn {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    border-radius: 0.375rem;
+    font-weight: 500;
+    transition: all 0.15s ease;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8125rem;
+}
+
+.btn-lg {
+    padding: 0.5rem 1rem;
+    font-size: 0.9375rem;
+}
+
+/* Primary Button */
+.btn-primary {
+    background-color: var(--gray-800);
+    border-color: var(--gray-800);
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: var(--gray-900);
+    border-color: var(--gray-900);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow);
+}
+
+/* Secondary Button */
+.btn-secondary {
+    background-color: var(--gray-600);
+    border-color: var(--gray-600);
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: var(--gray-700);
+    border-color: var(--gray-700);
+}
+
+/* Outline Buttons */
+.btn-outline-primary {
+    color: var(--gray-800);
+    border-color: var(--gray-300);
+    background-color: white;
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--gray-800);
+    border-color: var(--gray-800);
+    color: white;
+}
+
+.btn-outline-secondary {
+    color: var(--gray-600);
+    border-color: var(--gray-300);
+}
+
+.btn-outline-secondary:hover {
+    background-color: var(--gray-600);
+    border-color: var(--gray-600);
+    color: white;
+}
+
+.btn-outline-info {
+    color: var(--gray-700);
+    border-color: var(--gray-300);
+}
+
+.btn-outline-info:hover {
+    background-color: var(--gray-700);
+    border-color: var(--gray-700);
+    color: white;
+}
+
+.btn-outline-danger {
+    color: var(--gray-800);
+    border-color: var(--gray-300);
+}
+
+.btn-outline-danger:hover {
+    background-color: var(--gray-800);
+    border-color: var(--gray-800);
+    color: white;
+}
+
+/* Success/Warning/Danger Buttons */
+.btn-success {
+    background-color: var(--gray-700);
+    border-color: var(--gray-700);
+}
+
+.btn-success:hover {
+    background-color: var(--gray-800);
+    border-color: var(--gray-800);
+}
+
+.btn-warning {
+    background-color: var(--gray-600);
+    border-color: var(--gray-600);
+    color: white;
+}
+
+.btn-warning:hover {
+    background-color: var(--gray-700);
+    border-color: var(--gray-700);
+}
+
+.btn-danger {
+    background-color: var(--gray-800);
+    border-color: var(--gray-800);
+}
+
+.btn-danger:hover {
+    background-color: var(--gray-900);
+    border-color: var(--gray-900);
+}
+
+/* Cards */
+.card {
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow);
+    border-radius: 0.5rem;
+    background-color: white;
+}
+
+.card:hover {
+    box-shadow: var(--shadow-lg);
+}
+
+.card-header {
+    background-color: var(--gray-50);
+    border-bottom: 1px solid var(--border-color);
+    color: var(--gray-800);
+}
+
+/* Badges */
+.badge {
+    font-size: 0.75rem;
+    padding: 0.35em 0.65em;
+    font-weight: 500;
+}
+
+.bg-success {
+    background-color: var(--gray-700) !important;
+}
+
+.bg-warning {
+    background-color: var(--gray-500) !important;
+}
+
+.bg-danger {
+    background-color: var(--gray-800) !important;
+}
+
+.bg-info {
+    background-color: var(--gray-600) !important;
+}
+
+/* Status Badge */
+.status-badge {
+    font-size: 0.75rem;
+}
+
+/* Alerts */
+.alert-success {
+    background-color: var(--gray-100);
+    border-color: var(--gray-300);
+    color: var(--gray-800);
+}
+
+.alert-warning {
+    background-color: var(--gray-100);
+    border-color: var(--gray-300);
+    color: var(--gray-700);
+}
+
+.alert-danger {
+    background-color: var(--gray-100);
+    border-color: var(--gray-400);
+    color: var(--gray-900);
+}
+
+.alert-info {
+    background-color: var(--gray-50);
+    border-color: var(--gray-300);
+    color: var(--gray-700);
+}
+
+/* Forms */
+.form-control,
+.form-select {
+    border-color: var(--gray-300);
+    font-size: 0.875rem;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--gray-500);
+    box-shadow: 0 0 0 0.2rem rgba(107, 114, 128, 0.25);
+}
+
+.form-label {
+    color: var(--gray-700);
+    font-weight: 500;
+    font-size: 0.875rem;
+}
+
+/* Modal */
+.modal-header {
+    background-color: var(--gray-50);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal-footer {
+    background-color: var(--gray-50);
+    border-top: 1px solid var(--border-color);
+}
+
+/* Navbar */
+.navbar {
+    box-shadow: var(--shadow);
+}
+
+/* Links */
+a {
+    color: var(--gray-700);
+}
+
+a:hover {
+    color: var(--gray-900);
+}
+
+/* Sidebar Navigation */
+.sidebar-nav-item {
+    color: var(--gray-600);
+    border-left: 3px solid transparent;
+}
+
+.sidebar-nav-item:hover {
+    background-color: var(--gray-50);
+    color: var(--gray-900);
+    border-left-color: var(--gray-800);
+}
+
+.sidebar-nav-item.active {
+    background-color: var(--gray-100);
+    color: var(--gray-900);
+    border-left-color: var(--gray-800);
+    font-weight: 500;
+}
+
+/* Tables */
+.table {
+    font-size: 0.875rem;
+}
+
+.table thead th {
+    background-color: var(--gray-50);
+    color: var(--gray-700);
+    border-bottom: 2px solid var(--border-color);
+}
+
+/* App Cards */
+.app-card {
+    transition: all 0.2s ease;
+}
+
+.app-card:hover {
+    transform: translateY(-2px);
+}
+
+/* Button Groups */
+.btn-group .btn {
+    font-size: 0.8125rem;
+}
+
+/* Text Colors */
+.text-muted {
+    color: var(--gray-500) !important;
+}
+
+/* Icons */
+.bi {
+    font-size: 0.875rem;
+}
+
+/* Smaller spacing for compact UI */
+.mb-3 {
+    margin-bottom: 0.75rem !important;
+}
+
+.mb-4 {
+    margin-bottom: 1rem !important;
+}
+
+/* Custom utility classes */
+.text-mono {
+    color: var(--gray-800);
+}
+
+.bg-mono {
+    background-color: var(--gray-800);
+}
+
+.border-mono {
+    border-color: var(--gray-300);
+}
+
+/* Loading states */
+.btn:disabled {
+    background-color: var(--gray-400);
+    border-color: var(--gray-400);
+    opacity: 0.6;
+}
+
+/* Scrollbar styling (webkit browsers) */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--gray-100);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--gray-400);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--gray-500);
+}
