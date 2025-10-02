@@ -465,6 +465,25 @@ function deployWordPress($site, $config) {
         throw new Exception("CRITICAL: deployWordPress received empty container_name for site: " . $site["name"]);
     }
     
+    // Generate database credentials
+    $siteId = generateSiteId($site['name']);
+    $dbName = 'wp_' . $siteId;
+    $dbUser = 'wp_' . substr(md5($site['name']), 0, 8);
+    $dbPass = generateRandomString(16);
+    
+    // Create database and user in MariaDB
+    $dbCommands = "
+        CREATE DATABASE IF NOT EXISTS `{$dbName}`;
+        CREATE USER IF NOT EXISTS '{$dbUser}'@'%' IDENTIFIED BY '{$dbPass}';
+        GRANT ALL PRIVILEGES ON `{$dbName}`.* TO '{$dbUser}'@'%';
+        FLUSH PRIVILEGES;
+    ";
+    
+    $createDbResult = executeDockerCommand("exec webbadeploy_db mysql -uroot -pwebbadeploy_root_pass -e \"{$dbCommands}\"");
+    if (!$createDbResult['success']) {
+        throw new Exception("Failed to create WordPress database: " . $createDbResult['output']);
+    }
+    
     // Create WordPress application containers
     $composePath = "/app/apps/wordpress/sites/{$site['container_name']}/docker-compose.yml";
     $wpCompose = createWordPressDockerCompose($site, $config);
