@@ -27,8 +27,10 @@ RUN mkdir -p /app/apps/php/sites /app/apps/wordpress/sites /app/apps/laravel/sit
 
 # Add www-data to docker group (use host's docker GID)
 # The docker.sock will be mounted with proper permissions via docker-compose
-RUN groupadd -g 999 docker 2>/dev/null || true \
-    && usermod -aG docker www-data 2>/dev/null || true
+ARG DOCKER_GID=999
+RUN groupadd -g ${DOCKER_GID} docker 2>/dev/null || true \
+    && usermod -aG docker www-data 2>/dev/null || true \
+    && usermod -aG docker root 2>/dev/null || true
 
 # Expose port
 EXPOSE 80
