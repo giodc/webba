@@ -51,8 +51,9 @@ services:
       - DB_PATH=/app/data/database.sqlite
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.webbadeploy.rule=Host(`192.168.64.4`) || Host(`localhost`)"
+      - "traefik.http.routers.webbadeploy.rule=PathPrefix(`/`)"
       - "traefik.http.routers.webbadeploy.entrypoints=web"
+      - "traefik.http.routers.webbadeploy.priority=1"
       - "traefik.http.services.webbadeploy.loadbalancer.server.port=80"
     networks:
       - webbadeploy
