@@ -47,6 +47,8 @@ services:
       - ./data:/app/data
       - ./ssl:/app/ssl
       - ./apps:/app/apps
+      # Mount GUI files for live updates (development)
+      - ./gui:/var/www/html
     environment:
       - DB_PATH=/app/data/database.sqlite
     networks:

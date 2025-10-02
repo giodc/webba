@@ -162,9 +162,19 @@ function renewAllSSLCertificates() {
 }
 
 function getDockerContainerStatus($containerName) {
-    $result = executeDockerCommand("ps -f name=$containerName --format \"{{.Status}}\"");
-    if ($result['success'] && !empty($result['output'])) {
-        return strpos($result['output'], 'Up') !== false ? 'running' : 'stopped';
+    // Use docker inspect for exact container name match
+    $output = [];
+    $returnCode = 0;
+    exec("docker inspect -f '{{.State.Status}}' " . escapeshellarg($containerName) . " 2>&1", $output, $returnCode);
+    
+    if ($returnCode === 0 && !empty($output)) {
+        $status = trim($output[0]);
+        if ($status === 'running') {
+            return 'running';
+        } elseif ($status === 'exited' || $status === 'created') {
+            return 'stopped';
+        }
+        return $status;
     }
     return 'unknown';
 }

@@ -46,6 +46,26 @@ switch ($action) {
         stopContainer($db, $_GET["id"]);
         break;
     
+    case "change_password":
+        changePasswordHandler($db);
+        break;
+    
+    case "check_updates":
+        checkForUpdates();
+        break;
+    
+    case "perform_update":
+        performSystemUpdate();
+        break;
+    
+    case "get_update_info":
+        getUpdateInformation();
+        break;
+    
+    case "get_update_logs":
+        getUpdateLogs();
+        break;
+    
     case "get_logs":
         getContainerLogs($db, $_GET["id"]);
         break;
@@ -879,6 +899,143 @@ function regenerateSFTPPassword($db, $id) {
         echo json_encode([
             "success" => false,
             "error" => $e->getMessage()
+        ]);
+    }
+}
+
+function changePasswordHandler($db) {
+    try {
+        $input = json_decode(file_get_contents('php://input'), true);
+        $currentPassword = $input['current_password'] ?? '';
+        $newPassword = $input['new_password'] ?? '';
+        
+        if (empty($currentPassword) || empty($newPassword)) {
+            throw new Exception("Current password and new password are required");
+        }
+        
+        if (strlen($newPassword) < 6) {
+            throw new Exception("New password must be at least 6 characters long");
+        }
+        
+        // Get current user
+        $currentUser = getCurrentUser();
+        if (!$currentUser) {
+            throw new Exception("User not found");
+        }
+        
+        // Verify current password
+        if (!password_verify($currentPassword, $currentUser['password_hash'])) {
+            throw new Exception("Current password is incorrect");
+        }
+        
+        // Hash new password
+        $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
+        
+        // Update password in database
+        $stmt = $db->prepare("UPDATE users SET password_hash = ? WHERE id = ?");
+        $stmt->execute([$hashedPassword, $currentUser['id']]);
+        
+        echo json_encode([
+            "success" => true,
+            "message" => "Password changed successfully"
+        ]);
+        
+    } catch (Exception $e) {
+        http_response_code(400);
+        echo json_encode([
+            "success" => false,
+            "error" => $e->getMessage()
+        ]);
+    }
+}
+
+// ============================================
+// UPDATE SYSTEM HANDLERS
+// ============================================
+
+function checkForUpdates() {
+    try {
+        require_once 'includes/updater.php';
+        $updater = new Updater();
+        $info = $updater->getUpdateInfo();
+        
+        // Update last check time
+        setLastUpdateCheck(time());
+        
+        echo json_encode([
+            'success' => true,
+            'data' => $info
+        ]);
+        
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'error' => $e->getMessage()
+        ]);
+    }
+}
+
+function performSystemUpdate() {
+    try {
+        require_once 'includes/updater.php';
+        $updater = new Updater();
+        $result = $updater->performUpdate();
+        
+        if ($result['success']) {
+            echo json_encode($result);
+        } else {
+            http_response_code(500);
+            echo json_encode($result);
+        }
+        
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'error' => $e->getMessage()
+        ]);
+    }
+}
+
+function getUpdateInformation() {
+    try {
+        require_once 'includes/updater.php';
+        $updater = new Updater();
+        $info = $updater->getUpdateInfo();
+        $changelog = $updater->getChangelog(10);
+        
+        echo json_encode([
+            'success' => true,
+            'info' => $info,
+            'changelog' => $changelog
+        ]);
+        
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'error' => $e->getMessage()
+        ]);
+    }
+}
+
+function getUpdateLogs() {
+    try {
+        require_once 'includes/updater.php';
+        $updater = new Updater();
+        $logs = $updater->getUpdateLogs(100);
+        
+        echo json_encode([
+            'success' => true,
+            'logs' => $logs
+        ]);
+        
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'error' => $e->getMessage()
         ]);
     }
 }

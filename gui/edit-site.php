@@ -35,87 +35,34 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
     <link href="css/custom.css" rel="stylesheet">
     <style>
         .sidebar {
-            position: fixed;
-            top: 0;
-            bottom: 0;
-            left: 0;
-            width: 280px;
-            background: #1f2937;
-            color: #e5e7eb;
-            padding: 0;
-            overflow-y: auto;
-        }
-        .main-content {
-            margin-left: 280px;
-            padding: 0;
-        }
-        .sidebar-header {
-            padding: 1.5rem;
-            background: #111827;
-            border-bottom: 1px solid #374151;
-        }
-        .sidebar-nav {
-            padding: 1rem 0;
+            background: #f8f9fa;
+            border-right: 1px solid #e5e7eb;
+            padding: 1.5rem 0;
+            min-height: calc(100vh - 56px);
         }
         .sidebar-nav-item {
             display: flex;
             align-items: center;
             padding: 0.75rem 1.5rem;
-            color: #d1d5db;
+            color: #4b5563;
             text-decoration: none;
             transition: all 0.2s;
             border-left: 3px solid transparent;
         }
         .sidebar-nav-item:hover {
-            background: #374151;
-            color: #fff;
-            border-left-color: #6b7280;
+            background: #f3f4f6;
+            color: #1f2937;
+            border-left-color: #9ca3af;
         }
         .sidebar-nav-item.active {
-            background: #374151;
-            color: #fff;
+            background: #e5e7eb;
+            color: #1f2937;
             border-left-color: #4b5563;
+            font-weight: 500;
         }
         .sidebar-nav-item i {
-            width: 24px;
-            margin-right: 12px;
-        }
-        .content-header {
-            background: #fff;
-            border-bottom: 1px solid #e5e7eb;
-            padding: 1.5rem 2rem;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-        .content-body {
-            padding: 2rem;
-            background: #f9fafb;
-            min-height: calc(100vh - 80px);
-        }
-        .card {
-            border: none;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            margin-bottom: 1.5rem;
-        }
-        .card-header {
-            background: #fff;
-            border-bottom: 2px solid #e5e7eb;
-            font-weight: 600;
-            padding: 1rem 1.5rem;
-        }
-        .status-badge {
-            padding: 0.35rem 0.75rem;
-            border-radius: 0.375rem;
-            font-weight: 500;
-            font-size: 0.8125rem;
-        }
-        .status-running { background: #4b5563; color: #fff; }
-        .status-stopped { background: #9ca3af; color: #fff; }
-        .btn-action {
-            margin-right: 0.5rem;
-            margin-bottom: 0.5rem;
+            width: 20px;
+            margin-right: 10px;
         }
         .info-row {
             display: flex;
@@ -128,107 +75,88 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
         .info-label {
             font-weight: 600;
             color: #6b7280;
-            width: 200px;
+            width: 180px;
             flex-shrink: 0;
+            font-size: 0.875rem;
         }
         .info-value {
-            color: #1e293b;
+            color: #1f2937;
             flex: 1;
         }
-        .section-title {
-            font-size: 0.875rem;
-            font-weight: 600;
-            color: #64748b;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 1rem;
+        .status-badge {
+            padding: 0.35rem 0.75rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            font-size: 0.8125rem;
         }
+        .status-running { background: #4b5563; color: #fff; }
+        .status-stopped { background: #9ca3af; color: #fff; }
     </style>
 </head>
 <body>
-    <!-- Sidebar -->
-    <div class="sidebar">
-        <div class="sidebar-header">
-            <a href="/" class="text-white text-decoration-none">
-                <h5 class="mb-1"><i class="bi bi-cloud-arrow-up me-2"></i>WebBadeploy</h5>
+    <!-- Navbar (same as dashboard) -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-cloud-arrow-up me-2"></i>WebBadeploy
             </a>
-            <small class="text-muted">Site Management</small>
-        </div>
-        
-        <nav class="sidebar-nav">
-            <a href="#overview" class="sidebar-nav-item active" data-section="overview">
-                <i class="bi bi-speedometer2"></i>
-                <span>Overview</span>
-            </a>
-            <a href="#settings" class="sidebar-nav-item" data-section="settings">
-                <i class="bi bi-gear"></i>
-                <span>Settings</span>
-            </a>
-            <a href="#domain" class="sidebar-nav-item" data-section="domain">
-                <i class="bi bi-globe"></i>
-                <span>Domain & SSL</span>
-            </a>
-            <a href="#container" class="sidebar-nav-item" data-section="container">
-                <i class="bi bi-box"></i>
-                <span>Container</span>
-            </a>
-            <a href="#files" class="sidebar-nav-item" data-section="files">
-                <i class="bi bi-folder"></i>
-                <span>Files & Volumes</span>
-            </a>
-            <a href="#logs" class="sidebar-nav-item" data-section="logs">
-                <i class="bi bi-terminal"></i>
-                <span>Logs</span>
-            </a>
-            <a href="#sftp" class="sidebar-nav-item" data-section="sftp">
-                <i class="bi bi-hdd-network"></i>
-                <span>SFTP Access</span>
-            </a>
-            <a href="#backup" class="sidebar-nav-item" data-section="backup">
-                <i class="bi bi-cloud-download"></i>
-                <span>Backup & Restore</span>
-            </a>
-            <a href="#danger" class="sidebar-nav-item" data-section="danger">
-                <i class="bi bi-exclamation-triangle"></i>
-                <span>Danger Zone</span>
-            </a>
-        </nav>
-        
-        <div class="p-3 border-top border-secondary">
-            <a href="/" class="btn btn-outline-light btn-sm w-100">
-                <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
-            </a>
-        </div>
-    </div>
-
-    <!-- Main Content -->
-    <div class="main-content">
-        <!-- Header -->
-        <div class="content-header">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h4 class="mb-1"><?= htmlspecialchars($site['name']) ?></h4>
-                    <div class="text-muted">
-                        <span class="me-3"><i class="bi bi-<?= getAppIcon($site['type']) ?> me-1"></i><?= ucfirst($site['type']) ?></span>
-                        <span class="me-3"><i class="bi bi-globe me-1"></i><?= htmlspecialchars($site['domain']) ?></span>
-                        <span class="status-badge status-<?= $containerStatus ?>">
-                            <i class="bi bi-circle-fill me-1"></i><?= ucfirst($containerStatus) ?>
-                        </span>
-                    </div>
-                </div>
-                <div>
-                    <button class="btn btn-outline-primary btn-action" onclick="viewSite('<?= $site['domain'] ?>', <?= $site['ssl'] ? 'true' : 'false' ?>)">
-                        <i class="bi bi-eye me-1"></i>View Site
-                    </button>
-                    <button class="btn btn-outline-success btn-action" onclick="restartContainer()">
-                        <i class="bi bi-arrow-clockwise me-1"></i>Restart
-                    </button>
-                </div>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/">
+                    <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
+                </a>
             </div>
         </div>
+    </nav>
 
-        <!-- Content Body -->
-        <div class="content-body">
+    <!-- Main Content with Two Columns -->
+    <div class="container mt-5">
+        <div class="row">
+            <!-- Left Sidebar -->
+            <div class="col-md-3 p-0">
+                <div class="sidebar">
+                    <nav>
+                        <a href="#overview" class="sidebar-nav-item active" data-section="overview">
+                            <i class="bi bi-speedometer2"></i>
+                            <span>Overview</span>
+                        </a>
+                        <a href="#settings" class="sidebar-nav-item" data-section="settings">
+                            <i class="bi bi-gear"></i>
+                            <span>Settings</span>
+                        </a>
+                        <a href="#domain" class="sidebar-nav-item" data-section="domain">
+                            <i class="bi bi-globe"></i>
+                            <span>Domain & SSL</span>
+                        </a>
+                        <a href="#container" class="sidebar-nav-item" data-section="container">
+                            <i class="bi bi-box"></i>
+                            <span>Container</span>
+                        </a>
+                        <a href="#files" class="sidebar-nav-item" data-section="files">
+                            <i class="bi bi-folder"></i>
+                            <span>Files & Volumes</span>
+                        </a>
+                        <a href="#logs" class="sidebar-nav-item" data-section="logs">
+                            <i class="bi bi-terminal"></i>
+                            <span>Logs</span>
+                        </a>
+                        <a href="#sftp" class="sidebar-nav-item" data-section="sftp">
+                            <i class="bi bi-hdd-network"></i>
+                            <span>SFTP Access</span>
+                        </a>
+                        <a href="#backup" class="sidebar-nav-item" data-section="backup">
+                            <i class="bi bi-cloud-download"></i>
+                            <span>Backup & Restore</span>
+                        </a>
+                        <a href="#danger" class="sidebar-nav-item" data-section="danger">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            <span>Danger Zone</span>
+                        </a>
+                    </nav>
+                </div>
+            </div>
+
+            <!-- Right Content Area -->
+            <div class="col-md-9">
             <!-- Overview Section -->
             <div id="overview-section" class="content-section">
                 <div class="row">
@@ -597,6 +525,7 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                         </button>
                     </div>
                 </div>
+            </div>
             </div>
         </div>
     </div>

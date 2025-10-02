@@ -23,14 +23,24 @@ $sites = getAllSites($db);
     <link href="css/custom.css" rel="stylesheet">
 </head>
 <body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
             <a class="navbar-brand" href="/">
                 <i class="bi bi-cloud-arrow-up me-2"></i>WebBadeploy
             </a>
             <div class="navbar-nav ms-auto">
+                <a class="nav-link position-relative" href="#" onclick="showUpdateModal(); return false;" id="updateLink" style="display: none;">
+                    <i class="bi bi-arrow-up-circle me-1"></i>Update Available
+                    <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle">
+                        <span class="visually-hidden">Update available</span>
+                    </span>
+                </a>
                 <span class="nav-link text-light">
                     <i class="bi bi-person-circle me-1"></i><?= htmlspecialchars($currentUser['username']) ?>
                 </span>
+                <a class="nav-link" href="#" onclick="showPasswordModal(); return false;">
+                    <i class="bi bi-key me-1"></i>Change Password
+                </a>
                 <a class="nav-link" href="/logout.php">
                     <i class="bi bi-box-arrow-right me-1"></i>Logout
                 </a>
@@ -54,7 +64,7 @@ $sites = getAllSites($db);
         <div class="row">
             <div class="col-md-12">
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h2><i class="bi bi-grid me-2"></i>Your Applications</h2>
+                    <h2><i class="bi bi-grid me-2"></i>Your Websites</h2>
                     <button class="btn btn-primary" onclick="showCreateModal()">
                         <i class="bi bi-plus me-2"></i>New App
                     </button>
@@ -68,14 +78,16 @@ $sites = getAllSites($db);
                         <p class="text-muted">Deploy your first application to get started</p>
                     </div>
                     <?php else: ?>
-                    <?php foreach ($sites as $site): ?>
+                    <?php foreach ($sites as $site): 
+                        $containerStatus = getDockerContainerStatus($site['container_name']);
+                    ?>
                     <div class="col-md-4 mb-4">
                         <div class="card app-card h-100">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-start mb-3">
                                     <h5 class="card-title"><?= htmlspecialchars($site['name']) ?></h5>
-                                    <span class="badge <?= $site['status'] == 'running' ? 'bg-success' : 'bg-warning' ?> status-badge">
-                                        <i class="bi bi-circle-fill me-1"></i><?= $site['status'] ?>
+                                    <span class="badge <?= $containerStatus == 'running' ? 'bg-success' : 'bg-warning' ?> status-badge">
+                                        <i class="bi bi-circle-fill me-1"></i><?= ucfirst($containerStatus) ?>
                                     </span>
                                 </div>
                                 <p class="card-text text-muted">
@@ -386,6 +398,69 @@ $sites = getAllSites($db);
                         </button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div class="modal fade" id="passwordModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-key me-2"></i>Change Password</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="passwordForm" onsubmit="changePassword(event)">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Current Password</label>
+                            <input type="password" class="form-control" name="current_password" required autocomplete="current-password">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">New Password</label>
+                            <input type="password" class="form-control" name="new_password" required minlength="6" autocomplete="new-password">
+                            <div class="form-text">Minimum 6 characters</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Confirm New Password</label>
+                            <input type="password" class="form-control" name="confirm_password" required minlength="6" autocomplete="new-password">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle me-2"></i>Change Password
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Update Modal -->
+    <div class="modal fade" id="updateModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="bi bi-arrow-up-circle me-2"></i>System Update</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="updateContent">
+                        <div class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Checking for updates...</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="performUpdateBtn" style="display: none;" onclick="performUpdate()">
+                        <i class="bi bi-download me-2"></i>Install Update
+                    </button>
+                </div>
             </div>
         </div>
     </div>

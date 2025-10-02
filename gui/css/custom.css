@@ -268,6 +268,20 @@ body {
 /* Navbar */
 .navbar {
     box-shadow: var(--shadow);
+    background-color: var(--gray-900) !important;
+}
+
+.navbar-dark .navbar-brand {
+    color: white;
+    font-weight: 600;
+}
+
+.navbar-dark .navbar-brand:hover {
+    color: var(--gray-200);
+}
+
+.bg-dark {
+    background-color: var(--gray-900) !important;
 }
 
 /* Links */

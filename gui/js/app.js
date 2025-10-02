@@ -1,11 +1,16 @@
-let createModal, editModal;
+let createModal, editModal, passwordModal, updateModal;
 
 // Version check - if you see this in console, the new JS is loaded
-console.log("WebBadeploy JS v2.0 loaded - Settings page is active!");
+console.log("WebBadeploy JS v4.0 loaded - Update system integrated!");
 
 document.addEventListener("DOMContentLoaded", function() {
     createModal = new bootstrap.Modal(document.getElementById("createModal"));
     editModal = new bootstrap.Modal(document.getElementById("editModal"));
+    passwordModal = new bootstrap.Modal(document.getElementById("passwordModal"));
+    updateModal = new bootstrap.Modal(document.getElementById("updateModal"));
+    
+    // Check for updates on page load
+    checkForUpdatesBackground();
     
     // Auto-generate domain from name
     document.querySelector("input[name=\"name\"]").addEventListener("input", function(e) {
@@ -346,4 +351,243 @@ function showAlert(type, message) {
             bsAlert.close();
         }
     }, 5000);
+}
+
+function showPasswordModal() {
+    document.getElementById("passwordForm").reset();
+    passwordModal.show();
+}
+
+async function changePassword(event) {
+    event.preventDefault();
+
+    const formData = new FormData(event.target);
+    const currentPassword = formData.get("current_password");
+    const newPassword = formData.get("new_password");
+    const confirmPassword = formData.get("confirm_password");
+
+    // Validate passwords match
+    if (newPassword !== confirmPassword) {
+        showAlert("danger", "New passwords do not match");
+        return;
+    }
+
+    // Validate password length
+    if (newPassword.length < 6) {
+        showAlert("danger", "Password must be at least 6 characters long");
+        return;
+    }
+
+    const submitBtn = event.target.querySelector("button[type=\"submit\"]");
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = "<span class=\"spinner-border spinner-border-sm me-2\"></span>Changing...";
+    submitBtn.disabled = true;
+
+    try {
+        const response = await fetch("api.php?action=change_password", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                current_password: currentPassword,
+                new_password: newPassword
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showAlert("success", "Password changed successfully!");
+            passwordModal.hide();
+            event.target.reset();
+        } else {
+            showAlert("danger", result.error || "Failed to change password");
+        }
+    } catch (error) {
+        showAlert("danger", "Network error: " + error.message);
+    } finally {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    }
+}
+
+// ============================================
+// UPDATE SYSTEM FUNCTIONS
+// ============================================
+
+async function checkForUpdatesBackground() {
+    try {
+        const response = await fetch("api.php?action=check_updates");
+        const result = await response.json();
+        
+        if (result.success && result.data.update_available) {
+            document.getElementById("updateLink").style.display = "block";
+        }
+    } catch (error) {
+        console.error("Failed to check for updates:", error);
+    }
+}
+
+async function showUpdateModal() {
+    updateModal.show();
+    
+    try {
+        const response = await fetch("api.php?action=get_update_info");
+        const result = await response.json();
+        
+        if (result.success) {
+            displayUpdateInfo(result.info, result.changelog);
+        } else {
+            document.getElementById("updateContent").innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Failed to load update information: ${result.error}
+                </div>
+            `;
+        }
+    } catch (error) {
+        document.getElementById("updateContent").innerHTML = `
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                Network error: ${error.message}
+            </div>
+        `;
+    }
+}
+
+function displayUpdateInfo(info, changelog) {
+    const updateBtn = document.getElementById("performUpdateBtn");
+    
+    let html = `
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <h6 class="text-muted">Current Version</h6>
+                <h4>${info.current_version}</h4>
+            </div>
+            <div class="col-md-6">
+                <h6 class="text-muted">Latest Version</h6>
+                <h4>${info.remote_version || "Unknown"}</h4>
+            </div>
+        </div>
+    `;
+    
+    if (info.update_available) {
+        html += `
+            <div class="alert alert-success">
+                <i class="bi bi-check-circle me-2"></i>
+                <strong>Update Available!</strong> A new version is ready to install.
+            </div>
+        `;
+        updateBtn.style.display = "block";
+    } else {
+        html += `
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle me-2"></i>
+                You are running the latest version.
+            </div>
+        `;
+        updateBtn.style.display = "none";
+    }
+    
+    if (info.has_local_changes) {
+        html += `
+            <div class="alert alert-warning">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <strong>Warning:</strong> Local changes detected. They will be stashed before updating.
+            </div>
+        `;
+    }
+    
+    if (changelog && changelog.length > 0) {
+        html += `
+            <h6 class="mt-4 mb-3">Recent Changes</h6>
+            <div class="bg-light p-3 rounded" style="max-height: 200px; overflow-y: auto;">
+                <ul class="list-unstyled mb-0">
+        `;
+        changelog.forEach(line => {
+            html += `<li class="mb-1"><code class="text-dark">${line}</code></li>`;
+        });
+        html += `
+                </ul>
+            </div>
+        `;
+    }
+    
+    html += `
+        <div class="mt-3">
+            <small class="text-muted">
+                <i class="bi bi-clock me-1"></i>
+                Last checked: ${new Date(info.last_check * 1000).toLocaleString()}
+            </small>
+        </div>
+    `;
+    
+    document.getElementById("updateContent").innerHTML = html;
+}
+
+async function performUpdate() {
+    const updateBtn = document.getElementById("performUpdateBtn");
+    const originalText = updateBtn.innerHTML;
+    
+    if (!confirm("Are you sure you want to update? This will pull the latest changes from Git and may restart services.")) {
+        return;
+    }
+    
+    updateBtn.innerHTML = "<span class=\"spinner-border spinner-border-sm me-2\"></span>Updating...";
+    updateBtn.disabled = true;
+    
+    document.getElementById("updateContent").innerHTML = `
+        <div class="text-center py-4">
+            <div class="spinner-border text-primary mb-3" role="status"></div>
+            <h5>Installing Update...</h5>
+            <p class="text-muted">Please wait, this may take a moment.</p>
+        </div>
+    `;
+    
+    try {
+        const response = await fetch("api.php?action=perform_update", {
+            method: "POST"
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            document.getElementById("updateContent").innerHTML = `
+                <div class="alert alert-success">
+                    <i class="bi bi-check-circle me-2"></i>
+                    <strong>Update Successful!</strong><br>
+                    ${result.message}
+                </div>
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    The page will reload in 3 seconds...
+                </div>
+            `;
+            
+            setTimeout(() => {
+                location.reload();
+            }, 3000);
+        } else {
+            document.getElementById("updateContent").innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Update Failed!</strong><br>
+                    ${result.error}
+                </div>
+            `;
+            updateBtn.innerHTML = originalText;
+            updateBtn.disabled = false;
+        }
+    } catch (error) {
+        document.getElementById("updateContent").innerHTML = `
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <strong>Network Error!</strong><br>
+                ${error.message}
+            </div>
+        `;
+        updateBtn.innerHTML = originalText;
+        updateBtn.disabled = false;
+    }
 }
