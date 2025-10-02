@@ -472,14 +472,19 @@ function deployWordPress($site, $config) {
     $dbPass = generateRandomString(16);
     
     // Create database and user in MariaDB
-    $dbCommands = "
-        CREATE DATABASE IF NOT EXISTS `{$dbName}`;
-        CREATE USER IF NOT EXISTS '{$dbUser}'@'%' IDENTIFIED BY '{$dbPass}';
-        GRANT ALL PRIVILEGES ON `{$dbName}`.* TO '{$dbUser}'@'%';
-        FLUSH PRIVILEGES;
-    ";
+    // Try different root passwords (installer might use 'rootpassword')
+    $rootPasswords = ['webbadeploy_root_pass', 'rootpassword'];
+    $createDbResult = null;
     
-    $createDbResult = executeDockerCommand("exec webbadeploy_db mariadb -uroot -pwebbadeploy_root_pass -e \"{$dbCommands}\"");
+    foreach ($rootPasswords as $rootPass) {
+        $dbCommands = "CREATE DATABASE IF NOT EXISTS \`{$dbName}\`; CREATE USER IF NOT EXISTS '{$dbUser}'@'%' IDENTIFIED BY '{$dbPass}'; GRANT ALL PRIVILEGES ON \`{$dbName}\`.* TO '{$dbUser}'@'%'; FLUSH PRIVILEGES;";
+        
+        $createDbResult = executeDockerCommand("exec webbadeploy_db mariadb -uroot -p{$rootPass} -e \"{$dbCommands}\"");
+        
+        if ($createDbResult['success']) {
+            break; // Success, stop trying
+        }
+    }
     if (!$createDbResult['success']) {
         throw new Exception("Failed to create WordPress database: " . $createDbResult['output']);
     }
