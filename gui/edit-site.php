@@ -35,8 +35,8 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
             bottom: 0;
             left: 0;
             width: 280px;
-            background: #1e293b;
-            color: #e2e8f0;
+            background: #1f2937;
+            color: #e5e7eb;
             padding: 0;
             overflow-y: auto;
         }
@@ -46,8 +46,8 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
         }
         .sidebar-header {
             padding: 1.5rem;
-            background: #0f172a;
-            border-bottom: 1px solid #334155;
+            background: #111827;
+            border-bottom: 1px solid #374151;
         }
         .sidebar-nav {
             padding: 1rem 0;
@@ -56,20 +56,20 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
             display: flex;
             align-items: center;
             padding: 0.75rem 1.5rem;
-            color: #cbd5e1;
+            color: #d1d5db;
             text-decoration: none;
             transition: all 0.2s;
             border-left: 3px solid transparent;
         }
         .sidebar-nav-item:hover {
-            background: #334155;
+            background: #374151;
             color: #fff;
-            border-left-color: #3b82f6;
+            border-left-color: #6b7280;
         }
         .sidebar-nav-item.active {
-            background: #334155;
+            background: #374151;
             color: #fff;
-            border-left-color: #3b82f6;
+            border-left-color: #4b5563;
         }
         .sidebar-nav-item i {
             width: 24px;
@@ -77,7 +77,7 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
         }
         .content-header {
             background: #fff;
-            border-bottom: 1px solid #e2e8f0;
+            border-bottom: 1px solid #e5e7eb;
             padding: 1.5rem 2rem;
             position: sticky;
             top: 0;
@@ -86,7 +86,7 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
         }
         .content-body {
             padding: 2rem;
-            background: #f8fafc;
+            background: #f9fafb;
             min-height: calc(100vh - 80px);
         }
         .card {
@@ -96,18 +96,18 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
         }
         .card-header {
             background: #fff;
-            border-bottom: 2px solid #e2e8f0;
+            border-bottom: 2px solid #e5e7eb;
             font-weight: 600;
             padding: 1rem 1.5rem;
         }
         .status-badge {
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            font-weight: 600;
-            font-size: 0.875rem;
+            padding: 0.35rem 0.75rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            font-size: 0.8125rem;
         }
-        .status-running { background: #dcfce7; color: #166534; }
-        .status-stopped { background: #fee2e2; color: #991b1b; }
+        .status-running { background: #4b5563; color: #fff; }
+        .status-stopped { background: #9ca3af; color: #fff; }
         .btn-action {
             margin-right: 0.5rem;
             margin-bottom: 0.5rem;
@@ -115,14 +115,14 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
         .info-row {
             display: flex;
             padding: 0.75rem 0;
-            border-bottom: 1px solid #e2e8f0;
+            border-bottom: 1px solid #e5e7eb;
         }
         .info-row:last-child {
             border-bottom: none;
         }
         .info-label {
             font-weight: 600;
-            color: #64748b;
+            color: #6b7280;
             width: 200px;
             flex-shrink: 0;
         }
