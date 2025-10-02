@@ -234,6 +234,11 @@ chmod -R 755 "$INSTALL_DIR"
 chmod -R 777 "$INSTALL_DIR/apps"
 chmod -R 777 "$INSTALL_DIR/data"
 
+# Fix Docker socket permissions for container access
+echo -e "${YELLOW}Configuring Docker socket permissions...${NC}"
+chmod 666 /var/run/docker.sock
+echo -e "${GREEN}✓ Docker socket permissions configured${NC}"
+
 # Get server IP
 SERVER_IP=$(curl -s ifconfig.me || hostname -I | awk '{print $1}')
 
