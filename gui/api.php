@@ -481,18 +481,19 @@ FLUSH PRIVILEGES;";
     
     file_put_contents($sqlFile, $sqlContent);
     
-    // Copy SQL file to container and execute
+    // Copy SQL file to container
     $copyResult = executeDockerCommand("cp {$sqlFile} webbadeploy_db:/tmp/setup.sql");
     if (!$copyResult['success']) {
+        unlink($sqlFile);
         throw new Exception("Failed to copy SQL file: " . $copyResult['output']);
     }
     
-    // Execute SQL file
-    $execResult = executeDockerCommand("exec -e MYSQL_PWD=webbadeploy_root_pass webbadeploy_db mariadb -uroot < /tmp/setup.sql");
+    // Execute SQL file inside the container
+    $execResult = executeDockerCommand("exec webbadeploy_db sh -c 'MYSQL_PWD=webbadeploy_root_pass mariadb -uroot < /tmp/setup.sql'");
     
     // Clean up
     unlink($sqlFile);
-    executeDockerCommand("exec webbadeploy_db rm /tmp/setup.sql");
+    executeDockerCommand("exec webbadeploy_db rm -f /tmp/setup.sql");
     
     if (!$execResult['success']) {
         throw new Exception("Failed to create WordPress database: " . $execResult['output']);
