@@ -1,12 +1,44 @@
 <?php
+// Prevent any output before JSON
+ob_start();
+
+// Disable error display, log errors instead
+ini_set('display_errors', '0');
+error_reporting(E_ALL);
+
+// Set JSON header first
 header('Content-Type: application/json');
+
+// Set error handler to catch all errors and return JSON
+set_error_handler(function($errno, $errstr, $errfile, $errline) {
+    ob_clean();
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'error' => 'PHP Error: ' . $errstr . ' in ' . basename($errfile) . ' on line ' . $errline
+    ]);
+    exit;
+});
+
+// Set exception handler
+set_exception_handler(function($exception) {
+    ob_clean();
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'error' => 'Exception: ' . $exception->getMessage()
+    ]);
+    exit;
+});
+
 require_once 'includes/functions.php';
 require_once 'includes/auth.php';
 
 // Require authentication for all API calls
 if (!isLoggedIn()) {
+    ob_clean();
     http_response_code(401);
-    echo json_encode(['error' => 'Unauthorized']);
+    echo json_encode(['success' => false, 'error' => 'Unauthorized']);
     exit;
 }
 
