@@ -157,7 +157,7 @@ try {
         break;
     
     case "get_logs":
-        getContainerLogs($db, $_GET["id"]);
+        getSiteContainerLogs($db, $_GET["id"]);
         break;
     
     case "get_stats":
@@ -1079,6 +1079,35 @@ function stopContainer($db, $id) {
 
     } catch (Exception $e) {
         http_response_code(400);
+        echo json_encode([
+            "success" => false,
+            "error" => $e->getMessage()
+        ]);
+    }
+}
+
+function getSiteContainerLogs($db, $id) {
+    try {
+        $site = getSiteById($db, $id);
+        if (!$site) {
+            throw new Exception("Site not found");
+        }
+
+        $lines = $_GET['lines'] ?? 100;
+        $containerName = escapeshellarg($site['container_name']);
+        
+        exec("docker logs --tail " . intval($lines) . " {$containerName} 2>&1", $output, $returnCode);
+        
+        if ($returnCode === 0) {
+            echo json_encode([
+                "success" => true,
+                "logs" => implode("\n", $output)
+            ]);
+        } else {
+            throw new Exception("Failed to get logs: " . implode("\n", $output));
+        }
+    } catch (Exception $e) {
+        http_response_code(500);
         echo json_encode([
             "success" => false,
             "error" => $e->getMessage()
