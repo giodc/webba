@@ -354,6 +354,18 @@ $customWildcardDomain = getSetting($db, 'custom_wildcard_domain', '');
                                     Enable performance optimizations (Redis, OpCache, CDN-ready)
                                 </label>
                             </div>
+                            <div class="mb-3">
+                                <label class="form-label">Database Configuration</label>
+                                <select class="form-select" name="wp_db_type" id="wpDbType">
+                                    <option value="shared" selected>Shared Database (Recommended - uses global MariaDB)</option>
+                                    <option value="dedicated">Dedicated Database (Separate MariaDB container per site)</option>
+                                </select>
+                                <div class="form-text">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    <strong>Shared:</strong> Faster, uses less resources, easier to manage<br>
+                                    <strong>Dedicated:</strong> Complete isolation, better for high-traffic sites
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="modal-footer">

@@ -522,8 +522,9 @@ function createWordPressDockerCompose($site, $config) {
     $containerName = $site["container_name"];
     $domain = $site["domain"];
     
-    // Use shared database with unique table prefix
-    $tablePrefix = 'wp_' . substr(md5($site['name']), 0, 8) . '_';
+    // Check database type (shared or dedicated)
+    $dbType = $config['wp_db_type'] ?? 'shared';
+    $useDedicatedDb = ($dbType === 'dedicated');
     
     // Generate random database password for this site
     $dbPassword = bin2hex(random_bytes(16)); // 32 character random password
@@ -539,12 +540,27 @@ services:
   {$containerName}:
     image: wordpress:latest
     container_name: {$containerName}
-    environment:
+    environment:";
+    
+    if ($useDedicatedDb) {
+        // Dedicated database configuration
+        $dbName = 'wordpress';
+        $dbUser = 'wordpress';
+        $compose .= "
+      - WORDPRESS_DB_HOST={$containerName}_db
+      - WORDPRESS_DB_NAME={$dbName}
+      - WORDPRESS_DB_USER={$dbUser}
+      - WORDPRESS_DB_PASSWORD={$dbPassword}";
+    } else {
+        // Shared database configuration with unique table prefix
+        $tablePrefix = 'wp_' . substr(md5($site['name']), 0, 8) . '_';
+        $compose .= "
       - WORDPRESS_DB_HOST=webbadeploy_db
       - WORDPRESS_DB_NAME=webbadeploy
       - WORDPRESS_DB_USER=webbadeploy
-      - WORDPRESS_DB_PASSWORD={$dbPassword}
+      - WORDPRESS_DB_PASSWORD=webbadeploy_pass
       - WORDPRESS_TABLE_PREFIX={$tablePrefix}";
+    }
     
     // Add Redis configuration if optimizations are enabled
     if ($wpOptimize) {
@@ -592,6 +608,26 @@ services:
     restart: unless-stopped
 ";
     
+    // Add dedicated database service if selected
+    if ($useDedicatedDb) {
+        $dbRootPassword = bin2hex(random_bytes(16));
+        $compose .= "
+  {$containerName}_db:
+    image: mariadb:latest
+    container_name: {$containerName}_db
+    environment:
+      - MYSQL_ROOT_PASSWORD={$dbRootPassword}
+      - MYSQL_DATABASE=wordpress
+      - MYSQL_USER=wordpress
+      - MYSQL_PASSWORD={$dbPassword}
+    volumes:
+      - {$containerName}_db_data:/var/lib/mysql
+    networks:
+      - webbadeploy_webbadeploy
+    restart: unless-stopped
+";
+    }
+    
     // Add Redis service if optimizations are enabled
     if ($wpOptimize) {
         $compose .= "
@@ -607,7 +643,15 @@ services:
     
     $compose .= "
 volumes:
-  wp_{$containerName}_data:
+  wp_{$containerName}_data:";
+    
+    // Add database volume if using dedicated database
+    if ($useDedicatedDb) {
+        $compose .= "
+  {$containerName}_db_data:";
+    }
+    
+    $compose .= "
 
 networks:
   webbadeploy_webbadeploy:
