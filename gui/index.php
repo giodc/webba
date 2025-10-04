@@ -113,6 +113,11 @@ $customWildcardDomain = getSetting($db, 'custom_wildcard_domain', '');
                                         <?= $site['domain'] ?>
                                         <?php if ($site['ssl']): ?><i class="bi bi-shield-check text-success ms-1"></i><?php endif; ?>
                                     </a>
+                                    <br>
+                                    <small class="badge <?= $site['ssl'] ? 'bg-success' : 'bg-secondary' ?> mt-1">
+                                        <i class="bi bi-<?= $site['ssl'] ? 'shield-lock-fill' : 'shield-slash' ?>"></i>
+                                        SSL: <?= $site['ssl'] ? 'Enabled' : 'Disabled' ?>
+                                    </small>
                                 </div>
                                 
                                 <?php if ($containerStatus === 'running'): ?>
