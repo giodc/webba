@@ -2146,7 +2146,11 @@ function exportDatabase($db) {
             throw new Exception("Site not found");
         }
         
-        $containerName = $site['container_name'] . '_db';
+        if (($site['db_type'] ?? 'shared') !== 'dedicated') {
+            throw new Exception("This site uses a shared database. Export not available.");
+        }
+        
+        $containerName = escapeshellarg($site['container_name'] . '_db');
         $timestamp = date('Y-m-d_H-i-s');
         $filename = "backup_{$site['name']}_{$timestamp}.sql";
         $backupPath = "/app/data/backups/{$filename}";
@@ -2156,8 +2160,9 @@ function exportDatabase($db) {
             mkdir('/app/data/backups', 0755, true);
         }
         
-        // Export database
-        $command = "docker exec {$containerName} mysqldump -u wordpress -p" . escapeshellarg($site['db_password']) . " wordpress > {$backupPath} 2>&1";
+        // Export database using environment variable for password
+        $password = $site['db_password'] ?? '';
+        $command = "docker exec {$containerName} sh -c 'MYSQL_PWD=" . escapeshellarg($password) . " mysqldump -u wordpress wordpress' > {$backupPath} 2>&1";
         exec($command, $output, $returnCode);
         
         if ($returnCode === 0 && file_exists($backupPath)) {
@@ -2192,16 +2197,21 @@ function getDatabaseStats($db) {
             throw new Exception("Site not found");
         }
         
-        $containerName = $site['container_name'] . '_db';
+        if (($site['db_type'] ?? 'shared') !== 'dedicated') {
+            throw new Exception("This site uses a shared database. Stats not available.");
+        }
+        
+        $containerName = escapeshellarg($site['container_name'] . '_db');
         
         // Get database size and table count
         $sqlCommand = "SELECT 
-            ROUND(SUM(data_length + index_length) / 1024 / 1024, 2) AS 'Size (MB)',
+            ROUND(SUM(data_length + index_length) / 1024 / 1024, 2) AS 'Size_MB',
             COUNT(*) AS 'Tables'
             FROM information_schema.TABLES 
             WHERE table_schema = 'wordpress'";
         
-        $command = "docker exec {$containerName} mysql -u wordpress -p" . escapeshellarg($site['db_password']) . " -e " . escapeshellarg($sqlCommand) . " 2>&1";
+        $password = $site['db_password'] ?? '';
+        $command = "docker exec {$containerName} sh -c 'MYSQL_PWD=" . escapeshellarg($password) . " mysql -u wordpress -e " . escapeshellarg($sqlCommand) . "' 2>&1";
         exec($command, $output, $returnCode);
         
         if ($returnCode === 0) {
