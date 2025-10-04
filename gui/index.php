@@ -8,6 +8,7 @@ requireAuth();
 $db = initDatabase();
 $currentUser = getCurrentUser();
 $sites = getAllSites($db);
+$customWildcardDomain = getSetting($db, 'custom_wildcard_domain', '');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -38,6 +39,9 @@ $sites = getAllSites($db);
                         <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle">
                             <span class="visually-hidden">Update available</span>
                         </span>
+                    </a>
+                    <a class="nav-link" href="/settings.php">
+                        <i class="bi bi-gear me-1"></i>Settings
                     </a>
                     <a class="nav-link" href="/debug.php">
                         <i class="bi bi-bug me-1"></i>Debug
@@ -190,6 +194,9 @@ $sites = getAllSites($db);
                                     <select class="form-select" name="domain_suffix" style="max-width: 200px;" onchange="toggleSSLOptions(this.value)">
                                         <option value=".test.local">.test.local (Local)</option>
                                         <option value=".localhost">.localhost (Local)</option>
+                                        <?php if (!empty($customWildcardDomain)): ?>
+                                        <option value="<?= htmlspecialchars($customWildcardDomain) ?>"><?= htmlspecialchars($customWildcardDomain) ?> (Custom)</option>
+                                        <?php endif; ?>
                                         <option value=":8080">:8080 (Port-based)</option>
                                         <option value=":8081">:8081 (Port-based)</option>
                                         <option value=":8082">:8082 (Port-based)</option>

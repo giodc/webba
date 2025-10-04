@@ -42,7 +42,7 @@ services:
         DOCKER_GID: 988
     container_name: webbadeploy_gui
     ports:
-      - "3000:80"  # Dashboard accessible on port 3000
+      - "9000:80"  # Dashboard accessible on port 9000
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /usr/bin/docker:/usr/bin/docker:ro

@@ -25,16 +25,23 @@ document.addEventListener("DOMContentLoaded", function() {
     document.querySelector("select[name=\"domain_suffix\"]").addEventListener("change", function(e) {
         const customField = document.getElementById("customDomainField");
         const sslCheck = document.getElementById("sslCheck");
+        const domainSuffix = e.target.value;
 
-        if (e.target.value === "custom") {
+        if (domainSuffix === "custom") {
             customField.style.display = "block";
             sslCheck.disabled = false;
         } else {
             customField.style.display = "none";
-            sslCheck.disabled = true;
-            sslCheck.checked = false;
-            // Hide SSL challenge options when SSL is disabled
-            document.getElementById("sslChallengeOptions").style.display = "none";
+            
+            // Enable SSL for custom wildcard domains (starting with .)
+            if (domainSuffix.startsWith(".")) {
+                sslCheck.disabled = false;
+            } else {
+                sslCheck.disabled = true;
+                sslCheck.checked = false;
+                // Hide SSL challenge options when SSL is disabled
+                document.getElementById("sslChallengeOptions").style.display = "none";
+            }
         }
     });
 
@@ -57,7 +64,10 @@ function toggleSSLOptions(domainSuffix) {
     const sslCheck = document.getElementById("sslCheck");
     const sslChallengeOptions = document.getElementById("sslChallengeOptions");
     
-    if (domainSuffix !== "custom") {
+    // Enable SSL for custom domains and custom wildcard domains (starting with .)
+    const isCustomDomain = domainSuffix === "custom" || domainSuffix.startsWith(".");
+    
+    if (!isCustomDomain) {
         sslCheck.disabled = true;
         sslCheck.checked = false;
         sslChallengeOptions.style.display = "none";

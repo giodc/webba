@@ -20,8 +20,34 @@ function initDatabase() {
         sftp_enabled INTEGER DEFAULT 0,
         sftp_username TEXT,
         sftp_password TEXT,
-        sftp_port INTEGER
+        sftp_port INTEGER,
+        db_password TEXT
     )");
+
+    // Create settings table
+    $pdo->exec("CREATE TABLE IF NOT EXISTS settings (
+        key TEXT PRIMARY KEY,
+        value TEXT,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )");
+
+    // Migrate existing databases - add db_password column if it doesn't exist
+    try {
+        $result = $pdo->query("PRAGMA table_info(sites)");
+        $columns = $result->fetchAll(PDO::FETCH_ASSOC);
+        $hasDbPassword = false;
+        foreach ($columns as $column) {
+            if ($column['name'] === 'db_password') {
+                $hasDbPassword = true;
+                break;
+            }
+        }
+        if (!$hasDbPassword) {
+            $pdo->exec("ALTER TABLE sites ADD COLUMN db_password TEXT");
+        }
+    } catch (Exception $e) {
+        // Column might already exist or other error, continue
+    }
 
     return $pdo;
 }
@@ -35,6 +61,18 @@ function getSiteById($pdo, $id) {
     $stmt = $pdo->prepare("SELECT * FROM sites WHERE id = ?");
     $stmt->execute([$id]);
     return $stmt->fetch(PDO::FETCH_ASSOC);
+}
+
+function getSetting($pdo, $key, $default = null) {
+    $stmt = $pdo->prepare("SELECT value FROM settings WHERE key = ?");
+    $stmt->execute([$key]);
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $result ? $result['value'] : $default;
+}
+
+function setSetting($pdo, $key, $value) {
+    $stmt = $pdo->prepare("INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)");
+    return $stmt->execute([$key, $value]);
 }
 
 function createSite($pdo, $data) {

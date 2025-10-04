@@ -5,7 +5,7 @@
 ### One-Line Installation
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/yourrepo/webbadeploy/main/install-production.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/giodc/webba/master/install-production.sh | sudo bash
 ```
 
 Or download and run:

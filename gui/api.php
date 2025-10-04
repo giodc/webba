@@ -129,6 +129,10 @@ switch ($action) {
     case "get_dashboard_stats":
         getDashboardStats($db, $_GET["id"]);
         break;
+    
+    case "restart_traefik":
+        restartTraefik();
+        break;
         
     default:
         http_response_code(400);
@@ -1899,6 +1903,27 @@ function getDashboardStats($db, $id) {
 
     } catch (Exception $e) {
         http_response_code(400);
+        echo json_encode([
+            "success" => false,
+            "error" => $e->getMessage()
+        ]);
+    }
+}
+
+function restartTraefik() {
+    try {
+        exec("docker restart webbadeploy_traefik 2>&1", $output, $returnCode);
+        
+        if ($returnCode === 0) {
+            echo json_encode([
+                "success" => true,
+                "message" => "Traefik restarted successfully"
+            ]);
+        } else {
+            throw new Exception("Failed to restart Traefik: " . implode("\n", $output));
+        }
+    } catch (Exception $e) {
+        http_response_code(500);
         echo json_encode([
             "success" => false,
             "error" => $e->getMessage()
