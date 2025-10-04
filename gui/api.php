@@ -133,6 +133,10 @@ switch ($action) {
     case "restart_traefik":
         restartTraefik();
         break;
+    
+    case "execute_docker_command":
+        executeDockerCommandAPI();
+        break;
         
     default:
         http_response_code(400);
@@ -2041,6 +2045,44 @@ function restartTraefik() {
             ]);
         } else {
             throw new Exception("Failed to restart Traefik: " . implode("\n", $output));
+        }
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode([
+            "success" => false,
+            "error" => $e->getMessage()
+        ]);
+    }
+}
+
+function executeDockerCommandAPI() {
+    try {
+        $input = json_decode(file_get_contents("php://input"), true);
+        
+        if (!isset($input['command'])) {
+            throw new Exception("Command is required");
+        }
+        
+        $command = $input['command'];
+        
+        // Security: Only allow specific docker commands
+        $allowedCommands = ['restart', 'start', 'stop', 'logs'];
+        $commandParts = explode(' ', $command);
+        
+        if (!in_array($commandParts[0], $allowedCommands)) {
+            throw new Exception("Command not allowed");
+        }
+        
+        exec("docker " . escapeshellcmd($command) . " 2>&1", $output, $returnCode);
+        
+        if ($returnCode === 0) {
+            echo json_encode([
+                "success" => true,
+                "message" => "Command executed successfully",
+                "output" => implode("\n", $output)
+            ]);
+        } else {
+            throw new Exception("Command failed: " . implode("\n", $output));
         }
     } catch (Exception $e) {
         http_response_code(500);

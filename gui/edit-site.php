@@ -1141,11 +1141,17 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                 return;
             }
             
+            showAlert('info', 'Restarting database...');
+            
             try {
-                const response = await fetch('/api.php?action=restart_container', {
+                // Use docker command directly to restart the database container
+                const response = await fetch('/api.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ container: containerName + '_db' })
+                    body: JSON.stringify({ 
+                        action: 'execute_docker_command',
+                        command: `restart ${containerName}_db`
+                    })
                 });
                 
                 const result = await response.json();
