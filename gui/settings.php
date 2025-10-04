@@ -28,31 +28,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $newEmail = trim($_POST['letsencrypt_email']);
         
         if (filter_var($newEmail, FILTER_VALIDATE_EMAIL)) {
-            // Update docker-compose.yml
-            $updatedContent = preg_replace(
-                '/acme\.email=[^\s"]+/',
-                'acme.email=' . $newEmail,
-                $dockerComposeContent
-            );
+            // Use sed to update the file directly on the host
+            $escapedEmail = escapeshellarg($newEmail);
+            $escapedPath = escapeshellarg($dockerComposePath);
             
-            // Write to temporary file first
-            $tempFile = '/tmp/docker-compose-' . time() . '.yml';
-            if (file_put_contents($tempFile, $updatedContent)) {
-                // Use shell command to move the file to the host location
-                $moveCmd = "cat " . escapeshellarg($tempFile) . " > " . escapeshellarg($dockerComposePath) . " 2>&1";
-                exec($moveCmd, $moveOutput, $moveReturn);
-                
-                // Clean up temp file
-                @unlink($tempFile);
-                
-                if ($moveReturn === 0) {
-                    $successMessage = 'Let\'s Encrypt email updated successfully! Please restart Traefik for changes to take effect.';
-                    $currentEmail = $newEmail;
-                } else {
-                    $errorMessage = 'Failed to update docker-compose.yml: ' . implode(' ', $moveOutput);
-                }
+            // Create backup first
+            exec("cp $escapedPath $escapedPath.backup 2>&1", $backupOutput, $backupReturn);
+            
+            // Use sed to replace the email in place
+            $sedCmd = "sed -i 's/acme\\.email=[^\"[:space:]]*/acme.email=$newEmail/g' $escapedPath 2>&1";
+            exec($sedCmd, $sedOutput, $sedReturn);
+            
+            if ($sedReturn === 0) {
+                $successMessage = 'Let\'s Encrypt email updated successfully! Please restart Traefik for changes to take effect.';
+                $currentEmail = $newEmail;
+                // Re-read the file to confirm
+                exec("cat $dockerComposePath 2>&1", $output, $returnCode);
+                $dockerComposeContent = $returnCode === 0 ? implode("\n", $output) : '';
             } else {
-                $errorMessage = 'Failed to create temporary file.';
+                // Restore backup if sed failed
+                exec("cp $escapedPath.backup $escapedPath 2>&1");
+                $errorMessage = 'Failed to update docker-compose.yml: ' . implode(' ', $sedOutput);
             }
         } else {
             $errorMessage = 'Please enter a valid email address.';
