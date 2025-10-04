@@ -2216,9 +2216,10 @@ function exportDatabase($db) {
             throw new Exception("This site uses a shared database. Export not available.");
         }
         
-        $containerName = escapeshellarg($site['container_name'] . '_db');
+        $containerName = $site['container_name'] . '_db';
         $timestamp = date('Y-m-d_H-i-s');
-        $filename = "backup_{$site['name']}_{$timestamp}.sql";
+        $siteName = preg_replace('/[^a-zA-Z0-9_-]/', '_', $site['name']);
+        $filename = "backup_{$siteName}_{$timestamp}.sql";
         $backupPath = "/app/data/backups/{$filename}";
         
         // Create backups directory if it doesn't exist
@@ -2226,20 +2227,38 @@ function exportDatabase($db) {
             mkdir('/app/data/backups', 0755, true);
         }
         
-        // Export database using environment variable for password
+        // Export database using mysqldump
         $password = $site['db_password'] ?? '';
-        $command = "docker exec {$containerName} sh -c 'MYSQL_PWD=" . escapeshellarg($password) . " mysqldump -u wordpress wordpress' > {$backupPath} 2>&1";
-        exec($command, $output, $returnCode);
         
-        if ($returnCode === 0 && file_exists($backupPath)) {
+        // Build command with proper escaping
+        $cmd = sprintf(
+            "docker exec %s sh -c 'MYSQL_PWD=%s mysqldump -u wordpress wordpress' > %s 2>&1",
+            escapeshellarg($containerName),
+            escapeshellarg($password),
+            escapeshellarg($backupPath)
+        );
+        
+        exec($cmd, $output, $returnCode);
+        
+        if ($returnCode === 0 && file_exists($backupPath) && filesize($backupPath) > 0) {
             echo json_encode([
                 "success" => true,
                 "message" => "Database exported successfully",
                 "file" => $filename,
+                "size" => filesize($backupPath),
                 "download_url" => "/download.php?file=" . urlencode($filename)
             ]);
         } else {
-            throw new Exception("Failed to export database: " . implode("\n", $output));
+            $errorMsg = "Export failed. ";
+            if (!empty($output)) {
+                $errorMsg .= "Error: " . implode("\n", $output);
+            }
+            if (!file_exists($backupPath)) {
+                $errorMsg .= " Backup file was not created.";
+            } elseif (filesize($backupPath) === 0) {
+                $errorMsg .= " Backup file is empty.";
+            }
+            throw new Exception($errorMsg);
         }
     } catch (Exception $e) {
         http_response_code(500);
