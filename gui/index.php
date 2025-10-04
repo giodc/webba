@@ -330,6 +330,40 @@ $customWildcardDomain = getSetting($db, 'custom_wildcard_domain', '');
                                 </div>
                             </div>
                         </div>
+
+                        <div id="phpOptions" style="display: none;">
+                            <hr>
+                            <h6><i class="bi bi-code-slash text-primary me-2"></i>PHP Configuration</h6>
+                            <div class="mb-3">
+                                <label class="form-label">Database</label>
+                                <select class="form-select" name="php_db_type" id="phpDbType">
+                                    <option value="none" selected>No Database</option>
+                                    <option value="mysql">MySQL/MariaDB</option>
+                                    <option value="postgres">PostgreSQL</option>
+                                </select>
+                                <div class="form-text">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    Select a database if your PHP app needs one
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="laravelOptions" style="display: none;">
+                            <hr>
+                            <h6><i class="bi bi-lightning text-primary me-2"></i>Laravel Configuration</h6>
+                            <div class="mb-3">
+                                <label class="form-label">Database</label>
+                                <select class="form-select" name="laravel_db_type" id="laravelDbType">
+                                    <option value="mysql" selected>MySQL/MariaDB (Recommended)</option>
+                                    <option value="postgres">PostgreSQL</option>
+                                    <option value="none">No Database</option>
+                                </select>
+                                <div class="form-text">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    Laravel works best with MySQL or PostgreSQL
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>

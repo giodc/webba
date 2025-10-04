@@ -120,6 +120,13 @@ function showDNSProviderFields(provider) {
 
 function toggleTypeOptions(type) {
     const wpOptions = document.getElementById("wordpressOptions");
+    const phpOptions = document.getElementById("phpOptions");
+    const laravelOptions = document.getElementById("laravelOptions");
+
+    // Hide all options first
+    wpOptions.style.display = "none";
+    phpOptions.style.display = "none";
+    laravelOptions.style.display = "none";
 
     if (type === "wordpress") {
         wpOptions.style.display = "block";
@@ -129,8 +136,10 @@ function toggleTypeOptions(type) {
         if (!passwordField.value) {
             passwordField.value = generatePassword(16);
         }
-    } else {
-        wpOptions.style.display = "none";
+    } else if (type === "php") {
+        phpOptions.style.display = "block";
+    } else if (type === "laravel") {
+        laravelOptions.style.display = "block";
     }
 }
 
