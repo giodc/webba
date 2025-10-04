@@ -230,6 +230,30 @@ function getDockerContainerStatus($containerName) {
     return 'unknown';
 }
 
+function checkContainerSSLLabels($containerName) {
+    // Check if container has SSL Traefik labels configured
+    $output = [];
+    $returnCode = 0;
+    
+    $dockerPaths = ['/usr/bin/docker', '/usr/local/bin/docker', 'docker'];
+    
+    foreach ($dockerPaths as $dockerCmd) {
+        // Check for the secure router label which indicates SSL is configured
+        exec("$dockerCmd inspect -f '{{index .Config.Labels \"traefik.http.routers." . $containerName . "-secure.tls\"}}' " . escapeshellarg($containerName) . " 2>&1", $output, $returnCode);
+        
+        if ($returnCode === 0 && !empty($output)) {
+            $hasSSL = trim($output[0]) === 'true';
+            return $hasSSL;
+        }
+        
+        // Reset for next attempt
+        $output = [];
+        $returnCode = 0;
+    }
+    
+    return false;
+}
+
 function reloadNginx() {
     return executeDockerCommand("exec webbadeploy_nginx nginx -s reload");
 }

@@ -92,6 +92,7 @@ $customWildcardDomain = getSetting($db, 'custom_wildcard_domain', '');
                     <?php else: ?>
                     <?php foreach ($sites as $site): 
                         $containerStatus = getDockerContainerStatus($site['container_name']);
+                        $sslConfigured = checkContainerSSLLabels($site['container_name']);
                     ?>
                     <div class="col-md-4 mb-4" data-site-id="<?= $site['id'] ?>">
                         <div class="card app-card h-100">
@@ -114,10 +115,19 @@ $customWildcardDomain = getSetting($db, 'custom_wildcard_domain', '');
                                         <?php if ($site['ssl']): ?><i class="bi bi-shield-check text-success ms-1"></i><?php endif; ?>
                                     </a>
                                     <br>
-                                    <small class="badge <?= $site['ssl'] ? 'bg-success' : 'bg-secondary' ?> mt-1">
-                                        <i class="bi bi-<?= $site['ssl'] ? 'shield-lock-fill' : 'shield-slash' ?>"></i>
-                                        SSL: <?= $site['ssl'] ? 'Enabled' : 'Disabled' ?>
-                                    </small>
+                                    <?php if ($site['ssl'] && $sslConfigured): ?>
+                                        <small class="badge bg-success mt-1" title="SSL is enabled and configured in container">
+                                            <i class="bi bi-shield-lock-fill"></i> SSL: Active
+                                        </small>
+                                    <?php elseif ($site['ssl'] && !$sslConfigured): ?>
+                                        <small class="badge bg-warning mt-1" title="SSL enabled in database but not configured in container - recreate site">
+                                            <i class="bi bi-exclamation-triangle"></i> SSL: Not Configured
+                                        </small>
+                                    <?php else: ?>
+                                        <small class="badge bg-secondary mt-1" title="SSL is disabled">
+                                            <i class="bi bi-shield-slash"></i> SSL: Disabled
+                                        </small>
+                                    <?php endif; ?>
                                 </div>
                                 
                                 <?php if ($containerStatus === 'running'): ?>
