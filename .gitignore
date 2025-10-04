@@ -43,4 +43,5 @@ Thumbs.db
 # Backup files
 *.backup
 *.bak
-*.old
+*.olddocker-compose.yml
+docker-compose.yml
