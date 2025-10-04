@@ -8,41 +8,6 @@ requireAuth();
 $db = initDatabase();
 $currentUser = getCurrentUser();
 $sites = getAllSites($db);
-
-// Function to get container stats
-function getContainerStats($containerName) {
-    $stats = ['cpu' => '0%', 'memory' => '0 MB', 'cpu_percent' => 0, 'mem_percent' => 0];
-    
-    exec("docker stats --no-stream --format '{{.CPUPerc}}|{{.MemUsage}}' $containerName 2>&1", $output);
-    if (!empty($output[0]) && strpos($output[0], 'Error') === false) {
-        $parts = explode('|', $output[0]);
-        $stats['cpu'] = $parts[0] ?? '0%';
-        $stats['memory'] = $parts[1] ?? '0 MB';
-        
-        // Extract percentages for graphs
-        $stats['cpu_percent'] = (float)str_replace('%', '', $stats['cpu']);
-        
-        // Parse memory usage (e.g., "45.5MiB / 1.944GiB")
-        if (isset($parts[1])) {
-            preg_match('/(\d+\.?\d*)\w+\s*\/\s*(\d+\.?\d*)(\w+)/', $parts[1], $memMatch);
-            if (count($memMatch) >= 4) {
-                $used = (float)$memMatch[1];
-                $total = (float)$memMatch[2];
-                $unit = $memMatch[3];
-                
-                // Convert to same unit if needed
-                if (strpos($parts[1], 'MiB') !== false && strpos($parts[1], 'GiB') !== false) {
-                    $used = $used; // Keep in MiB
-                    $total = $total * 1024; // Convert GiB to MiB
-                }
-                
-                $stats['mem_percent'] = $total > 0 ? ($used / $total) * 100 : 0;
-            }
-        }
-    }
-    
-    return $stats;
-}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -118,9 +83,8 @@ function getContainerStats($containerName) {
                     <?php else: ?>
                     <?php foreach ($sites as $site): 
                         $containerStatus = getDockerContainerStatus($site['container_name']);
-                        $stats = $containerStatus === 'running' ? getContainerStats($site['container_name']) : null;
                     ?>
-                    <div class="col-md-4 mb-4">
+                    <div class="col-md-4 mb-4" data-site-id="<?= $site['id'] ?>">
                         <div class="card app-card h-100">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-start mb-3">
@@ -138,27 +102,25 @@ function getContainerStats($containerName) {
                                     <?php if ($site['ssl']): ?><i class="bi bi-shield-check text-success ms-1"></i><?php endif; ?>
                                 </div>
                                 
-                                <?php if ($stats): ?>
-                                <!-- Statistics -->
-                                <div class="mb-3 stats-section">
+                                <?php if ($containerStatus === 'running'): ?>
+                                <!-- Statistics (loaded asynchronously) -->
+                                <div class="mb-3 stats-section" id="stats-<?= $site['id'] ?>">
                                     <div class="stat-item mb-2">
                                         <div class="d-flex justify-content-between align-items-center mb-1">
                                             <small class="text-muted"><i class="bi bi-cpu"></i> CPU</small>
-                                            <small class="fw-bold"><?= htmlspecialchars($stats['cpu']) ?></small>
+                                            <small class="fw-bold stats-cpu"><span class="spinner-border spinner-border-sm"></span></small>
                                         </div>
                                         <div class="progress" style="height: 4px;">
-                                            <div class="progress-bar bg-primary" role="progressbar" 
-                                                 style="width: <?= min($stats['cpu_percent'], 100) ?>%"></div>
+                                            <div class="progress-bar bg-primary stats-cpu-bar" role="progressbar" style="width: 0%"></div>
                                         </div>
                                     </div>
                                     <div class="stat-item">
                                         <div class="d-flex justify-content-between align-items-center mb-1">
                                             <small class="text-muted"><i class="bi bi-memory"></i> Memory</small>
-                                            <small class="fw-bold"><?= htmlspecialchars($stats['memory']) ?></small>
+                                            <small class="fw-bold stats-memory"><span class="spinner-border spinner-border-sm"></span></small>
                                         </div>
                                         <div class="progress" style="height: 4px;">
-                                            <div class="progress-bar bg-info" role="progressbar" 
-                                                 style="width: <?= min($stats['mem_percent'], 100) ?>%"></div>
+                                            <div class="progress-bar bg-info stats-memory-bar" role="progressbar" style="width: 0%"></div>
                                         </div>
                                     </div>
                                 </div>

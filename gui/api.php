@@ -125,6 +125,10 @@ switch ($action) {
     case "regenerate_sftp_password":
         regenerateSFTPPassword($db, $_GET["id"]);
         break;
+    
+    case "get_dashboard_stats":
+        getDashboardStats($db, $_GET["id"]);
+        break;
         
     default:
         http_response_code(400);
@@ -1814,6 +1818,90 @@ function saveEnvironmentVariables($db) {
         echo json_encode([
             'success' => false,
             'error' => $e->getMessage()
+        ]);
+    }
+}
+
+function getDashboardStats($db, $id) {
+    try {
+        $site = getSiteById($db, $id);
+        if (!$site) {
+            throw new Exception("Site not found");
+        }
+
+        // Check if container is running
+        $status = getDockerContainerStatus($site['container_name']);
+        if ($status !== 'running') {
+            echo json_encode([
+                "success" => true,
+                "stats" => [
+                    "cpu" => "0%",
+                    "memory" => "0 MB",
+                    "cpu_percent" => 0,
+                    "mem_percent" => 0,
+                    "status" => $status
+                ]
+            ]);
+            return;
+        }
+
+        // Cache stats for 5 seconds to avoid hammering docker stats
+        $cacheFile = "/tmp/stats_cache_{$site['id']}";
+        $cacheTime = 5; // seconds
+        
+        if (file_exists($cacheFile) && (time() - filemtime($cacheFile)) < $cacheTime) {
+            $cachedStats = json_decode(file_get_contents($cacheFile), true);
+            echo json_encode([
+                "success" => true,
+                "stats" => $cachedStats,
+                "cached" => true
+            ]);
+            return;
+        }
+
+        // Get container stats
+        $stats = ['cpu' => '0%', 'memory' => '0 MB', 'cpu_percent' => 0, 'mem_percent' => 0, 'status' => 'running'];
+        
+        exec("docker stats --no-stream --format '{{.CPUPerc}}|{{.MemUsage}}' {$site['container_name']} 2>&1", $output);
+        if (!empty($output[0]) && strpos($output[0], 'Error') === false) {
+            $parts = explode('|', $output[0]);
+            $stats['cpu'] = $parts[0] ?? '0%';
+            $stats['memory'] = $parts[1] ?? '0 MB';
+            
+            // Extract percentages for graphs
+            $stats['cpu_percent'] = (float)str_replace('%', '', $stats['cpu']);
+            
+            // Parse memory usage (e.g., "45.5MiB / 1.944GiB")
+            if (isset($parts[1])) {
+                preg_match('/(\d+\.?\d*)\w+\s*\/\s*(\d+\.?\d*)(\w+)/', $parts[1], $memMatch);
+                if (count($memMatch) >= 4) {
+                    $used = (float)$memMatch[1];
+                    $total = (float)$memMatch[2];
+                    
+                    // Convert to same unit if needed
+                    if (strpos($parts[1], 'MiB') !== false && strpos($parts[1], 'GiB') !== false) {
+                        $used = $used; // Keep in MiB
+                        $total = $total * 1024; // Convert GiB to MiB
+                    }
+                    
+                    $stats['mem_percent'] = $total > 0 ? ($used / $total) * 100 : 0;
+                }
+            }
+        }
+
+        // Cache the results
+        file_put_contents($cacheFile, json_encode($stats));
+
+        echo json_encode([
+            "success" => true,
+            "stats" => $stats
+        ]);
+
+    } catch (Exception $e) {
+        http_response_code(400);
+        echo json_encode([
+            "success" => false,
+            "error" => $e->getMessage()
         ]);
     }
 }

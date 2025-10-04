@@ -1,7 +1,7 @@
 let createModal, editModal, passwordModal, updateModal;
 
 // Version check - if you see this in console, the new JS is loaded
-console.log("Webbadeploy JS v4.0 loaded - Update system integrated!");
+console.log("Webbadeploy JS v5.0 loaded - Async stats loading for performance!");
 
 document.addEventListener("DOMContentLoaded", function() {
     createModal = new bootstrap.Modal(document.getElementById("createModal"));
@@ -38,9 +38,15 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     });
 
+    // Load stats asynchronously for all sites
+    loadAllDashboardStats();
+    
     // Update site statuses
     updateAllSiteStatuses();
     setInterval(updateAllSiteStatuses, 30000); // Check every 30 seconds
+    
+    // Refresh stats every 10 seconds
+    setInterval(loadAllDashboardStats, 10000);
 });
 
 function showCreateModal() {
@@ -291,6 +297,40 @@ async function deleteSite(id) {
         }
     } catch (error) {
         showAlert("danger", "Network error: " + error.message);
+    }
+}
+
+async function loadAllDashboardStats() {
+    const siteCards = document.querySelectorAll("[data-site-id]");
+    
+    for (let card of siteCards) {
+        const siteId = card.getAttribute("data-site-id");
+        const statsSection = card.querySelector(`#stats-${siteId}`);
+        
+        if (statsSection) {
+            try {
+                const response = await fetch(`api.php?action=get_dashboard_stats&id=${siteId}`);
+                const result = await response.json();
+                
+                if (result.success && result.stats) {
+                    const stats = result.stats;
+                    
+                    // Update CPU
+                    const cpuText = statsSection.querySelector(".stats-cpu");
+                    const cpuBar = statsSection.querySelector(".stats-cpu-bar");
+                    if (cpuText) cpuText.textContent = stats.cpu;
+                    if (cpuBar) cpuBar.style.width = Math.min(stats.cpu_percent, 100) + "%";
+                    
+                    // Update Memory
+                    const memText = statsSection.querySelector(".stats-memory");
+                    const memBar = statsSection.querySelector(".stats-memory-bar");
+                    if (memText) memText.textContent = stats.memory;
+                    if (memBar) memBar.style.width = Math.min(stats.mem_percent, 100) + "%";
+                }
+            } catch (error) {
+                console.error("Failed to load stats for site", siteId, error);
+            }
+        }
     }
 }
 
