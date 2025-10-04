@@ -93,29 +93,25 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
     </style>
 </head>
 <body>
-    <!-- Navbar (same as dashboard) -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container">
-            <a class="navbar-brand" href="/">
-                <i class="bi bi-cloud-arrow-up me-2"></i>Webbadeploy
-            </a>
-            <div class="navbar-nav ms-auto">
-                <a class="nav-link" href="/">
-                    <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
-                </a>
-            </div>
-        </div>
-    </nav>
+    <?php include 'includes/navigation.php'; ?>
 
     <!-- Site Name Header -->
-    <div class="container mt-4">
-        <h2 class="mb-0">
-            <i class="bi bi-<?= getAppIcon($site['type']) ?> me-2"></i><?= htmlspecialchars($site['name']) ?>
-        </h2>
+    <div class="container-fluid mt-4 px-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <h2 class="mb-0">
+                <i class="bi bi-<?= getAppIcon($site['type']) ?> me-2"></i><?= htmlspecialchars($site['name']) ?>
+                <span class="badge bg-<?= $containerStatus === 'running' ? 'success' : 'secondary' ?> ms-2">
+                    <?= ucfirst($containerStatus) ?>
+                </span>
+            </h2>
+            <a href="/" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
+            </a>
+        </div>
     </div>
 
     <!-- Main Content with Two Columns -->
-    <div class="container mt-4">
+    <div class="container-fluid mt-4 px-4">
         <div class="row">
             <!-- Left Sidebar -->
             <div class="col-md-3 p-0">
