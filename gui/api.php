@@ -61,10 +61,12 @@ try {
 
 $action = $_GET["action"] ?? "";
 
-switch ($action) {
-    case "create_site":
-        createSiteHandler($db);
-        break;
+// Wrap entire switch in try-catch to ensure JSON responses
+try {
+    switch ($action) {
+        case "create_site":
+            createSiteHandler($db);
+            break;
         
     case "get_site":
         getSiteData($db, $_GET["id"]);
@@ -199,8 +201,19 @@ switch ($action) {
         break;
         
     default:
+        ob_clean();
         http_response_code(400);
-        echo json_encode(["error" => "Invalid action"]);
+        echo json_encode(["success" => false, "error" => "Invalid action: " . $action]);
+    }
+} catch (Throwable $e) {
+    ob_clean();
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'error' => 'Fatal error: ' . $e->getMessage(),
+        'file' => basename($e->getFile()),
+        'line' => $e->getLine()
+    ]);
 }
 
 function createSiteHandler($db) {
