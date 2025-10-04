@@ -43,7 +43,7 @@ Webbadeploy includes a built-in Git-based update system that allows you to easil
 
 ```bash
 cd /opt/webbadeploy
-git pull origin main
+git pull origin master
 ```
 
 ### Releasing a New Version
@@ -57,7 +57,7 @@ git pull origin main
    ```bash
    git add VERSION
    git commit -m "Release v1.1.0"
-   git push origin main
+   git push origin master
    ```
 
 3. Users will see the update notification on their dashboard
@@ -78,7 +78,7 @@ define('UPDATE_CHECK_INTERVAL', 3600); // 1 hour
 
 // Git remote and branch
 define('GIT_REMOTE', 'origin');
-define('GIT_BRANCH', 'main');
+define('GIT_BRANCH', 'master');
 ```
 
 ## Backup Location
@@ -112,7 +112,7 @@ The system will automatically stash local changes. To manually handle:
 ```bash
 cd /opt/webbadeploy
 git stash
-git pull origin main
+git pull origin master
 ```
 
 ### Permission errors after update
