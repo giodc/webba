@@ -83,41 +83,12 @@ if ($logType === 'acme') {
         .log-viewer .success {
             color: #4ec9b0;
         }
-        .log-viewer .info {
             color: #9cdcfe;
         }
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container">
-            <a class="navbar-brand" href="/">
-                <i class="bi bi-cloud-arrow-up me-2"></i>Webbadeploy
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <div class="navbar-nav ms-auto">
-                    <a class="nav-link" href="/">
-                        <i class="bi bi-house me-1"></i>Dashboard
-                    </a>
-                    <a class="nav-link active" href="/traefik-logs.php">
-                        <i class="bi bi-file-text me-1"></i>Traefik Logs
-                    </a>
-                    <a class="nav-link" href="/settings.php">
-                        <i class="bi bi-gear me-1"></i>Settings
-                    </a>
-                    <span class="nav-link text-light">
-                        <i class="bi bi-person-circle me-1"></i><?= htmlspecialchars($currentUser['username']) ?>
-                    </span>
-                    <a class="nav-link" href="/logout.php">
-                        <i class="bi bi-box-arrow-right me-1"></i>Logout
-                    </a>
-                </div>
-            </div>
-        </div>
-    </nav>
+    <?php include 'includes/navigation.php'; ?>
 
     <div class="container mt-5">
         <div class="row">
@@ -206,26 +177,10 @@ if ($logType === 'acme') {
         </div>
     </div>
 
-    <footer class="bg-dark text-white-50 py-3 mt-5">
-        <div class="container text-center">
-            <small>
-                <i class="bi bi-cloud-arrow-up me-1"></i>
-                Webbadeploy
-            </small>
-        </div>
-    </footer>
+    <?php include 'includes/footer.php'; ?>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        function copyLogs() {
-            const logContent = document.getElementById('logContent').textContent;
-            navigator.clipboard.writeText(logContent).then(() => {
-                alert('Logs copied to clipboard!');
-            }).catch(err => {
-                alert('Failed to copy logs: ' + err);
-            });
-        }
-        
         // Auto-scroll to bottom
         const logViewer = document.querySelector('.log-viewer');
         if (logViewer) {

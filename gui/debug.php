@@ -180,21 +180,7 @@ $systemInfo = getSystemInfo();
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container">
-            <a class="navbar-brand" href="/">
-                <i class="bi bi-cloud-arrow-up me-2"></i>WebBadeploy
-            </a>
-            <div class="navbar-nav ms-auto">
-                <a class="nav-link" href="/">
-                    <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
-                </a>
-                <span class="nav-link text-light">
-                    <i class="bi bi-person-circle me-1"></i><?= htmlspecialchars($currentUser['username']) ?>
-                </span>
-            </div>
-        </div>
-    </nav>
+    <?php include 'includes/navigation.php'; ?>
 
     <div class="container mt-4">
         <div class="d-flex justify-content-between align-items-center mb-4">
