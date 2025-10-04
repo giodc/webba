@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# WebBadeploy Volume Management Script
+# Webbadeploy Volume Management Script
 # Manage Docker volumes for site data
 
 set -e
@@ -16,7 +16,7 @@ NC='\033[0m' # No Color
 
 function show_help() {
     cat << EOF
-WebBadeploy Volume Management
+Webbadeploy Volume Management
 
 Usage: $0 [command] [options]
 

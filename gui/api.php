@@ -66,6 +66,46 @@ switch ($action) {
         getUpdateLogs();
         break;
     
+    case "list_files":
+        listContainerFiles($db, $_GET["id"], $_GET["path"] ?? '/var/www/html');
+        break;
+    
+    case "download_file":
+        downloadContainerFile($db, $_GET["id"], $_GET["path"]);
+        break;
+    
+    case "delete_file":
+        deleteContainerFile($db);
+        break;
+    
+    case "create_file":
+        createContainerFile($db);
+        break;
+    
+    case "create_folder":
+        createContainerFolder($db);
+        break;
+    
+    case "upload_file":
+        uploadContainerFile($db);
+        break;
+    
+    case "read_file":
+        readContainerFile($db);
+        break;
+    
+    case "save_file":
+        saveContainerFile($db);
+        break;
+    
+    case "get_env_vars":
+        getEnvironmentVariables($db, $_GET["id"]);
+        break;
+    
+    case "save_env_vars":
+        saveEnvironmentVariables($db);
+        break;
+    
     case "get_logs":
         getContainerLogs($db, $_GET["id"]);
         break;
@@ -302,7 +342,7 @@ function deployPHP($site, $config) {
 <body>
     <div class=\"card\">
         <h1>Site is Ready</h1>
-        <p>PHP app created by WebBadeploy.</p>
+        <p>PHP app created by Webbadeploy.</p>
     </div>
 </body>
 </html>
@@ -453,7 +493,16 @@ function createWordPressDockerCompose($site, $config) {
     // Use shared database with unique table prefix
     $tablePrefix = 'wp_' . substr(md5($site['name']), 0, 8) . '_';
     
-    return "version: '3.8'
+    // Generate random database password for this site
+    $dbPassword = bin2hex(random_bytes(16)); // 32 character random password
+    
+    // Store password in site config for reference
+    $site['db_password'] = $dbPassword;
+    
+    // Check if optimizations are enabled
+    $wpOptimize = $config['wp_optimize'] ?? false;
+    
+    $compose = "version: '3.8'
 services:
   {$containerName}:
     image: wordpress:latest
@@ -462,10 +511,30 @@ services:
       - WORDPRESS_DB_HOST=webbadeploy_db
       - WORDPRESS_DB_NAME=webbadeploy
       - WORDPRESS_DB_USER=webbadeploy
-      - WORDPRESS_DB_PASSWORD=webbadeploy_pass
-      - WORDPRESS_TABLE_PREFIX={$tablePrefix}
+      - WORDPRESS_DB_PASSWORD={$dbPassword}
+      - WORDPRESS_TABLE_PREFIX={$tablePrefix}";
+    
+    // Add Redis configuration if optimizations are enabled
+    if ($wpOptimize) {
+        $compose .= "
+      - WORDPRESS_CONFIG_EXTRA=
+          define('WP_REDIS_HOST', '{$containerName}_redis');
+          define('WP_REDIS_PORT', 6379);
+          define('WP_CACHE', true);
+          define('WP_CACHE_KEY_SALT', '{$containerName}');";
+    }
+    
+    $compose .= "
     volumes:
-      - wp_{$containerName}_data:/var/www/html
+      - wp_{$containerName}_data:/var/www/html";
+    
+    // Add PHP ini customizations for performance if optimizations enabled
+    if ($wpOptimize) {
+        $compose .= "
+      - ./php-custom.ini:/usr/local/etc/php/conf.d/custom.ini:ro";
+    }
+    
+    $compose .= "
     labels:
       - traefik.enable=true
       - traefik.http.routers.{$containerName}.rule=Host(`{$domain}`)
@@ -474,13 +543,30 @@ services:
     networks:
       - webbadeploy_webbadeploy
     restart: unless-stopped
-
+";
+    
+    // Add Redis service if optimizations are enabled
+    if ($wpOptimize) {
+        $compose .= "
+  {$containerName}_redis:
+    image: redis:7-alpine
+    container_name: {$containerName}_redis
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    networks:
+      - webbadeploy_webbadeploy
+    restart: unless-stopped
+";
+    }
+    
+    $compose .= "
 volumes:
   wp_{$containerName}_data:
 
 networks:
   webbadeploy_webbadeploy:
     external: true";
+    
+    return $compose;
 }
 
 function deployWordPress($site, $config) {
@@ -518,10 +604,55 @@ function deployWordPress($site, $config) {
         mkdir($dir, 0755, true);
     }
     file_put_contents($composePath, $wpCompose);
+    
+    // Create PHP configuration file if optimizations are enabled
+    $wpOptimize = $config['wp_optimize'] ?? false;
+    if ($wpOptimize) {
+        $phpIniPath = $dir . '/php-custom.ini';
+        $phpIniContent = "; PHP Performance Optimizations
+; OpCache settings
+opcache.enable=1
+opcache.memory_consumption=256
+opcache.interned_strings_buffer=16
+opcache.max_accelerated_files=10000
+opcache.revalidate_freq=2
+opcache.fast_shutdown=1
+
+; Memory and execution limits
+memory_limit=256M
+max_execution_time=300
+max_input_time=300
+post_max_size=64M
+upload_max_filesize=64M
+
+; Performance tuning
+max_input_vars=3000
+realpath_cache_size=4096K
+realpath_cache_ttl=600
+";
+        file_put_contents($phpIniPath, $phpIniContent);
+    }
 
     $result = executeDockerCompose($composePath, "up -d");
     if (!$result["success"]) {
         throw new Exception("Failed to start WordPress application: " . $result["output"]);
+    }
+    
+    // Install and activate Redis plugin if optimizations are enabled
+    if ($wpOptimize) {
+        // Wait a few seconds for WordPress to initialize
+        sleep(5);
+        
+        // Install WP-CLI if not already available, then install Redis plugin
+        $containerName = $site['container_name'];
+        
+        // Install Redis Object Cache plugin
+        exec("docker exec $containerName wp plugin install redis-cache --activate --allow-root 2>&1", $pluginOutput, $pluginReturn);
+        
+        // Enable Redis object cache
+        if ($pluginReturn === 0) {
+            exec("docker exec $containerName wp redis enable --allow-root 2>&1");
+        }
     }
 }
 
@@ -1033,6 +1164,653 @@ function getUpdateLogs() {
         
     } catch (Exception $e) {
         http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'error' => $e->getMessage()
+        ]);
+    }
+}
+
+// ============================================
+// FILE MANAGER HANDLERS
+// ============================================
+
+function listContainerFiles($db, $siteId, $path) {
+    try {
+        $site = getSiteById($db, $siteId);
+        if (!$site) {
+            throw new Exception("Site not found");
+        }
+        
+        // Check if container_name exists
+        if (empty($site['container_name'])) {
+            throw new Exception("Container name is empty in database for site ID: $siteId");
+        }
+        
+        // Sanitize path
+        $path = str_replace(['..', '~'], '', $path);
+        if (empty($path)) $path = '/var/www/html';
+        
+        // List files in container using a more reliable format
+        $containerName = $site['container_name'];
+        
+        // Verify container exists using docker inspect (most reliable)
+        exec("docker inspect --format='{{.State.Status}}' " . escapeshellarg($containerName) . " 2>&1", $inspectOutput, $inspectCode);
+        
+        if ($inspectCode !== 0) {
+            // Container doesn't exist - show available containers for debugging
+            exec("docker ps -a --format '{{.Names}}' 2>&1", $allContainers);
+            $containerList = implode(", ", $allContainers);
+            throw new Exception("Container '$containerName' not found. Available containers: " . ($containerList ?: "none"));
+        }
+        
+        $containerStatus = trim($inspectOutput[0] ?? '');
+        if ($containerStatus !== 'running') {
+            throw new Exception("Container '$containerName' is not running (status: $containerStatus). Please start the container first.");
+        }
+        
+        $output = [];
+        
+        // Use ls with full path - simpler and more reliable
+        $cmd = "docker exec $containerName ls -1A " . escapeshellarg($path) . " 2>&1";
+        exec($cmd, $output, $returnCode);
+        
+        if ($returnCode !== 0) {
+            $errorMsg = implode("\n", $output);
+            
+            // Check for specific error types
+            if (strpos($errorMsg, 'No such file or directory') !== false) {
+                throw new Exception("Directory not found: $path");
+            } elseif (strpos($errorMsg, 'is not running') !== false || strpos($errorMsg, 'not found') !== false) {
+                throw new Exception("Container '$containerName' is not running or not found");
+            } else {
+                throw new Exception("Failed to list files: " . $errorMsg);
+            }
+        }
+        
+        $files = [];
+        foreach ($output as $filename) {
+            $filename = trim($filename);
+            if (empty($filename) || $filename === '.' || $filename === '..') continue;
+            
+            // Get file details
+            $fullPath = rtrim($path, '/') . '/' . $filename;
+            $statCmd = "docker exec $containerName stat -c '%F|%s|%y' " . escapeshellarg($fullPath) . " 2>&1";
+            $statOutput = [];
+            exec($statCmd, $statOutput, $statReturn);
+            
+            if ($statReturn === 0 && !empty($statOutput[0])) {
+                $parts = explode('|', $statOutput[0]);
+                $fileType = $parts[0] ?? '';
+                $size = (int)($parts[1] ?? 0);
+                $modified = isset($parts[2]) ? date('M d H:i', strtotime($parts[2])) : '';
+                
+                $isDir = (strpos($fileType, 'directory') !== false);
+                
+                $files[] = [
+                    'name' => $filename,
+                    'type' => $isDir ? 'directory' : 'file',
+                    'size' => $size,
+                    'modified' => $modified,
+                    'path' => $fullPath
+                ];
+            }
+        }
+        
+        // Sort: directories first, then files
+        usort($files, function($a, $b) {
+            if ($a['type'] !== $b['type']) {
+                return $a['type'] === 'directory' ? -1 : 1;
+            }
+            return strcasecmp($a['name'], $b['name']);
+        });
+        
+        echo json_encode([
+            'success' => true,
+            'files' => $files,
+            'path' => $path
+        ]);
+        
+    } catch (Exception $e) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'error' => $e->getMessage()
+        ]);
+    }
+}
+
+function downloadContainerFile($db, $siteId, $path) {
+    try {
+        $site = getSiteById($db, $siteId);
+        if (!$site) {
+            throw new Exception("Site not found");
+        }
+        
+        // Sanitize path
+        $path = str_replace(['..', '~'], '', $path);
+        
+        $containerName = $site['container_name'];
+        $tempFile = tempnam(sys_get_temp_dir(), 'download_');
+        
+        // Copy file from container
+        exec("docker cp $containerName:$path $tempFile 2>&1", $output, $returnCode);
+        
+        if ($returnCode !== 0) {
+            throw new Exception("Failed to download file");
+        }
+        
+        // Send file to browser
+        $filename = basename($path);
+        header('Content-Type: application/octet-stream');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Content-Length: ' . filesize($tempFile));
+        readfile($tempFile);
+        unlink($tempFile);
+        exit;
+        
+    } catch (Exception $e) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'error' => $e->getMessage()
+        ]);
+    }
+}
+
+function deleteContainerFile($db) {
+    try {
+        $input = json_decode(file_get_contents('php://input'), true);
+        $siteId = $input['id'] ?? null;
+        $path = $input['path'] ?? null;
+        
+        if (!$siteId || !$path) {
+            throw new Exception("Missing parameters");
+        }
+        
+        $site = getSiteById($db, $siteId);
+        if (!$site) {
+            throw new Exception("Site not found");
+        }
+        
+        // Sanitize path
+        $path = str_replace(['..', '~'], '', $path);
+        
+        // Don't allow deleting critical files
+        $criticalFiles = ['/var/www/html/index.php', '/var/www/html'];
+        if (in_array($path, $criticalFiles)) {
+            throw new Exception("Cannot delete critical file");
+        }
+        
+        $containerName = $site['container_name'];
+        exec("docker exec $containerName rm -rf " . escapeshellarg($path) . " 2>&1", $output, $returnCode);
+        
+        if ($returnCode !== 0) {
+            throw new Exception("Failed to delete file: " . implode("\n", $output));
+        }
+        
+        echo json_encode([
+            'success' => true,
+            'message' => 'File deleted successfully'
+        ]);
+        
+    } catch (Exception $e) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'error' => $e->getMessage()
+        ]);
+    }
+}
+
+function createContainerFile($db) {
+    try {
+        $input = json_decode(file_get_contents('php://input'), true);
+        $siteId = $input['id'] ?? null;
+        $path = $input['path'] ?? null;
+        $filename = $input['filename'] ?? null;
+        $content = $input['content'] ?? '';
+        
+        if (!$siteId || !$path || !$filename) {
+            throw new Exception("Missing parameters");
+        }
+        
+        $site = getSiteById($db, $siteId);
+        if (!$site) {
+            throw new Exception("Site not found");
+        }
+        
+        // Sanitize path and filename
+        $path = str_replace(['..', '~'], '', $path);
+        $filename = basename($filename); // Remove any path components
+        $fullPath = rtrim($path, '/') . '/' . $filename;
+        
+        $containerName = $site['container_name'];
+        
+        // Create temp file with content
+        $tempFile = tempnam(sys_get_temp_dir(), 'newfile_');
+        file_put_contents($tempFile, $content);
+        
+        // Copy to container
+        exec("docker cp $tempFile $containerName:$fullPath 2>&1", $output, $returnCode);
+        unlink($tempFile);
+        
+        if ($returnCode !== 0) {
+            throw new Exception("Failed to create file: " . implode("\n", $output));
+        }
+        
+        // Set proper permissions
+        exec("docker exec $containerName chmod 644 " . escapeshellarg($fullPath) . " 2>&1");
+        
+        echo json_encode([
+            'success' => true,
+            'message' => 'File created successfully'
+        ]);
+        
+    } catch (Exception $e) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'error' => $e->getMessage()
+        ]);
+    }
+}
+
+function createContainerFolder($db) {
+    try {
+        $input = json_decode(file_get_contents('php://input'), true);
+        $siteId = $input['id'] ?? null;
+        $path = $input['path'] ?? null;
+        $foldername = $input['foldername'] ?? null;
+        
+        if (!$siteId || !$path || !$foldername) {
+            throw new Exception("Missing parameters");
+        }
+        
+        $site = getSiteById($db, $siteId);
+        if (!$site) {
+            throw new Exception("Site not found");
+        }
+        
+        // Sanitize path and foldername
+        $path = str_replace(['..', '~'], '', $path);
+        $foldername = basename($foldername); // Remove any path components
+        $fullPath = rtrim($path, '/') . '/' . $foldername;
+        
+        $containerName = $site['container_name'];
+        
+        // Create directory
+        exec("docker exec $containerName mkdir -p " . escapeshellarg($fullPath) . " 2>&1", $output, $returnCode);
+        
+        if ($returnCode !== 0) {
+            throw new Exception("Failed to create folder: " . implode("\n", $output));
+        }
+        
+        // Set proper permissions
+        exec("docker exec $containerName chmod 755 " . escapeshellarg($fullPath) . " 2>&1");
+        
+        echo json_encode([
+            'success' => true,
+            'message' => 'Folder created successfully'
+        ]);
+        
+    } catch (Exception $e) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'error' => $e->getMessage()
+        ]);
+    }
+}
+
+function uploadContainerFile($db) {
+    try {
+        $siteId = $_POST['id'] ?? null;
+        $path = $_POST['path'] ?? null;
+        
+        if (!$siteId || !$path) {
+            throw new Exception("Missing parameters");
+        }
+        
+        if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
+            throw new Exception("No file uploaded or upload error");
+        }
+        
+        $site = getSiteById($db, $siteId);
+        if (!$site) {
+            throw new Exception("Site not found");
+        }
+        
+        // Sanitize path
+        $path = str_replace(['..', '~'], '', $path);
+        $filename = basename($_FILES['file']['name']);
+        $fullPath = rtrim($path, '/') . '/' . $filename;
+        
+        $containerName = $site['container_name'];
+        $tempFile = $_FILES['file']['tmp_name'];
+        
+        // Copy to container
+        exec("docker cp $tempFile $containerName:$fullPath 2>&1", $output, $returnCode);
+        
+        if ($returnCode !== 0) {
+            throw new Exception("Failed to upload file: " . implode("\n", $output));
+        }
+        
+        // Set proper permissions
+        exec("docker exec $containerName chmod 644 " . escapeshellarg($fullPath) . " 2>&1");
+        
+        echo json_encode([
+            'success' => true,
+            'message' => 'File uploaded successfully'
+        ]);
+        
+    } catch (Exception $e) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'error' => $e->getMessage()
+        ]);
+    }
+}
+
+function readContainerFile($db) {
+    try {
+        $input = json_decode(file_get_contents('php://input'), true);
+        $siteId = $input['id'] ?? null;
+        $path = $input['path'] ?? null;
+        
+        if (!$siteId || !$path) {
+            throw new Exception("Missing parameters");
+        }
+        
+        $site = getSiteById($db, $siteId);
+        if (!$site) {
+            throw new Exception("Site not found");
+        }
+        
+        // Sanitize path
+        $path = str_replace(['..', '~'], '', $path);
+        
+        $containerName = $site['container_name'];
+        
+        // Read file from container
+        $output = [];
+        exec("docker exec $containerName cat " . escapeshellarg($path) . " 2>&1", $output, $returnCode);
+        
+        if ($returnCode !== 0) {
+            throw new Exception("Failed to read file: " . implode("\n", $output));
+        }
+        
+        $content = implode("\n", $output);
+        
+        echo json_encode([
+            'success' => true,
+            'content' => $content,
+            'filename' => basename($path)
+        ]);
+        
+    } catch (Exception $e) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'error' => $e->getMessage()
+        ]);
+    }
+}
+
+function saveContainerFile($db) {
+    try {
+        $input = json_decode(file_get_contents('php://input'), true);
+        $siteId = $input['id'] ?? null;
+        $path = $input['path'] ?? null;
+        $content = $input['content'] ?? '';
+        
+        if (!$siteId || !$path) {
+            throw new Exception("Missing parameters");
+        }
+        
+        $site = getSiteById($db, $siteId);
+        if (!$site) {
+            throw new Exception("Site not found");
+        }
+        
+        // Sanitize path
+        $path = str_replace(['..', '~'], '', $path);
+        
+        $containerName = $site['container_name'];
+        
+        // Create temp file with content
+        $tempFile = tempnam(sys_get_temp_dir(), 'editfile_');
+        file_put_contents($tempFile, $content);
+        
+        // Copy to container
+        exec("docker cp $tempFile $containerName:$path 2>&1", $output, $returnCode);
+        unlink($tempFile);
+        
+        if ($returnCode !== 0) {
+            throw new Exception("Failed to save file: " . implode("\n", $output));
+        }
+        
+        // Set proper permissions
+        exec("docker exec $containerName chmod 644 " . escapeshellarg($path) . " 2>&1");
+        
+        echo json_encode([
+            'success' => true,
+            'message' => 'File saved successfully'
+        ]);
+        
+    } catch (Exception $e) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'error' => $e->getMessage()
+        ]);
+    }
+}
+
+// ============================================
+// ENVIRONMENT VARIABLES HANDLERS
+// ============================================
+
+function getEnvironmentVariables($db, $siteId) {
+    try {
+        $site = getSiteById($db, $siteId);
+        if (!$site) {
+            throw new Exception("Site not found");
+        }
+        
+        $containerName = $site['container_name'];
+        
+        // Try both container path and host path
+        $possiblePaths = [
+            "/app/apps/{$site['type']}/sites/$containerName/docker-compose.yml",
+            "/opt/webbadeploy/apps/{$site['type']}/sites/$containerName/docker-compose.yml"
+        ];
+        
+        $composeFile = null;
+        foreach ($possiblePaths as $path) {
+            if (file_exists($path)) {
+                $composeFile = $path;
+                break;
+            }
+        }
+        
+        if (!$composeFile) {
+            throw new Exception("Docker compose file not found in any location");
+        }
+        
+        $content = file_get_contents($composeFile);
+        
+        // Parse environment variables from YAML
+        $envVars = [];
+        
+        // Match environment section - handle both proper and malformed YAML
+        // This regex matches "environment:" followed by lines starting with "      -"
+        if (preg_match('/environment:\s*\n((?:\s+-[^\n]+\n?)+)/m', $content, $matches)) {
+            $envBlock = $matches[1];
+            // Split by newlines and process each line
+            $lines = explode("\n", $envBlock);
+            
+            foreach ($lines as $line) {
+                // Match lines like "      - KEY=value" or "- KEY=value"
+                if (preg_match('/^\s*-\s*([^=]+)=(.*)$/', trim($line), $envMatch)) {
+                    $key = trim($envMatch[1]);
+                    $value = trim($envMatch[2]);
+                    
+                    if (!empty($key)) {
+                        $envVars[] = [
+                            'key' => $key,
+                            'value' => $value
+                        ];
+                    }
+                }
+            }
+        }
+        
+        // Log what we loaded
+        error_log("Loaded " . count($envVars) . " environment variables from $composeFile");
+        
+        echo json_encode([
+            'success' => true,
+            'env_vars' => $envVars
+        ]);
+        
+    } catch (Exception $e) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'error' => $e->getMessage()
+        ]);
+    }
+}
+
+function saveEnvironmentVariables($db) {
+    try {
+        $input = json_decode(file_get_contents('php://input'), true);
+        $siteId = $input['id'] ?? null;
+        $envVars = $input['env_vars'] ?? [];
+        
+        if (!$siteId) {
+            throw new Exception("Missing site ID");
+        }
+        
+        $site = getSiteById($db, $siteId);
+        if (!$site) {
+            throw new Exception("Site not found");
+        }
+        
+        $containerName = $site['container_name'];
+        
+        // Try both container path and host path
+        $possiblePaths = [
+            "/app/apps/{$site['type']}/sites/$containerName/docker-compose.yml",
+            "/opt/webbadeploy/apps/{$site['type']}/sites/$containerName/docker-compose.yml"
+        ];
+        
+        $composeFile = null;
+        foreach ($possiblePaths as $path) {
+            if (file_exists($path)) {
+                $composeFile = $path;
+                break;
+            }
+        }
+        
+        if (!$composeFile) {
+            throw new Exception("Docker compose file not found");
+        }
+        
+        // Read current docker-compose.yml
+        $content = file_get_contents($composeFile);
+        
+        // Create backup before modifying
+        $backupFile = $composeFile . '.backup.' . time();
+        file_put_contents($backupFile, $content);
+        error_log("Created backup: $backupFile");
+        
+        // Build new environment section with proper indentation
+        $envLines = [];
+        foreach ($envVars as $env) {
+            $key = trim($env['key'] ?? '');
+            $value = trim($env['value'] ?? '');
+            
+            // Skip empty keys
+            if (empty($key)) {
+                continue;
+            }
+            
+            // Sanitize key - remove spaces and special chars that break YAML
+            $key = preg_replace('/[^A-Z0-9_]/', '_', strtoupper($key));
+            
+            // Escape value if it contains special characters
+            // Quote the value if it contains spaces, colons, or special chars
+            if (preg_match('/[\s:{}[\]&*#?|<>=!%@`]/', $value)) {
+                // Escape quotes in value
+                $value = str_replace('"', '\\"', $value);
+                $value = '"' . $value . '"';
+            }
+            
+            $envLines[] = "      - $key=$value";
+        }
+        
+        if (empty($envLines)) {
+            throw new Exception("No valid environment variables to save. Received: " . json_encode($envVars));
+        }
+        
+        // Log what we're about to write
+        error_log("Saving " . count($envLines) . " environment variables for site $siteId");
+        
+        $newEnvSection = "    environment:\n" . implode("\n", $envLines) . "\n";
+        
+        // Replace environment section - handle both proper and malformed YAML
+        // Pattern 1: Proper formatting with newline before environment
+        $pattern1 = '/    environment:\s*\n(?:      - [^\n]+\n?)+/';
+        // Pattern 2: No newline before environment (malformed but common)
+        $pattern2 = '/environment:\s*\n(?:      - [^\n]+\n?)+/';
+        
+        $replaced = false;
+        
+        if (preg_match($pattern1, $content)) {
+            $content = preg_replace($pattern1, $newEnvSection, $content, 1);
+            $replaced = true;
+        } elseif (preg_match($pattern2, $content)) {
+            // For malformed YAML, add proper spacing
+            $content = preg_replace($pattern2, "    " . $newEnvSection, $content, 1);
+            $replaced = true;
+        }
+        
+        if (!$replaced) {
+            throw new Exception("Could not find environment section in docker-compose.yml. Content: " . substr($content, 0, 500));
+        }
+        
+        // Write back to file
+        file_put_contents($composeFile, $content);
+        
+        // Restart container using the directory where the compose file is
+        $composeDir = dirname($composeFile);
+        exec("cd $composeDir && docker-compose restart 2>&1", $output, $returnCode);
+        
+        // Check if container actually restarted (ignore YAML warnings)
+        $outputStr = implode("\n", $output);
+        $hasError = $returnCode !== 0 && !preg_match('/Started|Restarted/', $outputStr);
+        
+        if ($hasError) {
+            // Check if container is actually running despite the error
+            exec("docker ps -f name=$containerName --format '{{.Status}}'", $statusOutput);
+            $isRunning = !empty($statusOutput) && strpos($statusOutput[0], 'Up') !== false;
+            
+            if (!$isRunning) {
+                throw new Exception("Failed to restart container: " . $outputStr);
+            }
+        }
+        
+        echo json_encode([
+            'success' => true,
+            'message' => 'Environment variables saved and container restarted',
+            'warning' => $returnCode !== 0 ? 'Container restarted but with warnings' : null
+        ]);
+        
+    } catch (Exception $e) {
+        http_response_code(400);
         echo json_encode([
             'success' => false,
             'error' => $e->getMessage()

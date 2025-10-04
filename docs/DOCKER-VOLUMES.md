@@ -1,6 +1,6 @@
 # Docker Volumes for Site Storage
 
-WebBadeploy now uses **Docker volumes** instead of bind mounts for site data storage.
+Webbadeploy now uses **Docker volumes** instead of bind mounts for site data storage.
 
 ## Why Docker Volumes?
 
@@ -179,7 +179,7 @@ Or use the helper script:
 #### Option 1: Copy Files After Deployment
 
 ```bash
-# 1. Deploy site via WebBadeploy GUI
+# 1. Deploy site via Webbadeploy GUI
 # 2. Copy your application files
 docker cp /path/to/your/app/. php_demo_1759272459:/var/www/html/
 
@@ -190,7 +190,7 @@ docker exec php_demo_1759272459 chown -R www-data:www-data /var/www/html
 #### Option 2: Use Volume Upload Script
 
 ```bash
-# 1. Deploy site via WebBadeploy GUI
+# 1. Deploy site via Webbadeploy GUI
 # 2. Upload your files
 ./scripts/manage-volumes.sh upload /path/to/your/app php_demo_1759272459_data
 ```
@@ -198,7 +198,7 @@ docker exec php_demo_1759272459 chown -R www-data:www-data /var/www/html
 #### Option 3: Git Clone Inside Container
 
 ```bash
-# 1. Deploy site via WebBadeploy GUI
+# 1. Deploy site via Webbadeploy GUI
 # 2. Install git and clone
 docker exec php_demo_1759272459 sh -c "
   apt-get update && apt-get install -y git

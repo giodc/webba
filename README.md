@@ -1,8 +1,8 @@
-# WebBadeploy 🚀
+# Webbadeploy 🚀
 
 > **Easy, secure, and optimized web application deployment platform**
 
-WebBadeploy is an open-source platform that makes deploying WordPress, PHP, and Laravel applications as simple as clicking a button. Built with Docker for security and portability, it provides a clean web interface for managing multiple applications on a single Ubuntu server.
+Webbadeploy is an open-source platform that makes deploying WordPress, PHP, and Laravel applications as simple as clicking a button. Built with Docker for security and portability, it provides a clean web interface for managing multiple applications on a single Ubuntu server.
 
 ## ✨ Features
 
@@ -22,7 +22,7 @@ WebBadeploy is an open-source platform that makes deploying WordPress, PHP, and 
 curl -fsSL https://raw.githubusercontent.com/giodc/webba/master/install-production.sh | sudo bash
 ```
 
-2. **Start WebBadeploy**:
+2. **Start Webbadeploy**:
 ```bash
 cd /opt/webbadeploy
 sudo -u webbadeploy docker-compose up -d
@@ -83,7 +83,7 @@ sudo -u webbadeploy docker-compose up -d
 
 ## 🔐 SSL Certificates
 
-WebBadeploy automatically handles SSL certificates using Let's Encrypt:
+Webbadeploy automatically handles SSL certificates using Let's Encrypt:
 
 - **Test Domains** (*.test.local): No SSL needed for local development
 - **Custom Domains**: Automatic SSL certificate request and renewal
@@ -113,7 +113,7 @@ docker-compose logs -f [service]
 # Restart services
 docker-compose restart
 
-# Update WebBadeploy
+# Update Webbadeploy
 git pull && docker-compose build --no-cache
 ```
 

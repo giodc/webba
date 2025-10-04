@@ -1,6 +1,6 @@
 <?php
 /**
- * WebBadeploy Update Configuration
+ * Webbadeploy Update Configuration
  */
 
 define('UPDATE_ENABLED', true);

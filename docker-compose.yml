@@ -36,7 +36,10 @@ services:
       - webbadeploy
 
   web-gui:
-    build: ./gui
+    build:
+      context: ./gui
+      args:
+        DOCKER_GID: 988
     container_name: webbadeploy_gui
     ports:
       - "3000:80"  # Dashboard accessible on port 3000

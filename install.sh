@@ -2,7 +2,7 @@
 
 set -e
 
-echo "WebBadeploy Installation Script"
+echo "Webbadeploy Installation Script"
 echo "==============================="
 
 # Check if running as root

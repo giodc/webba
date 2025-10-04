@@ -1,7 +1,7 @@
 let createModal, editModal, passwordModal, updateModal;
 
 // Version check - if you see this in console, the new JS is loaded
-console.log("WebBadeploy JS v4.0 loaded - Update system integrated!");
+console.log("Webbadeploy JS v4.0 loaded - Update system integrated!");
 
 document.addEventListener("DOMContentLoaded", function() {
     createModal = new bootstrap.Modal(document.getElementById("createModal"));

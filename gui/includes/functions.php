@@ -38,10 +38,11 @@ function getSiteById($pdo, $id) {
 }
 
 function createSite($pdo, $data) {
-    $stmt = $pdo->prepare("INSERT INTO sites (name, type, domain, ssl, ssl_config, container_name, config) VALUES (?, ?, ?, ?, ?, ?, ?)");
+    $stmt = $pdo->prepare("INSERT INTO sites (name, type, domain, ssl, ssl_config, container_name, config, db_password) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
     $containerName = $data['container_name'] ?? '';
     $config = json_encode($data['config'] ?? []);
     $sslConfig = isset($data['ssl_config']) ? json_encode($data['ssl_config']) : null;
+    $dbPassword = $data['db_password'] ?? null;
     
     
     return $stmt->execute([
@@ -51,7 +52,8 @@ function createSite($pdo, $data) {
         $data['ssl'] ? 1 : 0,
         $sslConfig,
         $containerName,
-        $config
+        $config,
+        $dbPassword
     ]);
 }
 

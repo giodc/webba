@@ -46,7 +46,7 @@ $csrfToken = generateCSRFToken();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - WebBadeploy</title>
+    <title>Login - Webbadeploy</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <link href="css/custom.css" rel="stylesheet">
@@ -137,7 +137,7 @@ $csrfToken = generateCSRFToken();
                 <div class="logo-icon">
                     <i class="bi bi-cloud-arrow-up"></i>
                 </div>
-                <h1>WebBadeploy</h1>
+                <h1>Webbadeploy</h1>
                 <p>Sign in to your account</p>
             </div>
 
@@ -181,7 +181,7 @@ $csrfToken = generateCSRFToken();
 
         <div class="text-center mt-4">
             <small style="color: rgba(255,255,255,0.6);">
-                WebBadeploy - Easy App Deployment Platform
+                Webbadeploy - Easy App Deployment Platform
             </small>
         </div>
     </div>

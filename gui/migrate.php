@@ -6,7 +6,7 @@
 
 require_once 'includes/functions.php';
 
-echo "WebBadeploy Database Migration\n";
+echo "Webbadeploy Database Migration\n";
 echo "================================\n\n";
 
 try {
@@ -79,6 +79,23 @@ try {
         echo "✓ Added sftp_password column\n";
     } else {
         echo "✓ sftp_password column already exists\n";
+    }
+    
+    // Check for db_password column
+    $hasDBPassword = false;
+    foreach ($columns as $column) {
+        if ($column['name'] === 'db_password') {
+            $hasDBPassword = true;
+            break;
+        }
+    }
+    
+    if (!$hasDBPassword) {
+        echo "Adding db_password column...\n";
+        $db->exec("ALTER TABLE sites ADD COLUMN db_password TEXT");
+        echo "✓ Added db_password column\n";
+    } else {
+        echo "✓ db_password column already exists\n";
     }
     
     echo "\n✅ Migration completed successfully!\n";

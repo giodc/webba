@@ -1,6 +1,6 @@
 # SSL Configuration Guide
 
-WebBadeploy supports both **HTTP Challenge** and **DNS Challenge** methods for Let's Encrypt SSL certificates.
+Webbadeploy supports both **HTTP Challenge** and **DNS Challenge** methods for Let's Encrypt SSL certificates.
 
 ## Overview
 
@@ -26,7 +26,7 @@ WebBadeploy supports both **HTTP Challenge** and **DNS Challenge** methods for L
 3. Traefik must be able to respond to `/.well-known/acme-challenge/` requests
 
 ### Configuration
-1. In the WebBadeploy GUI, select **Custom Domain**
+1. In the Webbadeploy GUI, select **Custom Domain**
 2. Enable **SSL Certificate**
 3. Choose **HTTP Challenge** (default)
 4. Deploy your application
@@ -56,7 +56,7 @@ WebBadeploy supports both **HTTP Challenge** and **DNS Challenge** methods for L
 1. Log in to [Cloudflare Dashboard](https://dash.cloudflare.com)
 2. Go to **My Profile** → **API Tokens**
 3. Create token with **Zone:DNS:Edit** permissions
-4. In WebBadeploy:
+4. In Webbadeploy:
    - Choose **DNS Challenge**
    - Select **Cloudflare**
    - Enter your Cloudflare email
@@ -71,7 +71,7 @@ CF_API_KEY=your_global_api_key
 #### AWS Route53
 1. Create IAM user with `AmazonRoute53FullAccess` policy
 2. Generate Access Key ID and Secret Access Key
-3. In WebBadeploy:
+3. In Webbadeploy:
    - Choose **DNS Challenge**
    - Select **AWS Route53**
    - Enter AWS credentials
@@ -86,7 +86,7 @@ AWS_REGION=us-east-1
 #### DigitalOcean
 1. Go to [API Tokens](https://cloud.digitalocean.com/account/api/tokens)
 2. Generate new token with **Write** scope
-3. In WebBadeploy:
+3. In Webbadeploy:
    - Choose **DNS Challenge**
    - Select **DigitalOcean**
    - Enter your API token

@@ -3,7 +3,7 @@
 ## For End Users (Dashboard)
 
 ### Check for Updates
-1. Open WebBadeploy dashboard
+1. Open Webbadeploy dashboard
 2. Look for **"Update Available"** notification in the navbar (appears automatically)
 3. Click the notification to see update details
 

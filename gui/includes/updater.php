@@ -1,6 +1,6 @@
 <?php
 /**
- * WebBadeploy Update Manager
+ * Webbadeploy Update Manager
  */
 
 require_once 'update-config.php';

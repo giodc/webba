@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Fix Docker Socket Permissions for WebBadeploy
+# Fix Docker Socket Permissions for Webbadeploy
 # Run this script if you get "permission denied" errors when creating sites
 
 set -e

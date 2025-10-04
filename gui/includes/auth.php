@@ -1,7 +1,7 @@
 <?php
 /**
- * WebBadeploy Authentication System
- * Lightweight, secure authentication for WebBadeploy
+ * Webbadeploy Authentication System
+ * Lightweight, secure authentication for Webbadeploy
  */
 
 // Start session if not already started

@@ -2,7 +2,7 @@
 
 ## Overview
 
-Enhanced the WebBadeploy dashboard with better error handling, improved user feedback, and a comprehensive edit site page.
+Enhanced the Webbadeploy dashboard with better error handling, improved user feedback, and a comprehensive edit site page.
 
 ---
 

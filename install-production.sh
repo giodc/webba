@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# WebBadeploy Production Installation Script
+# Webbadeploy Production Installation Script
 # For Ubuntu 20.04+ / Debian 11+ / Fresh Servers
 # Run: curl -fsSL https://raw.githubusercontent.com/yourrepo/webbadeploy/main/install-production.sh | sudo bash
 
@@ -14,7 +14,7 @@ NC='\033[0m' # No Color
 
 echo -e "${GREEN}"
 echo "╔═══════════════════════════════════════╗"
-echo "║   WebBadeploy Production Installer   ║"
+echo "║   Webbadeploy Production Installer   ║"
 echo "║   Easy App Deployment Platform       ║"
 echo "╚═══════════════════════════════════════╝"
 echo -e "${NC}"
@@ -99,7 +99,7 @@ else
 fi
 
 # Create installation directory
-echo -e "\n${YELLOW}Setting up WebBadeploy...${NC}"
+echo -e "\n${YELLOW}Setting up Webbadeploy...${NC}"
 INSTALL_DIR="/opt/webbadeploy"
 
 if [ -d "$INSTALL_DIR" ]; then
@@ -119,8 +119,8 @@ fi
 mkdir -p "$INSTALL_DIR"
 cd "$INSTALL_DIR"
 
-# Download WebBadeploy files
-echo -e "\n${YELLOW}Downloading WebBadeploy files...${NC}"
+# Download Webbadeploy files
+echo -e "\n${YELLOW}Downloading Webbadeploy files...${NC}"
 
 # Clone from GitHub repository
 if command -v git &> /dev/null; then
@@ -214,7 +214,7 @@ if [ ! -f "gui/index.php" ]; then
     exit 1
 fi
 
-echo -e "${GREEN}✓ WebBadeploy files verified${NC}"
+echo -e "${GREEN}✓ Webbadeploy files verified${NC}"
 
 # Set up firewall
 echo -e "\n${YELLOW}Configuring firewall...${NC}"
@@ -223,7 +223,7 @@ if command -v ufw &> /dev/null; then
     ufw allow 22/tcp comment 'SSH'
     ufw allow 80/tcp comment 'HTTP'
     ufw allow 443/tcp comment 'HTTPS'
-    ufw allow 3000/tcp comment 'WebBadeploy Dashboard'
+    ufw allow 3000/tcp comment 'Webbadeploy Dashboard'
     ufw allow 2222:2299/tcp comment 'SFTP Range'
     echo -e "${GREEN}✓ Firewall configured${NC}"
 fi
@@ -243,7 +243,7 @@ echo -e "${GREEN}✓ Docker socket permissions configured${NC}"
 SERVER_IP=$(curl -s ifconfig.me || hostname -I | awk '{print $1}')
 
 # Start services
-echo -e "\n${YELLOW}Starting WebBadeploy services...${NC}"
+echo -e "\n${YELLOW}Starting Webbadeploy services...${NC}"
 cd "$INSTALL_DIR"
 docker-compose up -d
 
@@ -269,12 +269,12 @@ fi
 echo -e "\n${GREEN}"
 echo "╔═══════════════════════════════════════════════════════════╗"
 echo "║                                                           ║"
-echo "║  ✓ WebBadeploy Installation Complete!                    ║"
+echo "║  ✓ Webbadeploy Installation Complete!                    ║"
 echo "║                                                           ║"
 echo "╚═══════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
 
-echo -e "${GREEN}Access your WebBadeploy dashboard:${NC}"
+echo -e "${GREEN}Access your Webbadeploy dashboard:${NC}"
 echo -e "  Main Dashboard:    http://$SERVER_IP:3000"
 echo ""
 echo -e "${YELLOW}Important Notes:${NC}"

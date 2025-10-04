@@ -29,14 +29,13 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edit Site - <?= htmlspecialchars($site['name']) ?> - WebBadeploy</title>
+    <title>Edit Site - <?= htmlspecialchars($site['name']) ?> - Webbadeploy</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <link href="css/custom.css" rel="stylesheet">
     <style>
         .sidebar {
             background: #f8f9fa;
-            border-right: 1px solid #e5e7eb;
             padding: 1.5rem 0;
             min-height: calc(100vh - 56px);
         }
@@ -98,7 +97,7 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
             <a class="navbar-brand" href="/">
-                <i class="bi bi-cloud-arrow-up me-2"></i>WebBadeploy
+                <i class="bi bi-cloud-arrow-up me-2"></i>Webbadeploy
             </a>
             <div class="navbar-nav ms-auto">
                 <a class="nav-link" href="/">
@@ -108,8 +107,15 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
         </div>
     </nav>
 
+    <!-- Site Name Header -->
+    <div class="container mt-4">
+        <h2 class="mb-0">
+            <i class="bi bi-<?= getAppIcon($site['type']) ?> me-2"></i><?= htmlspecialchars($site['name']) ?>
+        </h2>
+    </div>
+
     <!-- Main Content with Two Columns -->
-    <div class="container mt-5">
+    <div class="container mt-4">
         <div class="row">
             <!-- Left Sidebar -->
             <div class="col-md-3 p-0">
@@ -317,6 +323,35 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                         </form>
                     </div>
                 </div>
+                
+                <!-- Environment Variables -->
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <i class="bi bi-code-square me-2"></i>Environment Variables
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <strong>Note:</strong> Changes to environment variables require a container restart to take effect.
+                        </div>
+                        
+                        <div id="envVarsList">
+                            <div class="text-center py-4">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2 text-muted">Loading environment variables...</p>
+                            </div>
+                        </div>
+                        
+                        <button class="btn btn-success mt-3" onclick="showAddEnvVarModal()">
+                            <i class="bi bi-plus-circle me-2"></i>Add Variable
+                        </button>
+                        <button class="btn btn-primary mt-3" onclick="saveEnvVars()">
+                            <i class="bi bi-save me-2"></i>Save & Restart Container
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <!-- Domain Section -->
@@ -382,8 +417,70 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                         <i class="bi bi-folder me-2"></i>Files & Volumes
                     </div>
                     <div class="card-body">
-                        <p>Volume: <code><?= $site['container_name'] ?>_data</code></p>
-                        <p>File management coming soon...</p>
+                        <div class="mb-3">
+                            <strong>Volume:</strong> <code><?= $site['container_name'] ?>_data</code>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <strong>File Manager</strong><br>
+                            Browse and manage your site files directly in the container.
+                        </div>
+                        
+                        <!-- File Browser -->
+                        <div id="fileBrowser">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div>
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="navigateUp()">
+                                        <i class="bi bi-arrow-up"></i> Up
+                                    </button>
+                                    <span class="ms-2" id="currentPath">/var/www/html</span>
+                                </div>
+                                <div>
+                                    <button class="btn btn-sm btn-primary" onclick="showUploadModal()">
+                                        <i class="bi bi-upload"></i> Upload
+                                    </button>
+                                    <button class="btn btn-sm btn-success" onclick="showNewFileModal()">
+                                        <i class="bi bi-file-plus"></i> New File
+                                    </button>
+                                    <button class="btn btn-sm btn-info" onclick="showNewFolderModal()">
+                                        <i class="bi bi-folder-plus"></i> New Folder
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- File List -->
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th width="50"><i class="bi bi-file-earmark"></i></th>
+                                            <th>Name</th>
+                                            <th width="120">Size</th>
+                                            <th width="180">Modified</th>
+                                            <th width="150">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="fileList">
+                                        <tr>
+                                            <td colspan="5" class="text-center py-4">
+                                                <div class="spinner-border text-primary" role="status">
+                                                    <span class="visually-hidden">Loading...</span>
+                                                </div>
+                                                <p class="mt-2 text-muted">Loading files...</p>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <small class="text-muted">
+                                <i class="bi bi-exclamation-triangle me-1"></i>
+                                Be careful when editing or deleting files. Always backup before making changes.
+                            </small>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -526,6 +623,31 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                     </div>
                 </div>
             </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- File Editor Modal -->
+    <div class="modal fade" id="fileEditorModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-pencil-square me-2"></i>Edit File: <span id="editFileName"></span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <textarea id="fileEditorContent" class="form-control" rows="20" style="font-family: 'Courier New', monospace; font-size: 14px;"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-2"></i>Cancel
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="saveFileContent()">
+                        <i class="bi bi-save me-2"></i>Save Changes
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -835,6 +957,398 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                 icon.classList.add('bi-eye');
             }
         }
+        
+        // File Manager Functions
+        let currentPath = '/var/www/html';
+        
+        async function loadFiles(path = currentPath) {
+            currentPath = path;
+            document.getElementById('currentPath').textContent = path;
+            
+            // Show loading state
+            const fileList = document.getElementById('fileList');
+            fileList.innerHTML = `
+                <tr>
+                    <td colspan="5" class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Loading files...</p>
+                    </td>
+                </tr>
+            `;
+            
+            try {
+                console.log('Fetching files from:', path);
+                const response = await fetch(`/api.php?action=list_files&id=${siteId}&path=${encodeURIComponent(path)}`);
+                console.log('Response status:', response.status);
+                
+                const result = await response.json();
+                console.log('API result:', result);
+                
+                if (result.success) {
+                    displayFiles(result.files);
+                } else {
+                    fileList.innerHTML = `<tr><td colspan="5" class="text-center text-danger py-4">Error: ${result.error}</td></tr>`;
+                    showAlert('danger', 'Error loading files: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Error loading files:', error);
+                fileList.innerHTML = `<tr><td colspan="5" class="text-center text-danger py-4">Network error: ${error.message}</td></tr>`;
+                showAlert('danger', 'Network error: ' + error.message);
+            }
+        }
+        
+        function displayFiles(files) {
+            const fileList = document.getElementById('fileList');
+            if (!files || files.length === 0) {
+                fileList.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">No files found</td></tr>';
+                return;
+            }
+            
+            fileList.innerHTML = files.map(file => {
+                const icon = file.type === 'directory' ? 'bi-folder-fill text-warning' : 'bi-file-earmark text-primary';
+                const size = file.type === 'directory' ? '-' : formatFileSize(file.size);
+                
+                return `
+                    <tr>
+                        <td><i class="bi ${icon}"></i></td>
+                        <td>
+                            ${file.type === 'directory' 
+                                ? `<a href="#" onclick="loadFiles('${file.path}'); return false;">${file.name}</a>`
+                                : file.name
+                            }
+                        </td>
+                        <td>${size}</td>
+                        <td><small>${file.modified}</small></td>
+                        <td>
+                            ${file.type === 'file' ? `
+                                <button class="btn btn-sm btn-outline-info" onclick="editFile('${file.path}', '${file.name}')" title="Edit">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-primary" onclick="downloadFile('${file.path}')" title="Download">
+                                    <i class="bi bi-download"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteFile('${file.path}')" title="Delete">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            ` : `
+                                <button class="btn btn-sm btn-outline-primary" onclick="loadFiles('${file.path}')" title="Open">
+                                    <i class="bi bi-folder-open"></i>
+                                </button>
+                            `}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+        
+        function navigateUp() {
+            const parts = currentPath.split('/').filter(p => p);
+            parts.pop();
+            const newPath = '/' + parts.join('/');
+            loadFiles(newPath || '/var/www/html');
+        }
+        
+        async function downloadFile(path) {
+            window.open(`/api.php?action=download_file&id=${siteId}&path=${encodeURIComponent(path)}`, '_blank');
+        }
+        
+        let currentEditFilePath = '';
+        
+        async function editFile(path, filename) {
+            currentEditFilePath = path;
+            document.getElementById('editFileName').textContent = filename;
+            document.getElementById('fileEditorContent').value = 'Loading...';
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('fileEditorModal'));
+            modal.show();
+            
+            try {
+                const response = await fetch('/api.php?action=read_file', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({id: siteId, path: path})
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    document.getElementById('fileEditorContent').value = result.content;
+                } else {
+                    document.getElementById('fileEditorContent').value = 'Error loading file: ' + result.error;
+                    showAlert('danger', 'Error loading file: ' + result.error);
+                }
+            } catch (error) {
+                document.getElementById('fileEditorContent').value = 'Network error: ' + error.message;
+                showAlert('danger', 'Network error: ' + error.message);
+            }
+        }
+        
+        async function saveFileContent() {
+            const content = document.getElementById('fileEditorContent').value;
+            
+            try {
+                const response = await fetch('/api.php?action=save_file', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        id: siteId,
+                        path: currentEditFilePath,
+                        content: content
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('success', 'File saved successfully');
+                    bootstrap.Modal.getInstance(document.getElementById('fileEditorModal')).hide();
+                    loadFiles(currentPath);
+                } else {
+                    showAlert('danger', 'Error saving file: ' + result.error);
+                }
+            } catch (error) {
+                showAlert('danger', 'Network error: ' + error.message);
+            }
+        }
+        
+        async function deleteFile(path) {
+            if (!confirm('Are you sure you want to delete this file?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api.php?action=delete_file', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({id: siteId, path: path})
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('success', 'File deleted successfully');
+                    loadFiles(currentPath);
+                } else {
+                    showAlert('danger', 'Error: ' + result.error);
+                }
+            } catch (error) {
+                showAlert('danger', 'Network error: ' + error.message);
+            }
+        }
+        
+        async function showUploadModal() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.multiple = true;
+            input.onchange = async (e) => {
+                for (let file of e.target.files) {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('id', siteId);
+                    formData.append('path', currentPath);
+                    
+                    try {
+                        const response = await fetch('/api.php?action=upload_file', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        const result = await response.json();
+                        if (result.success) {
+                            showAlert('success', `Uploaded: ${file.name}`);
+                            loadFiles(currentPath);
+                        } else {
+                            showAlert('danger', 'Error: ' + result.error);
+                        }
+                    } catch (error) {
+                        showAlert('danger', 'Error: ' + error.message);
+                    }
+                }
+            };
+            input.click();
+        }
+        
+        async function showNewFileModal() {
+            const filename = prompt('Enter file name (e.g., index.php):');
+            if (!filename) return;
+            const content = prompt('Enter file content (optional):') || '';
+            
+            try {
+                const response = await fetch('/api.php?action=create_file', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({id: siteId, path: currentPath, filename: filename, content: content})
+                });
+                const result = await response.json();
+                if (result.success) {
+                    showAlert('success', 'File created successfully');
+                    loadFiles(currentPath);
+                } else {
+                    showAlert('danger', 'Error: ' + result.error);
+                }
+            } catch (error) {
+                showAlert('danger', 'Error: ' + error.message);
+            }
+        }
+        
+        async function showNewFolderModal() {
+            const foldername = prompt('Enter folder name:');
+            if (!foldername) return;
+            
+            try {
+                const response = await fetch('/api.php?action=create_folder', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({id: siteId, path: currentPath, foldername: foldername})
+                });
+                const result = await response.json();
+                if (result.success) {
+                    showAlert('success', 'Folder created successfully');
+                    loadFiles(currentPath);
+                } else {
+                    showAlert('danger', 'Error: ' + result.error);
+                }
+            } catch (error) {
+                showAlert('danger', 'Error: ' + error.message);
+            }
+        }
+        
+        // Load files when Files section is opened
+        document.querySelector('[data-section="files"]')?.addEventListener('click', function() {
+            console.log('Files section clicked, loading files...');
+            loadFiles('/var/www/html');
+        });
+        
+        // Environment Variables Functions
+        let envVars = [];
+        
+        async function loadEnvVars() {
+            try {
+                const response = await fetch(`/api.php?action=get_env_vars&id=${siteId}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    envVars = result.env_vars;
+                    console.log('Loaded environment variables:', envVars);
+                    console.log('Total variables loaded:', envVars.length);
+                    displayEnvVars();
+                } else {
+                    showAlert('danger', 'Error loading environment variables: ' + result.error);
+                }
+            } catch (error) {
+                showAlert('danger', 'Network error: ' + error.message);
+            }
+        }
+        
+        function displayEnvVars() {
+            const container = document.getElementById('envVarsList');
+            
+            if (envVars.length === 0) {
+                container.innerHTML = '<p class="text-muted">No environment variables defined.</p>';
+                return;
+            }
+            
+            container.innerHTML = envVars.map((env, index) => {
+                // Escape HTML entities
+                const escapedKey = (env.key || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+                const escapedValue = (env.value || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+                
+                return `
+                    <div class="row mb-2 align-items-center">
+                        <div class="col-md-4">
+                            <input type="text" class="form-control" value="${escapedKey}" 
+                                   onchange="updateEnvVar(${index}, 'key', this.value)" 
+                                   placeholder="VARIABLE_NAME">
+                        </div>
+                        <div class="col-md-6">
+                            <input type="text" class="form-control" value="${escapedValue}" 
+                                   onchange="updateEnvVar(${index}, 'value', this.value)" 
+                                   placeholder="value">
+                        </div>
+                        <div class="col-md-2">
+                            <button class="btn btn-sm btn-outline-danger" onclick="removeEnvVar(${index})">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function updateEnvVar(index, field, value) {
+            envVars[index][field] = value;
+        }
+        
+        function removeEnvVar(index) {
+            if (confirm('Remove this environment variable?')) {
+                envVars.splice(index, 1);
+                displayEnvVars();
+            }
+        }
+        
+        function showAddEnvVarModal() {
+            const key = prompt('Enter variable name (e.g., MY_VARIABLE):');
+            if (!key) return;
+            
+            const value = prompt('Enter variable value:');
+            if (value === null) return;
+            
+            envVars.push({key: key.toUpperCase(), value: value});
+            displayEnvVars();
+        }
+        
+        async function saveEnvVars() {
+            if (!confirm('Save environment variables and restart container? This will cause brief downtime.')) {
+                return;
+            }
+            
+            // Filter out empty variables
+            const validEnvVars = envVars.filter(env => env.key && env.key.trim() !== '');
+            
+            if (validEnvVars.length === 0) {
+                showAlert('warning', 'No valid environment variables to save');
+                return;
+            }
+            
+            console.log('Saving env vars:', validEnvVars); // Debug
+            
+            try {
+                const response = await fetch('/api.php?action=save_env_vars', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        id: siteId,
+                        env_vars: validEnvVars
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('success', 'Environment variables saved and container restarted!');
+                    setTimeout(() => loadEnvVars(), 2000);
+                } else {
+                    showAlert('danger', 'Error: ' + result.error);
+                }
+            } catch (error) {
+                showAlert('danger', 'Network error: ' + error.message);
+            }
+        }
+        
+        // Load env vars when Settings section is opened
+        document.querySelector('[data-section="settings"]').addEventListener('click', function() {
+            loadEnvVars();
+        });
     </script>
 </body>
 </html>

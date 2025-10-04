@@ -1,4 +1,4 @@
-# WebBadeploy Deployment Guide
+# Webbadeploy Deployment Guide
 
 ## Quick Install (Fresh Ubuntu Server)
 
@@ -46,7 +46,7 @@ sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-
 sudo chmod +x /usr/local/bin/docker-compose
 ```
 
-### 2. Clone/Download WebBadeploy
+### 2. Clone/Download Webbadeploy
 
 ```bash
 # Create directory
@@ -54,7 +54,7 @@ sudo mkdir -p /opt/webbadeploy
 cd /opt/webbadeploy
 
 # Download files (or git clone if available)
-# Copy all WebBadeploy files here
+# Copy all Webbadeploy files here
 ```
 
 ### 3. Start Services
@@ -174,7 +174,7 @@ cd /opt/webbadeploy
 sudo docker-compose restart
 ```
 
-### Update WebBadeploy
+### Update Webbadeploy
 
 ```bash
 cd /opt/webbadeploy

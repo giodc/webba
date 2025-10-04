@@ -33,7 +33,7 @@ Docker volumes persist **permanently** until you explicitly delete them. This is
 
 ---
 
-## **WebBadeploy Delete Behavior**
+## **Webbadeploy Delete Behavior**
 
 ### **Current Implementation**
 
@@ -253,7 +253,7 @@ docker volume ls --filter label=environment=production
 
 **Recovery:**
 ```bash
-# 1. Setup new server with WebBadeploy
+# 1. Setup new server with Webbadeploy
 # 2. Restore volumes from backups
 for backup in /backups/*.tar.gz; do
   volume=$(basename $backup .tar.gz)
@@ -369,7 +369,7 @@ done
 ✅ **Survive container operations** - Stop, restart, remove, update
 ✅ **Survive system reboots** - Data is safe
 ✅ **Require explicit deletion** - Won't disappear accidentally
-✅ **WebBadeploy has options** - Keep or delete data when removing sites
+✅ **Webbadeploy has options** - Keep or delete data when removing sites
 ✅ **Easy to backup** - Simple tar commands
 ✅ **Production-ready** - Industry standard approach
 

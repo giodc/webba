@@ -1,8 +1,8 @@
-# WebBadeploy Update System
+# Webbadeploy Update System
 
 ## Overview
 
-WebBadeploy includes a built-in Git-based update system that allows you to easily update your installation from your Git repository.
+Webbadeploy includes a built-in Git-based update system that allows you to easily update your installation from your Git repository.
 
 ## Features
 
@@ -27,7 +27,7 @@ WebBadeploy includes a built-in Git-based update system that allows you to easil
 
 ### Manual Update via Dashboard
 
-1. Log in to WebBadeploy dashboard
+1. Log in to Webbadeploy dashboard
 2. If an update is available, you'll see an **"Update Available"** link in the navbar
 3. Click the link to open the update modal
 4. Review the changelog and current/new versions
