@@ -806,6 +806,7 @@ function updateSiteData($db) {
         }
 
         $domainChanged = ($site['domain'] !== $input["domain"]);
+        $sslChanged = ($site['ssl'] != ($input["ssl"] ? 1 : 0));
         
         // Update basic site information
         $stmt = $db->prepare("UPDATE sites SET name = ?, domain = ?, ssl = ? WHERE id = ?");
@@ -819,17 +820,52 @@ function updateSiteData($db) {
         $message = "Site updated successfully";
         $needsRestart = false;
         
-        // If domain changed, we need to update the container labels
-        if ($domainChanged) {
-            $message .= ". Domain changed - container needs to be redeployed for Traefik to update routing.";
+        // If domain or SSL changed, we need to regenerate docker-compose and redeploy
+        if ($domainChanged || $sslChanged) {
+            $message .= ". ";
+            if ($domainChanged) {
+                $message .= "Domain changed. ";
+            }
+            if ($sslChanged) {
+                $message .= "SSL " . ($input["ssl"] ? "enabled" : "disabled") . ". ";
+            }
+            $message .= "Regenerating container configuration...";
             $needsRestart = true;
+            
+            // Get updated site data
+            $updatedSite = getSiteById($db, $siteId);
+            
+            // Regenerate docker-compose.yml with new settings
+            $composePath = "/app/apps/{$updatedSite['type']}/sites/{$updatedSite['container_name']}/docker-compose.yml";
+            
+            if (file_exists($composePath)) {
+                // Generate new compose file based on site type
+                $newCompose = '';
+                if ($updatedSite['type'] === 'wordpress') {
+                    $newCompose = createWordPressDockerCompose($updatedSite, []);
+                } elseif ($updatedSite['type'] === 'php') {
+                    $newCompose = createPHPDockerCompose($updatedSite);
+                } elseif ($updatedSite['type'] === 'laravel') {
+                    $newCompose = createLaravelDockerCompose($updatedSite);
+                }
+                
+                if ($newCompose) {
+                    file_put_contents($composePath, $newCompose);
+                    
+                    // Recreate the container with new configuration
+                    executeDockerCompose($composePath, "up -d --force-recreate");
+                    
+                    $message = "Site updated and redeployed successfully with new configuration!";
+                }
+            }
         }
 
         echo json_encode([
             "success" => true,
             "message" => $message,
             "needs_restart" => $needsRestart,
-            "domain_changed" => $domainChanged
+            "domain_changed" => $domainChanged,
+            "ssl_changed" => $sslChanged
         ]);
 
     } catch (Exception $e) {
