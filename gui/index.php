@@ -40,6 +40,9 @@ $customWildcardDomain = getSetting($db, 'custom_wildcard_domain', '');
                             <span class="visually-hidden">Update available</span>
                         </span>
                     </a>
+                    <a class="nav-link" href="/traefik-logs.php">
+                        <i class="bi bi-file-text me-1"></i>SSL Logs
+                    </a>
                     <a class="nav-link" href="/settings.php">
                         <i class="bi bi-gear me-1"></i>Settings
                     </a>
