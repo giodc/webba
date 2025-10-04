@@ -2240,6 +2240,13 @@ function exportDatabase($db) {
         
         exec($cmd, $output, $returnCode);
         
+        // Debug info
+        error_log("Export command: " . $cmd);
+        error_log("Return code: " . $returnCode);
+        error_log("Output: " . implode("\n", $output));
+        error_log("Backup path: " . $backupPath);
+        error_log("File exists: " . (file_exists($backupPath) ? 'yes' : 'no'));
+        
         if ($returnCode === 0 && file_exists($backupPath) && filesize($backupPath) > 0) {
             echo json_encode([
                 "success" => true,
@@ -2250,6 +2257,15 @@ function exportDatabase($db) {
             ]);
         } else {
             $errorMsg = "Export failed. ";
+            $debugInfo = [
+                'return_code' => $returnCode,
+                'container' => $containerName,
+                'backup_path' => $backupPath,
+                'file_exists' => file_exists($backupPath),
+                'file_size' => file_exists($backupPath) ? filesize($backupPath) : 0,
+                'output' => implode("\n", $output)
+            ];
+            
             if (!empty($output)) {
                 $errorMsg .= "Error: " . implode("\n", $output);
             }
@@ -2258,7 +2274,15 @@ function exportDatabase($db) {
             } elseif (filesize($backupPath) === 0) {
                 $errorMsg .= " Backup file is empty.";
             }
-            throw new Exception($errorMsg);
+            
+            // Return detailed error
+            http_response_code(500);
+            echo json_encode([
+                "success" => false,
+                "error" => $errorMsg,
+                "debug" => $debugInfo
+            ]);
+            return;
         }
     } catch (Exception $e) {
         http_response_code(500);
