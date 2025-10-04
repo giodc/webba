@@ -9,10 +9,17 @@ $db = initDatabase();
 $currentUser = getCurrentUser();
 
 // Get current Let's Encrypt email from docker-compose.yml
-// The file is on the host, not in the container, so we need to read it via docker exec
 $dockerComposePath = '/opt/webbadeploy/docker-compose.yml';
-exec("cat $dockerComposePath 2>&1", $output, $returnCode);
-$dockerComposeContent = $returnCode === 0 ? implode("\n", $output) : '';
+
+// Try to read the file directly first, fallback to exec if not accessible
+if (file_exists($dockerComposePath) && is_readable($dockerComposePath)) {
+    $dockerComposeContent = file_get_contents($dockerComposePath);
+} else {
+    // Fallback: try using exec to read the file
+    exec("cat $dockerComposePath 2>&1", $output, $returnCode);
+    $dockerComposeContent = $returnCode === 0 ? implode("\n", $output) : '';
+}
+
 preg_match('/acme\.email=([^\s"]+)/', $dockerComposeContent, $matches);
 $currentEmail = $matches[1] ?? 'admin@example.com';
 
@@ -28,33 +35,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $newEmail = trim($_POST['letsencrypt_email']);
         
         if (filter_var($newEmail, FILTER_VALIDATE_EMAIL)) {
-            // Read, modify, and write the file using PHP instead of sed
-            $fileContent = file_get_contents($dockerComposePath);
-            
-            if ($fileContent !== false) {
-                // Create backup first
-                $backupPath = $dockerComposePath . '.backup';
-                file_put_contents($backupPath, $fileContent);
-                
-                // Replace the email using preg_replace
-                $newContent = preg_replace(
-                    '/acme\.email=[^\s"]+/',
-                    'acme.email=' . $newEmail,
-                    $fileContent
-                );
-                
-                // Write the updated content
-                if (file_put_contents($dockerComposePath, $newContent) !== false) {
-                    $successMessage = 'Let\'s Encrypt email updated successfully! Please restart Traefik for changes to take effect.';
-                    $currentEmail = $newEmail;
-                    $dockerComposeContent = $newContent;
-                } else {
-                    // Restore backup if write failed
-                    file_put_contents($dockerComposePath, $fileContent);
-                    $errorMessage = 'Failed to write to docker-compose.yml. Check file permissions.';
-                }
+            // Check if file exists and is accessible
+            if (!file_exists($dockerComposePath)) {
+                $errorMessage = 'docker-compose.yml not found. Make sure the file is mounted in the container at ' . $dockerComposePath;
+            } elseif (!is_readable($dockerComposePath)) {
+                $errorMessage = 'Cannot read docker-compose.yml. Check file permissions.';
+            } elseif (!is_writable($dockerComposePath)) {
+                $errorMessage = 'Cannot write to docker-compose.yml. Check file permissions.';
             } else {
-                $errorMessage = 'Failed to read docker-compose.yml. Check file permissions.';
+                // Read, modify, and write the file using PHP
+                $fileContent = file_get_contents($dockerComposePath);
+                
+                if ($fileContent !== false) {
+                    // Create backup first
+                    $backupPath = $dockerComposePath . '.backup';
+                    file_put_contents($backupPath, $fileContent);
+                    
+                    // Replace the email using preg_replace
+                    $newContent = preg_replace(
+                        '/acme\.email=[^\s"]+/',
+                        'acme.email=' . $newEmail,
+                        $fileContent
+                    );
+                    
+                    // Write the updated content
+                    if (file_put_contents($dockerComposePath, $newContent) !== false) {
+                        $successMessage = 'Let\'s Encrypt email updated successfully! Please restart Traefik for changes to take effect.';
+                        $currentEmail = $newEmail;
+                        $dockerComposeContent = $newContent;
+                    } else {
+                        // Restore backup if write failed
+                        file_put_contents($dockerComposePath, $fileContent);
+                        $errorMessage = 'Failed to write to docker-compose.yml. Check file permissions.';
+                    }
+                } else {
+                    $errorMessage = 'Failed to read docker-compose.yml content.';
+                }
             }
         } else {
             $errorMessage = 'Please enter a valid email address.';

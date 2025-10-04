@@ -51,6 +51,8 @@ services:
       - ./ssl:/app/ssl
       - ./apps:/app/apps
       - ./docker-compose.yml:/opt/webbadeploy/docker-compose.yml
+      - ./VERSION:/var/www/html/../VERSION:ro
+      - ./.git:/var/www/html/../.git:ro
       # Mount GUI files for live updates (development)
       - ./gui:/var/www/html
     environment:
