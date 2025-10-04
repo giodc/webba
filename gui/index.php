@@ -68,6 +68,11 @@ $customWildcardDomain = getSetting($db, 'custom_wildcard_domain', '');
                                 </div>
                                 <p class="card-text text-muted">
                                     <i class="bi bi-<?= getAppIcon($site['type']) ?> me-2"></i><?= ucfirst($site['type']) ?>
+                                    <?php if ($site['type'] === 'wordpress' && isset($site['db_type'])): ?>
+                                        <span class="badge bg-<?= $site['db_type'] === 'dedicated' ? 'info' : 'secondary' ?> ms-2" title="Database: <?= ucfirst($site['db_type']) ?>">
+                                            <i class="bi bi-database"></i> <?= ucfirst($site['db_type']) ?> DB
+                                        </span>
+                                    <?php endif; ?>
                                 </p>
                                 <div class="mb-3">
                                     <small class="text-muted">Domain:</small><br>

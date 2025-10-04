@@ -206,7 +206,8 @@ function createSiteHandler($db) {
             "ssl" => $data["ssl"] ?? false,
             "ssl_config" => $sslConfig,
             "container_name" => $containerName,
-            "config" => $data
+            "config" => $data,
+            "db_type" => $data["wp_db_type"] ?? 'shared'
         ];
 
         // Create site record

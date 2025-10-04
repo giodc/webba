@@ -197,6 +197,19 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                                         <?php endif; ?>
                                     </div>
                                 </div>
+                                <?php if ($site['type'] === 'wordpress'): ?>
+                                <div class="info-row">
+                                    <div class="info-label">Database Type</div>
+                                    <div class="info-value">
+                                        <span class="badge bg-<?= ($site['db_type'] ?? 'shared') === 'dedicated' ? 'info' : 'secondary' ?>">
+                                            <i class="bi bi-database me-1"></i><?= ucfirst($site['db_type'] ?? 'shared') ?>
+                                        </span>
+                                        <small class="text-muted ms-2">
+                                            <?= ($site['db_type'] ?? 'shared') === 'dedicated' ? 'Separate MariaDB container' : 'Shared global database' ?>
+                                        </small>
+                                    </div>
+                                </div>
+                                <?php endif; ?>
                                 <div class="info-row">
                                     <div class="info-label">Container Name</div>
                                     <div class="info-value"><code><?= htmlspecialchars($site['container_name']) ?></code></div>

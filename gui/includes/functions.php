@@ -31,22 +31,20 @@ function initDatabase() {
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )");
 
-    // Migrate existing databases - add db_password column if it doesn't exist
+    // Migrate existing databases - add columns if they don't exist
     try {
         $result = $pdo->query("PRAGMA table_info(sites)");
         $columns = $result->fetchAll(PDO::FETCH_ASSOC);
-        $hasDbPassword = false;
-        foreach ($columns as $column) {
-            if ($column['name'] === 'db_password') {
-                $hasDbPassword = true;
-                break;
-            }
-        }
-        if (!$hasDbPassword) {
+        $columnNames = array_column($columns, 'name');
+        
+        if (!in_array('db_password', $columnNames)) {
             $pdo->exec("ALTER TABLE sites ADD COLUMN db_password TEXT");
         }
+        if (!in_array('db_type', $columnNames)) {
+            $pdo->exec("ALTER TABLE sites ADD COLUMN db_type TEXT DEFAULT 'shared'");
+        }
     } catch (Exception $e) {
-        // Column might already exist or other error, continue
+        // Columns might already exist or other error, continue
     }
 
     return $pdo;
@@ -76,11 +74,12 @@ function setSetting($pdo, $key, $value) {
 }
 
 function createSite($pdo, $data) {
-    $stmt = $pdo->prepare("INSERT INTO sites (name, type, domain, ssl, ssl_config, container_name, config, db_password) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmt = $pdo->prepare("INSERT INTO sites (name, type, domain, ssl, ssl_config, container_name, config, db_password, db_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
     $containerName = $data['container_name'] ?? '';
     $config = json_encode($data['config'] ?? []);
     $sslConfig = isset($data['ssl_config']) ? json_encode($data['ssl_config']) : null;
     $dbPassword = $data['db_password'] ?? null;
+    $dbType = $data['db_type'] ?? 'shared';
     
     
     return $stmt->execute([
@@ -91,7 +90,8 @@ function createSite($pdo, $data) {
         $sslConfig,
         $containerName,
         $config,
-        $dbPassword
+        $dbPassword,
+        $dbType
     ]);
 }
 
