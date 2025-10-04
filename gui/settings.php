@@ -9,8 +9,10 @@ $db = initDatabase();
 $currentUser = getCurrentUser();
 
 // Get current Let's Encrypt email from docker-compose.yml
+// The file is on the host, not in the container, so we need to read it via docker exec
 $dockerComposePath = '/opt/webbadeploy/docker-compose.yml';
-$dockerComposeContent = file_exists($dockerComposePath) ? file_get_contents($dockerComposePath) : '';
+exec("cat $dockerComposePath 2>&1", $output, $returnCode);
+$dockerComposeContent = $returnCode === 0 ? implode("\n", $output) : '';
 preg_match('/acme\.email=([^\s"]+)/', $dockerComposeContent, $matches);
 $currentEmail = $matches[1] ?? 'admin@example.com';
 
@@ -33,11 +35,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $dockerComposeContent
             );
             
-            if (file_put_contents($dockerComposePath, $updatedContent)) {
-                $successMessage = 'Let\'s Encrypt email updated successfully! Please restart Traefik for changes to take effect.';
-                $currentEmail = $newEmail;
+            // Write to temporary file first
+            $tempFile = '/tmp/docker-compose-' . time() . '.yml';
+            if (file_put_contents($tempFile, $updatedContent)) {
+                // Use shell command to move the file to the host location
+                $moveCmd = "cat " . escapeshellarg($tempFile) . " > " . escapeshellarg($dockerComposePath) . " 2>&1";
+                exec($moveCmd, $moveOutput, $moveReturn);
+                
+                // Clean up temp file
+                @unlink($tempFile);
+                
+                if ($moveReturn === 0) {
+                    $successMessage = 'Let\'s Encrypt email updated successfully! Please restart Traefik for changes to take effect.';
+                    $currentEmail = $newEmail;
+                } else {
+                    $errorMessage = 'Failed to update docker-compose.yml: ' . implode(' ', $moveOutput);
+                }
             } else {
-                $errorMessage = 'Failed to update docker-compose.yml. Check file permissions.';
+                $errorMessage = 'Failed to create temporary file.';
             }
         } else {
             $errorMessage = 'Please enter a valid email address.';
