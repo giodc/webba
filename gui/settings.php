@@ -28,27 +28,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $newEmail = trim($_POST['letsencrypt_email']);
         
         if (filter_var($newEmail, FILTER_VALIDATE_EMAIL)) {
-            // Use sed to update the file directly on the host
-            $escapedEmail = escapeshellarg($newEmail);
-            $escapedPath = escapeshellarg($dockerComposePath);
+            // Read, modify, and write the file using PHP instead of sed
+            $fileContent = file_get_contents($dockerComposePath);
             
-            // Create backup first
-            exec("cp $escapedPath $escapedPath.backup 2>&1", $backupOutput, $backupReturn);
-            
-            // Use sed to replace the email in place
-            $sedCmd = "sed -i 's/acme\\.email=[^\"[:space:]]*/acme.email=$newEmail/g' $escapedPath 2>&1";
-            exec($sedCmd, $sedOutput, $sedReturn);
-            
-            if ($sedReturn === 0) {
-                $successMessage = 'Let\'s Encrypt email updated successfully! Please restart Traefik for changes to take effect.';
-                $currentEmail = $newEmail;
-                // Re-read the file to confirm
-                exec("cat $dockerComposePath 2>&1", $output, $returnCode);
-                $dockerComposeContent = $returnCode === 0 ? implode("\n", $output) : '';
+            if ($fileContent !== false) {
+                // Create backup first
+                $backupPath = $dockerComposePath . '.backup';
+                file_put_contents($backupPath, $fileContent);
+                
+                // Replace the email using preg_replace
+                $newContent = preg_replace(
+                    '/acme\.email=[^\s"]+/',
+                    'acme.email=' . $newEmail,
+                    $fileContent
+                );
+                
+                // Write the updated content
+                if (file_put_contents($dockerComposePath, $newContent) !== false) {
+                    $successMessage = 'Let\'s Encrypt email updated successfully! Please restart Traefik for changes to take effect.';
+                    $currentEmail = $newEmail;
+                    $dockerComposeContent = $newContent;
+                } else {
+                    // Restore backup if write failed
+                    file_put_contents($dockerComposePath, $fileContent);
+                    $errorMessage = 'Failed to write to docker-compose.yml. Check file permissions.';
+                }
             } else {
-                // Restore backup if sed failed
-                exec("cp $escapedPath.backup $escapedPath 2>&1");
-                $errorMessage = 'Failed to update docker-compose.yml: ' . implode(' ', $sedOutput);
+                $errorMessage = 'Failed to read docker-compose.yml. Check file permissions.';
             }
         } else {
             $errorMessage = 'Please enter a valid email address.';

@@ -239,6 +239,12 @@ echo -e "${YELLOW}Configuring Docker socket permissions...${NC}"
 chmod 666 /var/run/docker.sock
 echo -e "${GREEN}✓ Docker socket permissions configured${NC}"
 
+# Fix docker-compose.yml permissions for web GUI to update Let's Encrypt email
+echo -e "${YELLOW}Setting docker-compose.yml permissions...${NC}"
+chown www-data:www-data "$INSTALL_DIR/docker-compose.yml" 2>/dev/null || true
+chmod 664 "$INSTALL_DIR/docker-compose.yml"
+echo -e "${GREEN}✓ docker-compose.yml permissions configured${NC}"
+
 # Get server IP
 SERVER_IP=$(curl -s ifconfig.me || hostname -I | awk '{print $1}')
 

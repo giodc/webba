@@ -5,7 +5,7 @@
 
 set -e
 
-echo "🔧 Fixing Docker socket permissions..."
+echo "🔧 Fixing Docker socket and file permissions..."
 
 # Get the docker group ID
 DOCKER_GID=$(getent group docker | cut -d: -f3)
@@ -20,6 +20,11 @@ echo "📋 Docker group ID: $DOCKER_GID"
 # Set socket permissions
 echo "🔐 Setting socket permissions..."
 sudo chmod 666 /var/run/docker.sock
+
+# Fix docker-compose.yml permissions for web GUI to update Let's Encrypt email
+echo "🔐 Setting docker-compose.yml permissions..."
+sudo chown www-data:www-data /opt/webbadeploy/docker-compose.yml
+sudo chmod 664 /opt/webbadeploy/docker-compose.yml
 
 # Rebuild web-gui container with correct docker group
 echo "🔨 Rebuilding web-gui container..."

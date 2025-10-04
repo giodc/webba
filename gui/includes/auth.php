@@ -55,7 +55,7 @@ function isLoggedIn() {
  */
 function requireAuth() {
     if (!isLoggedIn()) {
-        $_SESSION['redirect_after_login'] = $_SERVER['REQUEST_URI'];
+        $_SESSION['redirect_after_login'] = $_SERVER['REQUEST_URI'] ?? '/';
         header('Location: /login.php');
         exit;
     }
