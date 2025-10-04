@@ -27,15 +27,7 @@ $customWildcardDomain = getSetting($db, 'custom_wildcard_domain', '');
     <?php include 'includes/navigation.php'; ?>
 
     <?php if (empty($sites)): ?>
-    <section class="hero">
-        <div class="container text-center">
-            <h1 class="display-4 mb-4">Deploy Apps in Seconds</h1>
-            <p class="lead mb-4">Easy WordPress, PHP, and Laravel deployment with SSL support</p>
-            <button class="btn btn-light btn-lg" onclick="showCreateModal()">
-                <i class="bi bi-plus-circle me-2"></i>Deploy Your First App
-            </button>
-        </div>
-    </section>
+
     <?php endif; ?>
 
     <div class="container mt-5">
@@ -52,8 +44,11 @@ $customWildcardDomain = getSetting($db, 'custom_wildcard_domain', '');
                     <?php if (empty($sites)): ?>
                     <div class="col-12 text-center py-5">
                         <i class="bi bi-cloud text-muted" style="font-size: 4rem;"></i>
-                        <h3 class="text-muted mt-3">No applications yet</h3>
-                        <p class="text-muted">Deploy your first application to get started</p>
+                        <h3 class="mt-3">No applications yet</h3>
+                        <p class="">Deploy your first application to get started</p>
+                        <button class="btn btn-primary btn-lg" onclick="showCreateModal()">
+                <i class="bi bi-plus-circle me-2"></i>Deploy Your First App
+            </button>
                     </div>
                     <?php else: ?>
                     <?php foreach ($sites as $site): 
