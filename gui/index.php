@@ -502,18 +502,7 @@ $customWildcardDomain = getSetting($db, 'custom_wildcard_domain', '');
         </div>
     </div>
 
-    <!-- Footer -->
-    <footer class="bg-dark text-white-50 py-3 mt-5">
-        <div class="container text-center">
-            <small>
-                <i class="bi bi-cloud-arrow-up me-1"></i>
-                Webbadeploy v<?php 
-                    $versionFile = '/var/www/html/../VERSION';
-                    echo file_exists($versionFile) ? trim(file_get_contents($versionFile)) : '1.0.0';
-                ?>
-            </small>
-        </div>
-    </footer>
+    <?php include 'includes/footer.php'; ?>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="js/app.js?v=3.0.<?= time() ?>"></script>
