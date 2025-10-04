@@ -1086,30 +1086,6 @@ function stopContainer($db, $id) {
     }
 }
 
-function getContainerLogs($db, $id) {
-    try {
-        $site = getSiteById($db, $id);
-        if (!$site) {
-            throw new Exception("Site not found");
-        }
-
-        $lines = $_GET['lines'] ?? 100;
-        $result = executeDockerCommand("logs --tail {$lines} {$site['container_name']}");
-        
-        echo json_encode([
-            "success" => true,
-            "logs" => $result['output']
-        ]);
-
-    } catch (Exception $e) {
-        http_response_code(400);
-        echo json_encode([
-            "success" => false,
-            "error" => $e->getMessage()
-        ]);
-    }
-}
-
 function getContainerStats($db, $id) {
     try {
         $site = getSiteById($db, $id);
