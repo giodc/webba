@@ -260,16 +260,8 @@ function createSiteHandler($db) {
         }
 
         // Traefik will automatically discover the container via labels
+        // SSL certificates are automatically requested by Traefik when the container starts
         // No manual configuration needed!
-
-        // Request SSL if needed
-        if ($site["ssl"] && $data["domain_suffix"] === "custom") {
-            try {
-                requestSSLCertificate($site["domain"], $data["wp_email"] ?? "admin@" . $site["domain"]);
-            } catch (Exception $sslError) {
-                // SSL errors are non-fatal
-            }
-        }
 
         if ($deploymentSuccess) {
             updateSiteStatus($db, $siteId, "running");
@@ -377,7 +369,7 @@ function createPHPDockerCompose($site, $config) {
         $containerName = "php_app_" . time();
     }
     
-    return "version: '3.8'
+    $compose = "version: '3.8'
 services:
   {$containerName}:
     image: php:8.2-apache
@@ -388,7 +380,21 @@ services:
       - traefik.enable=true
       - traefik.http.routers.{$containerName}.rule=Host(`{$domain}`)
       - traefik.http.routers.{$containerName}.entrypoints=web
-      - traefik.http.services.{$containerName}.loadbalancer.server.port=80
+      - traefik.http.services.{$containerName}.loadbalancer.server.port=80";
+    
+    // Add SSL labels if SSL is enabled
+    if ($site['ssl']) {
+        $compose .= "
+      - traefik.http.routers.{$containerName}-secure.rule=Host(`{$domain}`)
+      - traefik.http.routers.{$containerName}-secure.entrypoints=websecure
+      - traefik.http.routers.{$containerName}-secure.tls=true
+      - traefik.http.routers.{$containerName}-secure.tls.certresolver=letsencrypt
+      - traefik.http.routers.{$containerName}.middlewares=redirect-to-https
+      - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
+      - traefik.http.middlewares.redirect-to-https.redirectscheme.permanent=true";
+    }
+    
+    $compose .= "
     networks:
       - webbadeploy_webbadeploy
     restart: unless-stopped
@@ -399,6 +405,8 @@ volumes:
 networks:
   webbadeploy_webbadeploy:
     external: true";
+    
+    return $compose;
 }
 
 function deployLaravel($site, $config) {
@@ -465,7 +473,7 @@ function createLaravelDockerCompose($site, $config) {
     $containerName = $site["container_name"];
     $domain = $site["domain"];
     
-    return "version: '3.8'
+    $compose = "version: '3.8'
 services:
   {$containerName}:
     image: php:8.2-apache
@@ -481,7 +489,21 @@ services:
       - traefik.enable=true
       - traefik.http.routers.{$containerName}.rule=Host(`{$domain}`)
       - traefik.http.routers.{$containerName}.entrypoints=web
-      - traefik.http.services.{$containerName}.loadbalancer.server.port=80
+      - traefik.http.services.{$containerName}.loadbalancer.server.port=80";
+    
+    // Add SSL labels if SSL is enabled
+    if ($site['ssl']) {
+        $compose .= "
+      - traefik.http.routers.{$containerName}-secure.rule=Host(`{$domain}`)
+      - traefik.http.routers.{$containerName}-secure.entrypoints=websecure
+      - traefik.http.routers.{$containerName}-secure.tls=true
+      - traefik.http.routers.{$containerName}-secure.tls.certresolver=letsencrypt
+      - traefik.http.routers.{$containerName}.middlewares=redirect-to-https
+      - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
+      - traefik.http.middlewares.redirect-to-https.redirectscheme.permanent=true";
+    }
+    
+    $compose .= "
     networks:
       - webbadeploy_webbadeploy
     restart: unless-stopped
@@ -492,6 +514,8 @@ volumes:
 networks:
   webbadeploy_webbadeploy:
     external: true";
+    
+    return $compose;
 }
 
 function createWordPressDockerCompose($site, $config) {
@@ -542,12 +566,27 @@ services:
       - ./php-custom.ini:/usr/local/etc/php/conf.d/custom.ini:ro";
     }
     
+    // Generate Traefik labels with SSL support
     $compose .= "
     labels:
       - traefik.enable=true
       - traefik.http.routers.{$containerName}.rule=Host(`{$domain}`)
       - traefik.http.routers.{$containerName}.entrypoints=web
-      - traefik.http.services.{$containerName}.loadbalancer.server.port=80
+      - traefik.http.services.{$containerName}.loadbalancer.server.port=80";
+    
+    // Add SSL labels if SSL is enabled
+    if ($site['ssl']) {
+        $compose .= "
+      - traefik.http.routers.{$containerName}-secure.rule=Host(`{$domain}`)
+      - traefik.http.routers.{$containerName}-secure.entrypoints=websecure
+      - traefik.http.routers.{$containerName}-secure.tls=true
+      - traefik.http.routers.{$containerName}-secure.tls.certresolver=letsencrypt
+      - traefik.http.routers.{$containerName}.middlewares=redirect-to-https
+      - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
+      - traefik.http.middlewares.redirect-to-https.redirectscheme.permanent=true";
+    }
+    
+    $compose .= "
     networks:
       - webbadeploy_webbadeploy
     restart: unless-stopped
