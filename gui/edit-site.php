@@ -220,7 +220,7 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                             </div>
                         </div>
 
-                        <div class="card">
+                        <div class="card mt-4">
                             <div class="card-header">
                                 <i class="bi bi-lightning me-2"></i>Quick Actions
                             </div>
@@ -275,7 +275,7 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                             </div>
                         </div>
 
-                        <div class="card">
+                        <div class="card mt-4">
                             <div class="card-header">
                                 <i class="bi bi-link-45deg me-2"></i>Quick Links
                             </div>

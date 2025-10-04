@@ -93,7 +93,9 @@ $sites = getAllSites($db);
                         <div class="card app-card h-100">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-start mb-3">
-                                    <h5 class="card-title"><?= htmlspecialchars($site['name']) ?></h5>
+                                    <h5 class="card-title" onclick="window.location.href='edit-site.php?id=<?= $site['id'] ?>'" style="cursor: pointer;" title="Settings & Management">
+                                        <?= htmlspecialchars($site['name']) ?>
+                                    </h5>
                                     <span class="badge <?= $containerStatus == 'running' ? 'bg-success' : 'bg-warning' ?> status-badge">
                                         <i class="bi bi-circle-fill me-1"></i><?= ucfirst($containerStatus) ?>
                                     </span>
@@ -103,8 +105,10 @@ $sites = getAllSites($db);
                                 </p>
                                 <div class="mb-3">
                                     <small class="text-muted">Domain:</small><br>
-                                    <?= $site['domain'] ?>
-                                    <?php if ($site['ssl']): ?><i class="bi bi-shield-check text-success ms-1"></i><?php endif; ?>
+                                    <a href="<?= ($site['ssl'] ? 'https://' : 'http://') . $site['domain'] ?>" target="_blank" class="text-decoration-none" title="Open site in new tab">
+                                        <?= $site['domain'] ?>
+                                        <?php if ($site['ssl']): ?><i class="bi bi-shield-check text-success ms-1"></i><?php endif; ?>
+                                    </a>
                                 </div>
                                 
                                 <?php if ($containerStatus === 'running'): ?>

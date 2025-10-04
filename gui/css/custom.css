@@ -305,20 +305,21 @@ a:hover {
 /* Sidebar Navigation */
 .sidebar-nav-item {
     color: var(--gray-600);
-    border-left: 3px solid transparent;
+    border-left: 1px solid transparent!important;
 }
 
 .sidebar-nav-item:hover {
-    background-color: var(--gray-50);
+    background-color: transparent!important;
     color: var(--gray-900);
     border-left-color: var(--gray-800);
+    font-weight: 600!important;
 }
 
 .sidebar-nav-item.active {
-    background-color: var(--gray-100);
+    background-color: transparent!important;
     color: var(--gray-900);
-    border-left-color: var(--gray-800);
-    font-weight: 500;
+    border-left-color: transparent!important;
+    font-weight: 600!important;
 }
 
 /* Tables */
@@ -339,6 +340,13 @@ a:hover {
 
 .app-card:hover {
     transform: translateY(-2px);
+}
+
+.app-card .card-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
 }
 
 /* Statistics Section */
