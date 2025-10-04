@@ -137,6 +137,18 @@ switch ($action) {
     case "execute_docker_command":
         executeDockerCommandAPI();
         break;
+    
+    case "get_container_logs":
+        getContainerLogs();
+        break;
+    
+    case "export_database":
+        exportDatabase($db);
+        break;
+    
+    case "get_database_stats":
+        getDatabaseStats($db);
+        break;
         
     default:
         http_response_code(400);
@@ -2083,6 +2095,125 @@ function executeDockerCommandAPI() {
             ]);
         } else {
             throw new Exception("Command failed: " . implode("\n", $output));
+        }
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode([
+            "success" => false,
+            "error" => $e->getMessage()
+        ]);
+    }
+}
+
+function getContainerLogs() {
+    try {
+        $container = $_GET['container'] ?? '';
+        $lines = $_GET['lines'] ?? 100;
+        
+        if (empty($container)) {
+            throw new Exception("Container name is required");
+        }
+        
+        exec("docker logs --tail " . intval($lines) . " " . escapeshellarg($container) . " 2>&1", $output, $returnCode);
+        
+        if ($returnCode === 0) {
+            echo json_encode([
+                "success" => true,
+                "logs" => implode("\n", $output)
+            ]);
+        } else {
+            throw new Exception("Failed to get logs: " . implode("\n", $output));
+        }
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode([
+            "success" => false,
+            "error" => $e->getMessage()
+        ]);
+    }
+}
+
+function exportDatabase($db) {
+    try {
+        $siteId = $_GET['site_id'] ?? '';
+        
+        if (empty($siteId)) {
+            throw new Exception("Site ID is required");
+        }
+        
+        $site = getSiteById($db, $siteId);
+        if (!$site) {
+            throw new Exception("Site not found");
+        }
+        
+        $containerName = $site['container_name'] . '_db';
+        $timestamp = date('Y-m-d_H-i-s');
+        $filename = "backup_{$site['name']}_{$timestamp}.sql";
+        $backupPath = "/app/data/backups/{$filename}";
+        
+        // Create backups directory if it doesn't exist
+        if (!is_dir('/app/data/backups')) {
+            mkdir('/app/data/backups', 0755, true);
+        }
+        
+        // Export database
+        $command = "docker exec {$containerName} mysqldump -u wordpress -p" . escapeshellarg($site['db_password']) . " wordpress > {$backupPath} 2>&1";
+        exec($command, $output, $returnCode);
+        
+        if ($returnCode === 0 && file_exists($backupPath)) {
+            echo json_encode([
+                "success" => true,
+                "message" => "Database exported successfully",
+                "file" => $filename,
+                "download_url" => "/download.php?file=" . urlencode($filename)
+            ]);
+        } else {
+            throw new Exception("Failed to export database: " . implode("\n", $output));
+        }
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode([
+            "success" => false,
+            "error" => $e->getMessage()
+        ]);
+    }
+}
+
+function getDatabaseStats($db) {
+    try {
+        $siteId = $_GET['site_id'] ?? '';
+        
+        if (empty($siteId)) {
+            throw new Exception("Site ID is required");
+        }
+        
+        $site = getSiteById($db, $siteId);
+        if (!$site) {
+            throw new Exception("Site not found");
+        }
+        
+        $containerName = $site['container_name'] . '_db';
+        
+        // Get database size and table count
+        $sqlCommand = "SELECT 
+            ROUND(SUM(data_length + index_length) / 1024 / 1024, 2) AS 'Size (MB)',
+            COUNT(*) AS 'Tables'
+            FROM information_schema.TABLES 
+            WHERE table_schema = 'wordpress'";
+        
+        $command = "docker exec {$containerName} mysql -u wordpress -p" . escapeshellarg($site['db_password']) . " -e " . escapeshellarg($sqlCommand) . " 2>&1";
+        exec($command, $output, $returnCode);
+        
+        if ($returnCode === 0) {
+            $stats = "Database Statistics:\n\n";
+            $stats .= implode("\n", $output);
+            
+            echo json_encode([
+                "success" => true,
+                "stats" => $stats
+            ]);
+        } else {
+            throw new Exception("Failed to get database stats: " . implode("\n", $output));
         }
     } catch (Exception $e) {
         http_response_code(500);
