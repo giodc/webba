@@ -1,10 +1,11 @@
 <?php
-// Prevent any output before JSON
-ob_start();
-
-// Disable error display, log errors instead
+// CRITICAL: Must be first - prevent any output before JSON
+error_reporting(0);
 ini_set('display_errors', '0');
-error_reporting(E_ALL);
+ini_set('display_startup_errors', '0');
+
+// Start output buffering immediately
+ob_start();
 
 // Set JSON header first
 header('Content-Type: application/json');
@@ -31,8 +32,15 @@ set_exception_handler(function($exception) {
     exit;
 });
 
-require_once 'includes/functions.php';
-require_once 'includes/auth.php';
+try {
+    require_once 'includes/functions.php';
+    require_once 'includes/auth.php';
+} catch (Throwable $e) {
+    ob_clean();
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Failed to load dependencies: ' . $e->getMessage()]);
+    exit;
+}
 
 // Require authentication for all API calls
 if (!isLoggedIn()) {
@@ -42,7 +50,15 @@ if (!isLoggedIn()) {
     exit;
 }
 
-$db = initDatabase();
+try {
+    $db = initDatabase();
+} catch (Throwable $e) {
+    ob_clean();
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Database initialization failed: ' . $e->getMessage()]);
+    exit;
+}
+
 $action = $_GET["action"] ?? "";
 
 switch ($action) {
