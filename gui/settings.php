@@ -207,6 +207,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                 </div>
 
+                <!-- System Updates -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <i class="bi bi-arrow-up-circle me-2"></i>System Updates
+                    </div>
+                    <div class="card-body">
+                        <div id="updateCheckSection">
+                            <button class="btn btn-primary" onclick="checkForUpdates()">
+                                <i class="bi bi-search me-2"></i>Check for Updates
+                            </button>
+                        </div>
+                        <div id="updateInfoSection" style="display: none;">
+                            <!-- Update info will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+
                 <!-- System Information -->
                 <div class="card">
                     <div class="card-header">
@@ -297,6 +314,181 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 btn.innerHTML = originalText;
                 btn.disabled = false;
             }
+        }
+
+        async function checkForUpdates() {
+            const checkSection = document.getElementById('updateCheckSection');
+            const infoSection = document.getElementById('updateInfoSection');
+            
+            checkSection.innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Checking...</span></div> <span class="ms-2">Checking for updates...</span>';
+            
+            try {
+                const response = await fetch('/api.php?action=get_update_info');
+                const result = await response.json();
+                
+                if (result.success) {
+                    displayUpdateInfo(result.info, result.changelog);
+                } else {
+                    infoSection.innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            Failed to check for updates: ${result.error || 'Unknown error'}
+                        </div>
+                    `;
+                    infoSection.style.display = 'block';
+                    checkSection.style.display = 'none';
+                }
+            } catch (error) {
+                infoSection.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        Network error: ${error.message}
+                    </div>
+                `;
+                infoSection.style.display = 'block';
+                checkSection.style.display = 'none';
+            }
+        }
+
+        function displayUpdateInfo(info, changelog) {
+            const checkSection = document.getElementById('updateCheckSection');
+            const infoSection = document.getElementById('updateInfoSection');
+            
+            let html = `
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>Current Version:</strong> ${info.current_version}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Latest Version:</strong> ${info.remote_version || 'Unknown'}
+                    </div>
+                </div>
+            `;
+            
+            if (info.update_available) {
+                html += `
+                    <div class="alert alert-success">
+                        <i class="bi bi-check-circle me-2"></i>
+                        <strong>Update Available!</strong> A new version is ready to install.
+                    </div>
+                    <button class="btn btn-success mb-3" onclick="performUpdate()">
+                        <i class="bi bi-download me-2"></i>Install Update Now
+                    </button>
+                `;
+            } else {
+                html += `
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        You are running the latest version.
+                    </div>
+                `;
+            }
+            
+            if (info.has_local_changes) {
+                html += `
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <strong>Warning:</strong> Local changes detected. They will be stashed during update.
+                    </div>
+                `;
+            }
+            
+            if (changelog && changelog.length > 0) {
+                html += `
+                    <div class="mt-3">
+                        <h6>Recent Changes:</h6>
+                        <ul class="list-unstyled">
+                `;
+                changelog.slice(0, 5).forEach(line => {
+                    html += `<li><code>${line}</code></li>`;
+                });
+                html += `
+                        </ul>
+                    </div>
+                `;
+            }
+            
+            html += `
+                <button class="btn btn-secondary mt-2" onclick="resetUpdateSection()">
+                    <i class="bi bi-arrow-left me-2"></i>Back
+                </button>
+            `;
+            
+            infoSection.innerHTML = html;
+            infoSection.style.display = 'block';
+            checkSection.style.display = 'none';
+        }
+
+        async function performUpdate() {
+            if (!confirm('Are you sure you want to update? This will pull the latest changes from Git and may restart services.')) {
+                return;
+            }
+            
+            const infoSection = document.getElementById('updateInfoSection');
+            infoSection.innerHTML = `
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary mb-3" role="status"></div>
+                    <h5>Installing Update...</h5>
+                    <p class="text-muted">This may take a minute...</p>
+                </div>
+            `;
+            
+            try {
+                const response = await fetch('/api.php?action=perform_update', {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    infoSection.innerHTML = `
+                        <div class="alert alert-success">
+                            <i class="bi bi-check-circle me-2"></i>
+                            <strong>Update Successful!</strong><br>
+                            Updated to version ${result.version || 'latest'}<br>
+                            <small class="text-muted">Page will reload in 3 seconds...</small>
+                        </div>
+                    `;
+                    setTimeout(() => {
+                        location.reload();
+                    }, 3000);
+                } else {
+                    infoSection.innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            <strong>Update Failed!</strong><br>
+                            ${result.error || 'Unknown error'}
+                        </div>
+                        <button class="btn btn-secondary" onclick="resetUpdateSection()">
+                            <i class="bi bi-arrow-left me-2"></i>Back
+                        </button>
+                    `;
+                }
+            } catch (error) {
+                infoSection.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <strong>Network Error!</strong><br>
+                        ${error.message}
+                    </div>
+                    <button class="btn btn-secondary" onclick="resetUpdateSection()">
+                        <i class="bi bi-arrow-left me-2"></i>Back
+                    </button>
+                `;
+            }
+        }
+
+        function resetUpdateSection() {
+            const checkSection = document.getElementById('updateCheckSection');
+            const infoSection = document.getElementById('updateInfoSection');
+            
+            checkSection.innerHTML = `
+                <button class="btn btn-primary" onclick="checkForUpdates()">
+                    <i class="bi bi-search me-2"></i>Check for Updates
+                </button>
+            `;
+            checkSection.style.display = 'block';
+            infoSection.style.display = 'none';
         }
     </script>
 </body>
