@@ -141,6 +141,12 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                             <i class="bi bi-terminal"></i>
                             <span>Logs</span>
                         </a>
+                        <?php if ($site['type'] === 'wordpress' && ($site['db_type'] ?? 'shared') === 'dedicated'): ?>
+                        <a href="#database" class="sidebar-nav-item" data-section="database">
+                            <i class="bi bi-database"></i>
+                            <span>Database</span>
+                        </a>
+                        <?php endif; ?>
                         <a href="#sftp" class="sidebar-nav-item" data-section="sftp">
                             <i class="bi bi-hdd-network"></i>
                             <span>SFTP Access</span>
@@ -508,6 +514,147 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                     </div>
                 </div>
             </div>
+
+            <?php if ($site['type'] === 'wordpress' && ($site['db_type'] ?? 'shared') === 'dedicated'): ?>
+            <!-- Database Section -->
+            <div id="database-section" class="content-section" style="display: none;">
+                <div class="card mb-4">
+                    <div class="card-header bg-info text-white">
+                        <i class="bi bi-database me-2"></i>Dedicated Database
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            This site has a dedicated MariaDB container running separately from the shared database.
+                        </div>
+
+                        <h6 class="mb-3">Database Connection Information</h6>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Database Host</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="dbHost" value="<?= htmlspecialchars($site['container_name']) ?>_db" readonly>
+                                    <button class="btn btn-outline-secondary" onclick="copyToClipboard('dbHost')">
+                                        <i class="bi bi-clipboard"></i>
+                                    </button>
+                                </div>
+                                <small class="text-muted">Internal Docker network hostname</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Database Port</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="dbPort" value="3306" readonly>
+                                    <button class="btn btn-outline-secondary" onclick="copyToClipboard('dbPort')">
+                                        <i class="bi bi-clipboard"></i>
+                                    </button>
+                                </div>
+                                <small class="text-muted">Default MariaDB port</small>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Database Name</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="dbName" value="wordpress" readonly>
+                                    <button class="btn btn-outline-secondary" onclick="copyToClipboard('dbName')">
+                                        <i class="bi bi-clipboard"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Database User</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="dbUser" value="wordpress" readonly>
+                                    <button class="btn btn-outline-secondary" onclick="copyToClipboard('dbUser')">
+                                        <i class="bi bi-clipboard"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Database Password</label>
+                            <div class="input-group">
+                                <input type="password" class="form-control" id="dbPassword" value="<?= htmlspecialchars($site['db_password'] ?? '••••••••') ?>" readonly>
+                                <button class="btn btn-outline-secondary" onclick="togglePasswordVisibility('dbPassword')">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                                <button class="btn btn-outline-secondary" onclick="copyToClipboard('dbPassword')">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted">Keep this password secure</small>
+                        </div>
+
+                        <hr>
+
+                        <h6 class="mb-3">Database Management</h6>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <button class="btn btn-outline-primary w-100" onclick="viewDatabaseLogs()">
+                                    <i class="bi bi-terminal me-2"></i>View Database Logs
+                                </button>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <button class="btn btn-outline-success w-100" onclick="restartDatabase()">
+                                    <i class="bi bi-arrow-clockwise me-2"></i>Restart Database
+                                </button>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <button class="btn btn-outline-info w-100" onclick="exportDatabase()">
+                                    <i class="bi bi-download me-2"></i>Export Database
+                                </button>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <button class="btn btn-outline-warning w-100" onclick="showDatabaseStats()">
+                                    <i class="bi bi-graph-up me-2"></i>Database Stats
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="databaseOutput" class="mt-3" style="display: none;">
+                            <pre class="bg-dark text-light p-3 rounded" style="max-height: 300px; overflow-y: auto;" id="databaseOutputContent"></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-terminal me-2"></i>Quick Access Commands
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted">Connect to your database using these commands:</p>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">MySQL CLI (from host)</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control font-monospace" id="mysqlCommand" 
+                                       value="docker exec -it <?= htmlspecialchars($site['container_name']) ?>_db mysql -u wordpress -p wordpress" readonly>
+                                <button class="btn btn-outline-secondary" onclick="copyToClipboard('mysqlCommand')">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted">Run this command in your terminal to access MySQL CLI</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Database Backup</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control font-monospace" id="backupCommand" 
+                                       value="docker exec <?= htmlspecialchars($site['container_name']) ?>_db mysqldump -u wordpress -p wordpress > backup.sql" readonly>
+                                <button class="btn btn-outline-secondary" onclick="copyToClipboard('backupCommand')">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted">Creates a SQL backup file</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
 
             <!-- SFTP Section -->
             <div id="sftp-section" class="content-section" style="display: none;">
@@ -964,6 +1111,92 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                 element.type = 'password';
                 icon.classList.remove('bi-eye-slash');
                 icon.classList.add('bi-eye');
+            }
+        }
+        
+        // Database Management Functions
+        async function viewDatabaseLogs() {
+            const output = document.getElementById('databaseOutput');
+            const content = document.getElementById('databaseOutputContent');
+            
+            content.textContent = 'Loading database logs...';
+            output.style.display = 'block';
+            
+            try {
+                const response = await fetch(`/api.php?action=get_container_logs&container=${containerName}_db&lines=50`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    content.textContent = result.logs || 'No logs available';
+                } else {
+                    content.textContent = 'Error: ' + (result.error || 'Failed to fetch logs');
+                }
+            } catch (error) {
+                content.textContent = 'Network error: ' + error.message;
+            }
+        }
+        
+        async function restartDatabase() {
+            if (!confirm('Are you sure you want to restart the database? This will briefly disconnect your site.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api.php?action=restart_container', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ container: containerName + '_db' })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('success', 'Database restarted successfully!');
+                } else {
+                    showAlert('danger', 'Failed to restart database: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                showAlert('danger', 'Network error: ' + error.message);
+            }
+        }
+        
+        async function exportDatabase() {
+            showAlert('info', 'Exporting database... This may take a moment.');
+            
+            try {
+                const response = await fetch(`/api.php?action=export_database&site_id=${siteId}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('success', 'Database exported! Download link: ' + result.file);
+                    // Trigger download
+                    window.location.href = result.download_url;
+                } else {
+                    showAlert('danger', 'Failed to export database: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                showAlert('danger', 'Network error: ' + error.message);
+            }
+        }
+        
+        async function showDatabaseStats() {
+            const output = document.getElementById('databaseOutput');
+            const content = document.getElementById('databaseOutputContent');
+            
+            content.textContent = 'Loading database statistics...';
+            output.style.display = 'block';
+            
+            try {
+                const response = await fetch(`/api.php?action=get_database_stats&site_id=${siteId}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    content.textContent = result.stats || 'No statistics available';
+                } else {
+                    content.textContent = 'Error: ' + (result.error || 'Failed to fetch stats');
+                }
+            } catch (error) {
+                content.textContent = 'Network error: ' + error.message;
             }
         }
         
