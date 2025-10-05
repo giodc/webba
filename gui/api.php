@@ -326,7 +326,7 @@ function createSiteHandler($db) {
         try {
             switch ($data["type"]) {
                 case "wordpress":
-                    deployWordPress($site, $data);
+                    deployWordPress($db, $site, $data);
                     break;
                 case "php":
                     deployPHP($site, $data);
@@ -742,7 +742,7 @@ networks:
     return $compose;
 }
 
-function deployWordPress($site, $config) {
+function deployWordPress($db, $site, $config) {
     // Ensure container_name is set
     if (empty($site['container_name'])) {
         throw new Exception("CRITICAL: deployWordPress received empty container_name for site: " . $site["name"]);
@@ -783,7 +783,6 @@ function deployWordPress($site, $config) {
     
     // Save the database password to the database if it was generated
     if ($dbPassword && ($config['wp_db_type'] ?? 'shared') === 'dedicated') {
-        global $db;
         $stmt = $db->prepare("UPDATE sites SET db_password = ? WHERE container_name = ?");
         $stmt->execute([$dbPassword, $site['container_name']]);
     }
