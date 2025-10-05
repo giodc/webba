@@ -59,7 +59,7 @@ $customWildcardDomain = getSetting($db, 'custom_wildcard_domain', '');
                         <div class="card app-card h-100">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-start mb-3">
-                                    <h5 class="card-title" onclick="window.location.href='edit-site.php?id=<?= $site['id'] ?>'" style="cursor: pointer;" title="Settings & Management">
+                                    <h5 class="card-title" onclick="window.location.href='/edit/<?= $site['id'] ?>/'" style="cursor: pointer;" title="Settings & Management">
                                         <?= htmlspecialchars($site['name']) ?>
                                     </h5>
                                     <span class="badge <?= $containerStatus == 'running' ? 'bg-success' : 'bg-warning' ?> status-badge">
@@ -141,7 +141,7 @@ $customWildcardDomain = getSetting($db, 'custom_wildcard_domain', '');
                                     <button class="btn btn-outline-primary btn-sm" onclick="viewSite('<?= $site['domain'] ?>', <?= $site['ssl'] ? 'true' : 'false' ?>)" title="View Site">
                                         <i class="bi bi-eye"></i>
                                     </button>
-                                    <button class="btn btn-outline-info btn-sm" onclick="window.location.href='edit-site.php?id=<?= $site['id'] ?>'" title="Settings & Management">
+                                    <button class="btn btn-outline-info btn-sm" onclick="window.location.href='/edit/<?= $site['id'] ?>/'" title="Settings & Management">
                                         <i class="bi bi-gear"></i>
                                     </button>
                                     <button class="btn btn-outline-danger btn-sm" onclick="deleteSite(<?= $site['id'] ?>)" title="Delete Site">

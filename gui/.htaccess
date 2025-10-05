@@ -1,0 +1,10 @@
+RewriteEngine On
+RewriteBase /
+
+# Clean URL for editing sites with tab: /edit/123/database/
+RewriteCond %{REQUEST_URI} !^/edit-site\.php
+RewriteRule ^edit/([0-9]+)/([a-z]+)/?$ edit-site.php?id=$1&tab=$2 [L,QSA]
+
+# Clean URL for editing sites: /edit/123/
+RewriteCond %{REQUEST_URI} !^/edit-site\.php
+RewriteRule ^edit/([0-9]+)/?$ edit-site.php?id=$1 [L,QSA]

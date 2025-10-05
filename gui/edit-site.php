@@ -21,6 +21,9 @@ if (!$site) {
     exit;
 }
 
+// Get active tab from URL parameter (for bookmarking)
+$activeTab = $_GET['tab'] ?? 'overview';
+
 // Get container status
 $containerStatus = getDockerContainerStatus($site['container_name']);
 ?>
@@ -889,8 +892,22 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                 // Show section
                 document.querySelectorAll('.content-section').forEach(s => s.style.display = 'none');
                 document.getElementById(section + '-section').style.display = 'block';
+                
+                // Update URL with clean path for bookmarking
+                const siteId = <?= $siteId ?>;
+                const newUrl = section === 'overview' ? `/edit/${siteId}/` : `/edit/${siteId}/${section}/`;
+                window.history.pushState({}, '', newUrl);
             });
         });
+        
+        // Load active tab from URL on page load
+        const activeTab = '<?= htmlspecialchars($activeTab) ?>';
+        if (activeTab && activeTab !== 'overview') {
+            const tabLink = document.querySelector(`[data-section="${activeTab}"]`);
+            if (tabLink) {
+                tabLink.click();
+            }
+        }
 
         // Settings Form
         document.getElementById('settingsForm')?.addEventListener('submit', async function(e) {
