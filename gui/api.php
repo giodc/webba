@@ -2244,12 +2244,14 @@ function exportDatabase($db) {
         
         exec($cmd, $output, $returnCode);
         
-        // Debug info
+        // Debug info (log to server and include in response)
         error_log("Export command: " . $cmd);
         error_log("Return code: " . $returnCode);
         error_log("Output: " . implode("\n", $output));
         error_log("Backup path: " . $backupPath);
         error_log("File exists: " . (file_exists($backupPath) ? 'yes' : 'no'));
+        
+        $debugCommand = str_replace(escapeshellarg($password), '[PASSWORD]', $cmd);
         
         if ($returnCode === 0 && file_exists($backupPath) && filesize($backupPath) > 0) {
             echo json_encode([
@@ -2267,7 +2269,9 @@ function exportDatabase($db) {
                 'backup_path' => $backupPath,
                 'file_exists' => file_exists($backupPath),
                 'file_size' => file_exists($backupPath) ? filesize($backupPath) : 0,
-                'output' => implode("\n", $output)
+                'output' => implode("\n", $output),
+                'command' => $debugCommand,
+                'has_password' => !empty($password)
             ];
             
             if (!empty($output)) {
