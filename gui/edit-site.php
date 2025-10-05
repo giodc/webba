@@ -146,8 +146,9 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                         $hasDedicatedDb = ($site['type'] === 'wordpress' && ($site['db_type'] ?? 'shared') === 'dedicated');
                         $dbContainerExists = false;
                         if ($hasDedicatedDb) {
-                            exec("docker ps -a --filter name=" . escapeshellarg($site['container_name'] . '_db') . " --format '{{.Names}}' 2>&1", $dbCheck);
-                            $dbContainerExists = !empty($dbCheck) && trim($dbCheck[0]) === $site['container_name'] . '_db';
+                            $dbCheck = [];
+                            exec("docker ps -a --filter name=" . escapeshellarg($site['container_name'] . '_db') . " --format '{{.Names}}' 2>&1", $dbCheck, $returnCode);
+                            $dbContainerExists = ($returnCode === 0 && !empty($dbCheck) && trim($dbCheck[0]) === $site['container_name'] . '_db');
                         }
                         ?>
                         <?php if ($hasDedicatedDb && $dbContainerExists): ?>
