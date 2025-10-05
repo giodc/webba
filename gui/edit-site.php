@@ -684,7 +684,78 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                     </div>
                 </div>
 
-                <div class="card">
+                <?php
+                // Check if Redis container exists for this site
+                $redisContainerName = $site['container_name'] . '_redis';
+                exec("docker ps -a --filter name=" . escapeshellarg($redisContainerName) . " --format '{{.Names}}' 2>&1", $redisCheck, $redisReturnCode);
+                $hasRedis = ($redisReturnCode === 0 && !empty($redisCheck) && trim($redisCheck[0]) === $redisContainerName);
+                ?>
+                
+                <?php if ($hasRedis): ?>
+                <div class="card mt-4">
+                    <div class="card-header bg-danger text-white">
+                        <i class="bi bi-lightning-charge me-2"></i>Redis Cache
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            This site has Redis enabled for caching and performance optimization.
+                        </div>
+
+                        <h6 class="mb-3">Redis Connection Information</h6>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Redis Host</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="redisHost" value="<?= htmlspecialchars($redisContainerName) ?>" readonly>
+                                    <button class="btn btn-outline-secondary" onclick="copyToClipboard('redisHost')">
+                                        <i class="bi bi-clipboard"></i>
+                                    </button>
+                                </div>
+                                <small class="text-muted">Internal Docker network hostname</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Redis Port</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="redisPort" value="6379" readonly>
+                                    <button class="btn btn-outline-secondary" onclick="copyToClipboard('redisPort')">
+                                        <i class="bi bi-clipboard"></i>
+                                    </button>
+                                </div>
+                                <small class="text-muted">Default Redis port</small>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-warning">
+                            <strong><i class="bi bi-plugin me-2"></i>WordPress Plugin Required:</strong><br>
+                            Install <strong>Redis Object Cache</strong> plugin from WordPress admin.<br>
+                            The plugin will auto-detect Redis using the hostname above.
+                        </div>
+
+                        <h6 class="mb-3">Redis Management</h6>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <button class="btn btn-outline-danger w-100" onclick="flushRedis()">
+                                    <i class="bi bi-trash me-2"></i>Flush Cache
+                                </button>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <button class="btn btn-outline-success w-100" onclick="restartRedis()">
+                                    <i class="bi bi-arrow-clockwise me-2"></i>Restart Redis
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="redisOutput" class="mt-3" style="display: none;">
+                            <pre class="bg-dark text-light p-3 rounded" id="redisOutputContent"></pre>
+                        </div>
+                    </div>
+                </div>
+                <?php endif; ?>
+
+                <div class="card mt-4">
                     <div class="card-header">
                         <i class="bi bi-terminal me-2"></i>Quick Access Commands
                     </div>
@@ -1299,6 +1370,72 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                     showAlert('danger', 'Failed to restart database: ' + (result.error || 'Unknown error'));
                 }
             } catch (error) {
+                showAlert('danger', 'Network error: ' + error.message);
+            }
+        }
+        
+        async function flushRedis() {
+            if (!confirm('Are you sure you want to flush the Redis cache? This will clear all cached data.')) {
+                return;
+            }
+            
+            document.getElementById('redisOutput').style.display = 'block';
+            document.getElementById('redisOutputContent').textContent = 'Flushing Redis cache...';
+            
+            try {
+                const response = await fetch('/api.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        action: 'execute_docker_command',
+                        command: `exec ${containerName}_redis redis-cli FLUSHALL`
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    document.getElementById('redisOutputContent').textContent = 'Redis cache flushed successfully!';
+                    showAlert('success', 'Redis cache cleared!');
+                } else {
+                    document.getElementById('redisOutputContent').textContent = 'Error: ' + (result.error || 'Unknown error');
+                    showAlert('danger', 'Failed to flush Redis: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                document.getElementById('redisOutputContent').textContent = 'Network error: ' + error.message;
+                showAlert('danger', 'Network error: ' + error.message);
+            }
+        }
+        
+        async function restartRedis() {
+            if (!confirm('Are you sure you want to restart Redis? This will briefly clear the cache.')) {
+                return;
+            }
+            
+            document.getElementById('redisOutput').style.display = 'block';
+            document.getElementById('redisOutputContent').textContent = 'Restarting Redis...';
+            
+            try {
+                const response = await fetch('/api.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        action: 'execute_docker_command',
+                        command: `restart ${containerName}_redis`
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    document.getElementById('redisOutputContent').textContent = 'Redis restarted successfully!';
+                    showAlert('success', 'Redis restarted!');
+                } else {
+                    document.getElementById('redisOutputContent').textContent = 'Error: ' + (result.error || 'Unknown error');
+                    showAlert('danger', 'Failed to restart Redis: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                document.getElementById('redisOutputContent').textContent = 'Network error: ' + error.message;
                 showAlert('danger', 'Network error: ' + error.message);
             }
         }
