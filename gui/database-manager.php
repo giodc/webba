@@ -98,17 +98,25 @@ if ($dbType === 'dedicated') {
     $dbPassword = 'webbadeploy_pass';
 }
 
-// Pre-fill Adminer login form with credentials
-$_GET['username'] = $dbUser;
-
-// Handle auto-login on form submission
-if (isset($_POST['auth'])) {
-    $_POST['auth']['driver'] = 'server';
-    $_POST['auth']['server'] = $dbHost;
-    $_POST['auth']['username'] = $dbUser;
-    $_POST['auth']['password'] = $dbPassword;
-    $_POST['auth']['db'] = $dbName;
-}
-
-// Include Adminer directly
-include './adminer.php';
+// Auto-login: Pre-fill credentials and auto-submit
+?>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Connecting to Database...</title>
+</head>
+<body>
+    <h3>Connecting to <?= htmlspecialchars($site['name']) ?> database...</h3>
+    <form method="post" action="adminer.php" id="loginForm">
+        <input type="hidden" name="auth[driver]" value="server">
+        <input type="hidden" name="auth[server]" value="<?= htmlspecialchars($dbHost) ?>">
+        <input type="hidden" name="auth[username]" value="<?= htmlspecialchars($dbUser) ?>">
+        <input type="hidden" name="auth[password]" value="<?= htmlspecialchars($dbPassword) ?>">
+        <input type="hidden" name="auth[db]" value="<?= htmlspecialchars($dbName) ?>">
+    </form>
+    <script>
+        // Auto-submit the form
+        document.getElementById('loginForm').submit();
+    </script>
+</body>
+</html>
