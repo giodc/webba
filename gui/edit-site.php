@@ -1813,9 +1813,14 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                                    placeholder="VARIABLE_NAME">
                         </div>
                         <div class="col-md-6">
-                            <input type="text" class="form-control" value="${escapedValue}" 
-                                   onchange="updateEnvVar(${index}, 'value', this.value)" 
-                                   placeholder="value">
+                            <div class="input-group">
+                                <input type="password" class="form-control" id="envValue${index}" value="${escapedValue}" 
+                                       onchange="updateEnvVar(${index}, 'value', this.value)" 
+                                       placeholder="value">
+                                <button class="btn btn-outline-secondary" type="button" onclick="toggleEnvVisibility(${index})">
+                                    <i class="bi bi-eye" id="envEye${index}"></i>
+                                </button>
+                            </div>
                         </div>
                         <div class="col-md-2">
                             <button class="btn btn-sm btn-outline-danger" onclick="removeEnvVar(${index})">
@@ -1829,6 +1834,21 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
         
         function updateEnvVar(index, field, value) {
             envVars[index][field] = value;
+        }
+        
+        function toggleEnvVisibility(index) {
+            const input = document.getElementById(`envValue${index}`);
+            const icon = document.getElementById(`envEye${index}`);
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('bi-eye');
+                icon.classList.add('bi-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('bi-eye-slash');
+                icon.classList.add('bi-eye');
+            }
         }
         
         function removeEnvVar(index) {
