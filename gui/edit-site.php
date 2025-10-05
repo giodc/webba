@@ -143,7 +143,18 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                         </a>
                         <?php 
                         // Only show database tab if site has dedicated database AND container exists
-                        $hasDedicatedDb = ($site['type'] === 'wordpress' && ($site['db_type'] ?? 'shared') === 'dedicated');
+                        $dbType = $site['db_type'] ?? 'none';
+                        $hasDedicatedDb = false;
+                        
+                        // Check if site has a database
+                        if ($site['type'] === 'wordpress' && $dbType === 'dedicated') {
+                            $hasDedicatedDb = true;
+                        } elseif ($site['type'] === 'php' && in_array($dbType, ['mysql', 'postgresql'])) {
+                            $hasDedicatedDb = true;
+                        } elseif ($site['type'] === 'laravel' && in_array($dbType, ['mysql', 'postgresql'])) {
+                            $hasDedicatedDb = true;
+                        }
+                        
                         $dbContainerExists = false;
                         if ($hasDedicatedDb) {
                             $dbCheck = [];
@@ -547,17 +558,29 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                 </div>
             </div>
 
-            <?php if ($site['type'] === 'wordpress' && ($site['db_type'] ?? 'shared') === 'dedicated'): ?>
+            <?php 
+            // Show database section for any site with a database
+            $showDatabaseSection = false;
+            $dbType = $site['db_type'] ?? 'none';
+            if ($site['type'] === 'wordpress' && $dbType === 'dedicated') {
+                $showDatabaseSection = true;
+            } elseif ($site['type'] === 'php' && in_array($dbType, ['mysql', 'postgresql'])) {
+                $showDatabaseSection = true;
+            } elseif ($site['type'] === 'laravel' && in_array($dbType, ['mysql', 'postgresql'])) {
+                $showDatabaseSection = true;
+            }
+            ?>
+            <?php if ($showDatabaseSection): ?>
             <!-- Database Section -->
             <div id="database-section" class="content-section" style="display: none;">
                 <div class="card mb-4">
                     <div class="card-header bg-info text-white">
-                        <i class="bi bi-database me-2"></i>Dedicated Database
+                        <i class="bi bi-database me-2"></i>Dedicated Database (<?= strtoupper($dbType) ?>)
                     </div>
                     <div class="card-body">
                         <div class="alert alert-info">
                             <i class="bi bi-info-circle me-2"></i>
-                            This site has a dedicated MariaDB container running separately from the shared database.
+                            This site has a dedicated <?= $dbType === 'postgresql' ? 'PostgreSQL' : 'MariaDB' ?> container running separately.
                         </div>
 
                         <h6 class="mb-3">Database Connection Information</h6>
@@ -576,12 +599,12 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">Database Port</label>
                                 <div class="input-group">
-                                    <input type="text" class="form-control" id="dbPort" value="3306" readonly>
+                                    <input type="text" class="form-control" id="dbPort" value="<?= $dbType === 'postgresql' ? '5432' : '3306' ?>" readonly>
                                     <button class="btn btn-outline-secondary" onclick="copyToClipboard('dbPort')">
                                         <i class="bi bi-clipboard"></i>
                                     </button>
                                 </div>
-                                <small class="text-muted">Default MariaDB port</small>
+                                <small class="text-muted">Default <?= $dbType === 'postgresql' ? 'PostgreSQL' : 'MariaDB' ?> port</small>
                             </div>
                         </div>
 
@@ -589,7 +612,7 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">Database Name</label>
                                 <div class="input-group">
-                                    <input type="text" class="form-control" id="dbName" value="wordpress" readonly>
+                                    <input type="text" class="form-control" id="dbName" value="<?= $site['type'] === 'wordpress' ? 'wordpress' : 'appdb' ?>" readonly>
                                     <button class="btn btn-outline-secondary" onclick="copyToClipboard('dbName')">
                                         <i class="bi bi-clipboard"></i>
                                     </button>
@@ -598,7 +621,7 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">Database User</label>
                                 <div class="input-group">
-                                    <input type="text" class="form-control" id="dbUser" value="wordpress" readonly>
+                                    <input type="text" class="form-control" id="dbUser" value="<?= $site['type'] === 'wordpress' ? 'wordpress' : 'appuser' ?>" readonly>
                                     <button class="btn btn-outline-secondary" onclick="copyToClipboard('dbUser')">
                                         <i class="bi bi-clipboard"></i>
                                     </button>

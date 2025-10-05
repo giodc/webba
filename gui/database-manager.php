@@ -83,12 +83,21 @@ logDatabaseAccess($db, $site['id'], $currentUser['id'], 'database_manager_opened
 
 // Get database credentials
 $dbType = $site['db_type'] ?? 'shared';
+$siteType = $site['type'];
 
-if ($dbType === 'dedicated') {
-    // Dedicated database
+if ($dbType === 'dedicated' || in_array($dbType, ['mysql', 'postgresql'])) {
+    // Dedicated database (WordPress, PHP, Laravel)
     $dbHost = $site['container_name'] . '_db';
-    $dbName = 'wordpress';
-    $dbUser = 'wordpress';
+    
+    if ($siteType === 'wordpress') {
+        $dbName = 'wordpress';
+        $dbUser = 'wordpress';
+    } else {
+        // PHP or Laravel
+        $dbName = 'appdb';
+        $dbUser = 'appuser';
+    }
+    
     $dbPassword = $site['db_password'] ?? '';
 } else {
     // Shared database
