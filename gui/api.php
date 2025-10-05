@@ -287,6 +287,16 @@ function createSiteHandler($db) {
             }
         }
         
+        // Determine database type based on site type
+        $dbType = 'shared';
+        if ($data["type"] === 'wordpress') {
+            $dbType = $data["wp_db_type"] ?? 'shared';
+        } elseif ($data["type"] === 'php') {
+            $dbType = $data["php_db_type"] ?? 'none';
+        } elseif ($data["type"] === 'laravel') {
+            $dbType = $data["laravel_db_type"] ?? 'mysql';
+        }
+        
         $siteConfig = [
             "name" => $data["name"],
             "type" => $data["type"],
@@ -295,7 +305,7 @@ function createSiteHandler($db) {
             "ssl_config" => $sslConfig,
             "container_name" => $containerName,
             "config" => $data,
-            "db_type" => $data["wp_db_type"] ?? 'shared'
+            "db_type" => $dbType
         ];
 
         // Create site record
