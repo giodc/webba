@@ -9,6 +9,29 @@ requireAuth();
 $db = initDatabase();
 $currentUser = getCurrentUser();
 
+// Debug: Check if user data is valid
+if (!$currentUser || !isset($currentUser['id'])) {
+    http_response_code(403);
+    die('
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Session Error</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    </head>
+    <body class="bg-light">
+        <div class="container mt-5">
+            <div class="alert alert-danger">
+                <h4><i class="bi bi-exclamation-triangle"></i> Session Error</h4>
+                <p>Your session is invalid. Please log out and log in again.</p>
+                <a href="/logout.php" class="btn btn-primary">Logout</a>
+            </div>
+        </div>
+    </body>
+    </html>
+    ');
+}
+
 // Get and validate token
 $token = $_GET['token'] ?? '';
 $validated = validateDatabaseToken($db, $token);
@@ -43,7 +66,10 @@ if (!$site) {
 }
 
 // Check if user has permission to access this site's database
-if ($currentUser['role'] !== 'admin' && $site['user_id'] !== $currentUser['id']) {
+$userRole = $currentUser['role'] ?? '';
+$userId = $currentUser['id'] ?? 0;
+
+if ($userRole !== 'admin' && $site['user_id'] !== $userId) {
     http_response_code(403);
     die('You do not have permission to access this database');
 }
