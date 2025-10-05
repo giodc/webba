@@ -104,7 +104,9 @@ $_GET['username'] = $dbUser;
 $_GET['db'] = $dbName;
 
 // Store password in session for Adminer
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 $_SESSION['adminer_password'] = $dbPassword;
 $_SESSION['adminer_site_name'] = $site['name'];
 $_SESSION['adminer_site_id'] = $site['id'];
@@ -136,6 +138,16 @@ class AdminerCustom {
     function permanentLogin() {
         // Keep session for 5 minutes
         return false;
+    }
+    
+    function operators() {
+        // Return default operators
+        return array();
+    }
+    
+    function csp() {
+        // Return Content Security Policy headers
+        return array();
     }
 }
 
