@@ -574,7 +574,7 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
             <!-- Database Section -->
             <div id="database-section" class="content-section" style="display: none;">
                 <div class="card mb-4">
-                    <div class="card-header bg-info text-white">
+                    <div class="card-header bg-dark text-white">
                         <i class="bi bi-database me-2"></i>Dedicated Database (<?= strtoupper($dbType) ?>)
                     </div>
                     <div class="card-body">
@@ -693,7 +693,7 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                 
                 <?php if ($hasRedis): ?>
                 <div class="card mt-4">
-                    <div class="card-header bg-danger text-white">
+                    <div class="card-header bg-dark text-white">
                         <i class="bi bi-lightning-charge me-2"></i>Redis Cache
                     </div>
                     <div class="card-body">
@@ -901,7 +901,7 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
             <!-- Danger Zone -->
             <div id="danger-section" class="content-section" style="display: none;">
                 <div class="card border-danger">
-                    <div class="card-header bg-danger text-white">
+                    <div class="card-header bg-dark text-white">
                         <i class="bi bi-exclamation-triangle me-2"></i>Danger Zone
                     </div>
                     <div class="card-body">
