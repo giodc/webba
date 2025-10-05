@@ -161,15 +161,24 @@ function updateDashboardTraefikConfig($domain, $enableSSL) {
         $labels .= "      - traefik.http.routers.webgui.middlewares=webgui-redirect\n";
     }
     
-    // Remove existing labels if any
-    $content = preg_replace('/(\s+web-gui:.*?)(\n\s+labels:.*?)(?=\n\s{4}[a-z]|\n[a-z]|$)/s', '$1', $content);
-    
-    // Add new labels before networks section
-    $content = preg_replace(
-        '/(web-gui:.*?)(networks:)/s',
-        '$1' . $labels . '    $2',
-        $content
-    );
+    // Find the web-gui service and add labels before networks
+    // First, remove any existing labels section for web-gui
+    $pattern = '/(web-gui:.*?)(labels:.*?)(networks:)/s';
+    if (preg_match($pattern, $content)) {
+        // Labels exist, replace them
+        $content = preg_replace(
+            '/(web-gui:.*?)(labels:.*?)(networks:)/s',
+            '$1' . $labels . '    $3',
+            $content
+        );
+    } else {
+        // No labels, add them before networks
+        $content = preg_replace(
+            '/(web-gui:.*?)(    networks:)/s',
+            '$1' . $labels . '$2',
+            $content
+        );
+    }
     
     file_put_contents($dockerComposePath, $content);
     
