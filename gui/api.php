@@ -2247,10 +2247,12 @@ function exportDatabase($db) {
         $password = $site['db_password'] ?? '';
         
         // Build command with proper escaping (use full path to docker)
+        // Note: Don't use escapeshellarg on password inside sh -c quotes
+        // Note: MariaDB uses 'mariadb-dump' not 'mysqldump'
         $cmd = sprintf(
-            "/usr/bin/docker exec %s sh -c 'MYSQL_PWD=%s mysqldump -u wordpress wordpress' > %s 2>&1",
+            "/usr/bin/docker exec %s sh -c \"MYSQL_PWD=%s mariadb-dump -u wordpress wordpress\" > %s 2>&1",
             escapeshellarg($containerName),
-            escapeshellarg($password),
+            $password, // Don't escape - it's inside double quotes
             escapeshellarg($backupPath)
         );
         
