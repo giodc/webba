@@ -1311,7 +1311,7 @@ function getContainerStats($db, $id) {
         
         // Get volume size
         $volumeName = $site['type'] === 'wordpress' ? "wp_{$site['container_name']}_data" : "{$site['container_name']}_data";
-        $sizeResult = executeDockerCommand("system df -v | grep {$volumeName} || echo 'N/A'");
+        $sizeResult = executeDockerCommand("system df -v | grep {$volumeName} | awk '{print $3}' || echo 'N/A'");
         
         // Calculate uptime
         $uptime = 'N/A';

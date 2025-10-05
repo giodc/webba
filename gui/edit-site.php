@@ -342,9 +342,6 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                                     <a href="http://<?= htmlspecialchars($site['domain']) ?>" target="_blank" class="btn btn-sm btn-outline-primary">
                                         <i class="bi bi-globe me-1"></i>Visit Site
                                     </a>
-                                    <a href="http://192.168.64.4:8080/dashboard/#/http/routers" target="_blank" class="btn btn-sm btn-outline-secondary">
-                                        <i class="bi bi-diagram-3 me-1"></i>Traefik Dashboard
-                                    </a>
                                     <?php if ($site['type'] === 'wordpress'): ?>
                                     <a href="http://<?= htmlspecialchars($site['domain']) ?>/wp-admin" target="_blank" class="btn btn-sm btn-outline-info">
                                         <i class="bi bi-wordpress me-1"></i>WP Admin
