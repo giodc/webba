@@ -22,6 +22,23 @@ set_error_handler(function($errno, $errstr, $errfile, $errline) {
 
 // Set exception handler
 set_exception_handler(function($exception) {
+    ob_clean();
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'error' => 'Exception: ' . $exception->getMessage()
+    ]);
+    exit;
+});
+
+try {
+    require_once 'includes/functions.php';
+    require_once 'includes/auth.php';
+} catch (Throwable $e) {
+    ob_clean();
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Failed to load dependencies: ' . $e->getMessage()]);
+    exit;
 }
 
 // Require authentication for all API calls
