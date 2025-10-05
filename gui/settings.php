@@ -147,16 +147,18 @@ function updateDashboardTraefikConfig($domain, $enableSSL) {
     // Build Traefik labels
     $labels = "\n    labels:\n";
     $labels .= "      - traefik.enable=true\n";
-    $labels .= "      - traefik.http.routers.dashboard.rule=Host(`{$domain}`)\n";
-    $labels .= "      - traefik.http.routers.dashboard.entrypoints=web\n";
-    $labels .= "      - traefik.http.services.dashboard.loadbalancer.server.port=80\n";
+    $labels .= "      - traefik.http.routers.webgui.rule=Host(`{$domain}`)\n";
+    $labels .= "      - traefik.http.routers.webgui.entrypoints=web\n";
+    $labels .= "      - traefik.http.services.webgui.loadbalancer.server.port=80\n";
     
     if ($enableSSL === '1') {
-        $labels .= "      - traefik.http.routers.dashboard-secure.rule=Host(`{$domain}`)\n";
-        $labels .= "      - traefik.http.routers.dashboard-secure.entrypoints=websecure\n";
-        $labels .= "      - traefik.http.routers.dashboard-secure.tls=true\n";
-        $labels .= "      - traefik.http.routers.dashboard-secure.tls.certresolver=letsencrypt\n";
-        $labels .= "      - traefik.http.routers.dashboard.middlewares=redirect-to-https\n";
+        $labels .= "      - traefik.http.routers.webgui-secure.rule=Host(`{$domain}`)\n";
+        $labels .= "      - traefik.http.routers.webgui-secure.entrypoints=websecure\n";
+        $labels .= "      - traefik.http.routers.webgui-secure.tls=true\n";
+        $labels .= "      - traefik.http.routers.webgui-secure.tls.certresolver=letsencrypt\n";
+        $labels .= "      - traefik.http.middlewares.webgui-redirect.redirectscheme.scheme=https\n";
+        $labels .= "      - traefik.http.middlewares.webgui-redirect.redirectscheme.permanent=true\n";
+        $labels .= "      - traefik.http.routers.webgui.middlewares=webgui-redirect\n";
     }
     
     // Remove existing labels if any
