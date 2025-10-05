@@ -2152,13 +2152,13 @@ function restartTraefik() {
 
 function restartWebGui() {
     try {
-        // Use docker-compose to restart web-gui
-        exec("cd /opt/webbadeploy && docker-compose restart web-gui 2>&1", $output, $returnCode);
+        // Use docker-compose up with --force-recreate to apply new labels
+        exec("cd /opt/webbadeploy && docker-compose up -d --force-recreate web-gui 2>&1", $output, $returnCode);
         
         if ($returnCode === 0) {
             echo json_encode([
                 "success" => true,
-                "message" => "Web-GUI restarted successfully"
+                "message" => "Web-GUI recreated successfully with new configuration"
             ]);
         } else {
             throw new Exception("Failed to restart Web-GUI: " . implode("\n", $output));
