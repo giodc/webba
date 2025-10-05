@@ -624,6 +624,14 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                         <h6 class="mb-3">Database Management</h6>
                         
                         <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <button class="btn btn-primary w-100" onclick="openDatabaseManager()">
+                                    <i class="bi bi-database-gear me-2"></i>Open Database Manager
+                                </button>
+                                <small class="text-muted d-block mt-1">
+                                    <i class="bi bi-shield-check me-1"></i>Secure access with temporary token (expires in 5 minutes)
+                                </small>
+                            </div>
                             <div class="col-md-6 mb-3">
                                 <button class="btn btn-outline-primary w-100" onclick="viewDatabaseLogs()">
                                     <i class="bi bi-terminal me-2"></i>View Database Logs
@@ -1254,6 +1262,26 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                 }
             } catch (error) {
                 showAlert('danger', 'Network error: ' + error.message);
+            }
+        }
+        
+        async function openDatabaseManager() {
+            try {
+                showAlert('info', 'Generating secure access token...');
+                
+                const response = await fetch('/api.php?action=generate_db_token&site_id=' + siteId);
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Open database manager in new tab
+                    const url = '/database-manager.php?token=' + result.token;
+                    window.open(url, '_blank', 'width=1200,height=800');
+                    showAlert('success', 'Database Manager opened in new tab. Token expires in 5 minutes.');
+                } else {
+                    showAlert('danger', 'Failed to generate access token: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                showAlert('danger', 'Error: ' + error.message);
             }
         }
         

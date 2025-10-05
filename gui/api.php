@@ -16,30 +16,12 @@ set_error_handler(function($errno, $errstr, $errfile, $errline) {
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'error' => 'PHP Error: ' . $errstr . ' in ' . basename($errfile) . ' on line ' . $errline
     ]);
     exit;
 });
 
 // Set exception handler
 set_exception_handler(function($exception) {
-    ob_clean();
-    http_response_code(500);
-    echo json_encode([
-        'success' => false,
-        'error' => 'Exception: ' . $exception->getMessage()
-    ]);
-    exit;
-});
-
-try {
-    require_once 'includes/functions.php';
-    require_once 'includes/auth.php';
-} catch (Throwable $e) {
-    ob_clean();
-    http_response_code(500);
-    echo json_encode(['success' => false, 'error' => 'Failed to load dependencies: ' . $e->getMessage()]);
-    exit;
 }
 
 // Require authentication for all API calls
@@ -206,6 +188,10 @@ try {
     
     case "get_site_containers":
         getSiteContainers($db, $_GET["id"]);
+        break;
+    
+    case "generate_db_token":
+        generateDbToken($db);
         break;
         
     default:
@@ -2436,6 +2422,52 @@ function getSiteContainers($db, $siteId) {
         echo json_encode([
             "success" => true,
             "containers" => $containers
+        ]);
+        
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode([
+            "success" => false,
+            "error" => $e->getMessage()
+        ]);
+    }
+}
+
+function generateDbToken($db) {
+    try {
+        require_once 'includes/db-token.php';
+        
+        $siteId = $_GET['site_id'] ?? '';
+        
+        if (empty($siteId)) {
+            throw new Exception("Site ID is required");
+        }
+        
+        $site = getSiteById($db, $siteId);
+        if (!$site) {
+            throw new Exception("Site not found");
+        }
+        
+        // Check if site has a database
+        $dbType = $site['db_type'] ?? 'shared';
+        if ($dbType !== 'dedicated' && $site['type'] !== 'wordpress') {
+            throw new Exception("This site does not have database access");
+        }
+        
+        // Create tables if they don't exist
+        createDatabaseTokenTables($db);
+        
+        // Clean up old tokens
+        cleanupExpiredTokens($db);
+        
+        // Generate token
+        $currentUser = getCurrentUser();
+        $token = generateDatabaseToken($db, $siteId, $currentUser['id']);
+        
+        echo json_encode([
+            "success" => true,
+            "token" => $token,
+            "expires_in" => DB_TOKEN_EXPIRY
         ]);
         
     } catch (Exception $e) {
