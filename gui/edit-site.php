@@ -141,7 +141,16 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                             <i class="bi bi-terminal"></i>
                             <span>Logs</span>
                         </a>
-                        <?php if ($site['type'] === 'wordpress' && ($site['db_type'] ?? 'shared') === 'dedicated'): ?>
+                        <?php 
+                        // Only show database tab if site has dedicated database AND container exists
+                        $hasDedicatedDb = ($site['type'] === 'wordpress' && ($site['db_type'] ?? 'shared') === 'dedicated');
+                        $dbContainerExists = false;
+                        if ($hasDedicatedDb) {
+                            exec("docker ps -a --filter name=" . escapeshellarg($site['container_name'] . '_db') . " --format '{{.Names}}' 2>&1", $dbCheck);
+                            $dbContainerExists = !empty($dbCheck) && trim($dbCheck[0]) === $site['container_name'] . '_db';
+                        }
+                        ?>
+                        <?php if ($hasDedicatedDb && $dbContainerExists): ?>
                         <a href="#database" class="sidebar-nav-item" data-section="database">
                             <i class="bi bi-database"></i>
                             <span>Database</span>
