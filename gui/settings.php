@@ -26,6 +26,10 @@ $currentEmail = $matches[1] ?? 'admin@example.com';
 // Get custom wildcard domain from settings
 $customWildcardDomain = getSetting($db, 'custom_wildcard_domain', '');
 
+// Get dashboard domain settings
+$dashboardDomain = getSetting($db, 'dashboard_domain', '');
+$dashboardSSL = getSetting($db, 'dashboard_ssl', '0');
+
 $successMessage = '';
 $errorMessage = '';
 
@@ -92,6 +96,82 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $errorMessage = 'Invalid domain format. Use format like: .example.com or .yourdomain.com';
         }
     }
+    
+    if (isset($_POST['dashboard_domain'])) {
+        $newDashboardDomain = trim($_POST['dashboard_domain']);
+        $enableSSL = isset($_POST['dashboard_ssl']) ? '1' : '0';
+        
+        // Validate domain format (should NOT start with a dot, regular domain)
+        if (empty($newDashboardDomain) || preg_match('/^[a-z0-9.-]+\.[a-z]{2,}$/i', $newDashboardDomain)) {
+            // Save settings
+            setSetting($db, 'dashboard_domain', $newDashboardDomain);
+            setSetting($db, 'dashboard_ssl', $enableSSL);
+            
+            // Update docker-compose.yml with Traefik labels for web-gui
+            $result = updateDashboardTraefikConfig($newDashboardDomain, $enableSSL);
+            
+            if ($result['success']) {
+                $successMessage = 'Dashboard domain updated successfully! ' . $result['message'];
+                $dashboardDomain = $newDashboardDomain;
+                $dashboardSSL = $enableSSL;
+            } else {
+                $errorMessage = 'Failed to update dashboard configuration: ' . $result['error'];
+            }
+        } else {
+            $errorMessage = 'Invalid domain format. Use format like: dashboard.example.com';
+        }
+    }
+}
+
+function updateDashboardTraefikConfig($domain, $enableSSL) {
+    $dockerComposePath = '/opt/webbadeploy/docker-compose.yml';
+    
+    if (!file_exists($dockerComposePath) || !is_writable($dockerComposePath)) {
+        return ['success' => false, 'error' => 'Cannot access docker-compose.yml'];
+    }
+    
+    $content = file_get_contents($dockerComposePath);
+    
+    if (empty($domain)) {
+        // Remove Traefik labels if domain is empty
+        $content = preg_replace('/\s+labels:.*?(?=\n\s{4}[a-z]|\n[a-z]|$)/s', '', $content);
+        file_put_contents($dockerComposePath, $content);
+        return ['success' => true, 'message' => 'Dashboard domain removed. Restart web-gui to apply changes.'];
+    }
+    
+    // Find the web-gui service section
+    if (!preg_match('/web-gui:/', $content)) {
+        return ['success' => false, 'error' => 'web-gui service not found in docker-compose.yml'];
+    }
+    
+    // Build Traefik labels
+    $labels = "\n    labels:\n";
+    $labels .= "      - traefik.enable=true\n";
+    $labels .= "      - traefik.http.routers.dashboard.rule=Host(`{$domain}`)\n";
+    $labels .= "      - traefik.http.routers.dashboard.entrypoints=web\n";
+    $labels .= "      - traefik.http.services.dashboard.loadbalancer.server.port=80\n";
+    
+    if ($enableSSL === '1') {
+        $labels .= "      - traefik.http.routers.dashboard-secure.rule=Host(`{$domain}`)\n";
+        $labels .= "      - traefik.http.routers.dashboard-secure.entrypoints=websecure\n";
+        $labels .= "      - traefik.http.routers.dashboard-secure.tls=true\n";
+        $labels .= "      - traefik.http.routers.dashboard-secure.tls.certresolver=letsencrypt\n";
+        $labels .= "      - traefik.http.routers.dashboard.middlewares=redirect-to-https\n";
+    }
+    
+    // Remove existing labels if any
+    $content = preg_replace('/(\s+web-gui:.*?)(\n\s+labels:.*?)(?=\n\s{4}[a-z]|\n[a-z]|$)/s', '$1', $content);
+    
+    // Add new labels before networks section
+    $content = preg_replace(
+        '/(web-gui:.*?)(networks:)/s',
+        '$1' . $labels . '    $2',
+        $content
+    );
+    
+    file_put_contents($dockerComposePath, $content);
+    
+    return ['success' => true, 'message' => 'Please restart web-gui container: docker-compose restart web-gui'];
 }
 ?>
 <!DOCTYPE html>
@@ -154,6 +234,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <i class="bi bi-save me-2"></i>Save Custom Domain
                             </button>
                         </form>
+                    </div>
+                </div>
+
+                <!-- Dashboard Domain Configuration -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <i class="bi bi-house-door me-2"></i>Dashboard Domain
+                    </div>
+                    <div class="card-body">
+                        <form method="POST">
+                            <div class="mb-3">
+                                <label for="dashboard_domain" class="form-label">
+                                    Custom Dashboard Domain
+                                </label>
+                                <input type="text" class="form-control" id="dashboard_domain" name="dashboard_domain" 
+                                       value="<?= htmlspecialchars($dashboardDomain) ?>" placeholder="dashboard.example.com">
+                                <div class="form-text">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    Set a custom domain to access this dashboard. Make sure the domain points to your server's IP address.
+                                    Leave empty to keep using IP:port access.
+                                </div>
+                            </div>
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" id="dashboard_ssl" name="dashboard_ssl" 
+                                       <?= $dashboardSSL === '1' ? 'checked' : '' ?>>
+                                <label class="form-check-label" for="dashboard_ssl">
+                                    <i class="bi bi-shield-lock me-1"></i>Enable SSL (Let's Encrypt)
+                                </label>
+                                <div class="form-text">
+                                    Automatically obtain and renew SSL certificate for the dashboard domain.
+                                    <strong>Port 80 and 443 must be accessible from the internet.</strong>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save me-2"></i>Save Dashboard Settings
+                            </button>
+                        </form>
+                        
+                        <?php if (!empty($dashboardDomain)): ?>
+                        <div class="alert alert-info mt-3">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <strong>Current Dashboard URL:</strong><br>
+                            <a href="<?= $dashboardSSL === '1' ? 'https' : 'http' ?>://<?= htmlspecialchars($dashboardDomain) ?>" target="_blank">
+                                <?= $dashboardSSL === '1' ? 'https' : 'http' ?>://<?= htmlspecialchars($dashboardDomain) ?>
+                                <i class="bi bi-box-arrow-up-right ms-1"></i>
+                            </a>
+                        </div>
+                        <?php endif; ?>
                     </div>
                 </div>
 
