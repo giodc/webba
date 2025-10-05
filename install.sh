@@ -11,6 +11,15 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
+# Check if this is an update (webbadeploy already exists)
+if [ -d "/opt/webbadeploy/.git" ]; then
+    echo "Existing installation detected. Running update mode..."
+    UPDATE_MODE=true
+else
+    echo "New installation mode..."
+    UPDATE_MODE=false
+fi
+
 # Update system
 echo "Updating system packages..."
 apt update && apt upgrade -y
@@ -40,14 +49,68 @@ if ! id "webbadeploy" &>/dev/null; then
 fi
 
 # Set up directories
-echo "Setting up directories..."
-mkdir -p /opt/webbadeploy
-cp -r * /opt/webbadeploy/
-chown -R webbadeploy:webbadeploy /opt/webbadeploy
-
-# Create required directories
-mkdir -p /opt/webbadeploy/{data,nginx/sites,ssl,apps,web}
-chown -R webbadeploy:webbadeploy /opt/webbadeploy
+if [ "$UPDATE_MODE" = true ]; then
+    echo "Updating existing installation..."
+    cd /opt/webbadeploy
+    
+    # Stash any local changes
+    git stash
+    
+    # Pull latest version
+    echo "Pulling latest version from GitHub..."
+    git pull origin master
+    
+    # Set permissions on docker-compose.yml
+    echo "Setting permissions on docker-compose.yml..."
+    chmod 666 docker-compose.yml
+    
+    # Set Docker socket permissions
+    echo "Setting Docker socket permissions..."
+    chmod 666 /var/run/docker.sock
+    
+    # Create backup directory if it doesn't exist
+    echo "Ensuring backup directory exists..."
+    mkdir -p /opt/webbadeploy/data/backups
+    chown -R www-data:www-data /opt/webbadeploy/data/backups
+    
+    # Rebuild and restart containers
+    echo "Rebuilding containers..."
+    docker-compose build --no-cache web-gui
+    
+    echo "Restarting services..."
+    docker-compose down
+    docker-compose up -d
+    
+    echo ""
+    echo "==============================="
+    echo "Update completed successfully!"
+    echo "==============================="
+    echo "Webbadeploy has been updated to the latest version."
+    echo "Access the dashboard at: http://your-server-ip:9000"
+    exit 0
+else
+    echo "Setting up directories..."
+    mkdir -p /opt/webbadeploy
+    cp -r * /opt/webbadeploy/
+    chown -R webbadeploy:webbadeploy /opt/webbadeploy
+    
+    # Create required directories
+    mkdir -p /opt/webbadeploy/{data,nginx/sites,ssl,apps,web}
+    chown -R webbadeploy:webbadeploy /opt/webbadeploy
+    
+    # Set permissions on docker-compose.yml
+    echo "Setting permissions on docker-compose.yml..."
+    chmod 666 /opt/webbadeploy/docker-compose.yml
+    
+    # Set Docker socket permissions
+    echo "Setting Docker socket permissions..."
+    chmod 666 /var/run/docker.sock
+    
+    # Create backup directory
+    echo "Creating backup directory..."
+    mkdir -p /opt/webbadeploy/data/backups
+    chown -R www-data:www-data /opt/webbadeploy/data/backups
+fi
 
 # Install certbot for SSL
 echo "Installing Certbot for SSL certificates..."
