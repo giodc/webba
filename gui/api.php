@@ -346,10 +346,10 @@ function createSiteHandler($db) {
                     deployWordPress($db, $site, $data);
                     break;
                 case "php":
-                    deployPHP($site, $data);
+                    deployPHP($site, $data, $db);
                     break;
                 case "laravel":
-                    deployLaravel($site, $data);
+                    deployLaravel($site, $data, $db);
                     break;
             }
             $deploymentSuccess = true;
@@ -389,7 +389,7 @@ function createSiteHandler($db) {
     }
 }
 
-function deployPHP($site, $config) {
+function deployPHP($site, $config, $db) {
     // Ensure container_name is set
     if (empty($site['container_name'])) {
         throw new Exception("CRITICAL: deployPHP received empty container_name for site: " . $site["name"]);
@@ -397,7 +397,8 @@ function deployPHP($site, $config) {
     
     // Create PHP application container
     $composePath = "/app/apps/php/sites/{$site['container_name']}/docker-compose.yml";
-    $phpCompose = createPHPDockerCompose($site, $config);
+    $generatedPassword = null;
+    $phpCompose = createPHPDockerCompose($site, $config, $generatedPassword);
 
     $dir = dirname($composePath);
     if (!is_dir($dir)) {
@@ -405,6 +406,12 @@ function deployPHP($site, $config) {
     }
 
     file_put_contents($composePath, $phpCompose);
+
+    // Save database password if generated
+    if ($generatedPassword) {
+        $stmt = $db->prepare("UPDATE sites SET db_password = ? WHERE id = ?");
+        $stmt->execute([$generatedPassword, $site['id']]);
+    }
 
     // Start the container first to create the volume
     $result = executeDockerCompose($composePath, "up -d");
@@ -454,7 +461,7 @@ PHPEOF
     }
 }
 
-function createPHPDockerCompose($site, $config) {
+function createPHPDockerCompose($site, $config, &$generatedPassword = null) {
     $containerName = $site["container_name"];
     $domain = $site["domain"];
     
@@ -468,6 +475,14 @@ function createPHPDockerCompose($site, $config) {
         $containerName = "php_app_" . time();
     }
     
+    // Check database type
+    $dbType = $config['php_db_type'] ?? 'none';
+    $useDedicatedDb = in_array($dbType, ['mysql', 'postgresql']);
+    
+    // Generate random database password
+    $dbPassword = bin2hex(random_bytes(16));
+    $generatedPassword = $dbPassword;
+    
     $compose = "version: '3.8'
 services:
   {$containerName}:
@@ -475,6 +490,25 @@ services:
     container_name: {$containerName}
     volumes:
       - {$containerName}_data:/var/www/html
+    environment:";
+    
+    if ($useDedicatedDb) {
+        // Dedicated database
+        $compose .= "
+      - DB_HOST={$containerName}_db
+      - DB_DATABASE=appdb
+      - DB_USERNAME=appuser
+      - DB_PASSWORD={$dbPassword}";
+    } else {
+        // No database
+        $compose .= "
+      - DB_HOST=
+      - DB_DATABASE=
+      - DB_USERNAME=
+      - DB_PASSWORD=";
+    }
+    
+    $compose .= "
     labels:
       - traefik.enable=true
       - traefik.http.routers.{$containerName}.rule=Host(`{$domain}`)
@@ -497,9 +531,54 @@ services:
     networks:
       - webbadeploy_webbadeploy
     restart: unless-stopped
-
+";
+    
+    // Add database service if needed
+    if ($useDedicatedDb) {
+        if ($dbType === 'mysql') {
+            $compose .= "
+  {$containerName}_db:
+    image: mariadb:latest
+    container_name: {$containerName}_db
+    environment:
+      - MYSQL_ROOT_PASSWORD={$dbPassword}
+      - MYSQL_DATABASE=appdb
+      - MYSQL_USER=appuser
+      - MYSQL_PASSWORD={$dbPassword}
+    volumes:
+      - {$containerName}_db_data:/var/lib/mysql
+    networks:
+      - webbadeploy_webbadeploy
+    restart: unless-stopped
+";
+        } elseif ($dbType === 'postgresql') {
+            $compose .= "
+  {$containerName}_db:
+    image: postgres:15
+    container_name: {$containerName}_db
+    environment:
+      - POSTGRES_DB=appdb
+      - POSTGRES_USER=appuser
+      - POSTGRES_PASSWORD={$dbPassword}
+    volumes:
+      - {$containerName}_db_data:/var/lib/postgresql/data
+    networks:
+      - webbadeploy_webbadeploy
+    restart: unless-stopped
+";
+        }
+    }
+    
+    $compose .= "
 volumes:
-  {$containerName}_data:
+  {$containerName}_data:";
+    
+    if ($useDedicatedDb) {
+        $compose .= "
+  {$containerName}_db_data:";
+    }
+    
+    $compose .= "
 
 networks:
   webbadeploy_webbadeploy:
@@ -508,10 +587,11 @@ networks:
     return $compose;
 }
 
-function deployLaravel($site, $config) {
+function deployLaravel($site, $config, $db) {
     // Create Laravel application container (use Apache HTTP to avoid FastCGI 502)
     $composePath = "/app/apps/laravel/sites/{$site['container_name']}/docker-compose.yml";
-    $laravelCompose = createLaravelDockerCompose($site, $config);
+    $generatedPassword = null;
+    $laravelCompose = createLaravelDockerCompose($site, $config, $generatedPassword);
 
     $dir = dirname($composePath);
     if (!is_dir($dir)) {
@@ -519,6 +599,12 @@ function deployLaravel($site, $config) {
     }
 
     file_put_contents($composePath, $laravelCompose);
+
+    // Save database password if generated
+    if ($generatedPassword) {
+        $stmt = $db->prepare("UPDATE sites SET db_password = ? WHERE id = ?");
+        $stmt->execute([$generatedPassword, $site['id']]);
+    }
 
     // Start the container first to create the volume
     $result = executeDockerCompose($composePath, "up -d");
@@ -568,9 +654,17 @@ PHPEOF
     }
 }
 
-function createLaravelDockerCompose($site, $config) {
+function createLaravelDockerCompose($site, $config, &$generatedPassword = null) {
     $containerName = $site["container_name"];
     $domain = $site["domain"];
+    
+    // Check database type
+    $dbType = $config['laravel_db_type'] ?? 'mysql';
+    $useDedicatedDb = in_array($dbType, ['mysql', 'postgresql']);
+    
+    // Generate random database password
+    $dbPassword = bin2hex(random_bytes(16));
+    $generatedPassword = $dbPassword;
     
     $compose = "version: '3.8'
 services:
@@ -579,11 +673,25 @@ services:
     container_name: {$containerName}
     volumes:
       - {$containerName}_data:/var/www/html
-    environment:
-      - DB_HOST=webbadeploy_db
-      - DB_DATABASE=laravel_{$containerName}
-      - DB_USERNAME=laravel_user
-      - DB_PASSWORD=laravel_pass
+    environment:";
+    
+    if ($useDedicatedDb) {
+        // Dedicated database
+        $compose .= "
+      - DB_HOST={$containerName}_db
+      - DB_DATABASE=appdb
+      - DB_USERNAME=appuser
+      - DB_PASSWORD={$dbPassword}";
+    } else {
+        // No database
+        $compose .= "
+      - DB_HOST=
+      - DB_DATABASE=
+      - DB_USERNAME=
+      - DB_PASSWORD=";
+    }
+    
+    $compose .= "
     labels:
       - traefik.enable=true
       - traefik.http.routers.{$containerName}.rule=Host(`{$domain}`)
@@ -606,9 +714,54 @@ services:
     networks:
       - webbadeploy_webbadeploy
     restart: unless-stopped
-
+";
+    
+    // Add database service if needed
+    if ($useDedicatedDb) {
+        if ($dbType === 'mysql') {
+            $compose .= "
+  {$containerName}_db:
+    image: mariadb:latest
+    container_name: {$containerName}_db
+    environment:
+      - MYSQL_ROOT_PASSWORD={$dbPassword}
+      - MYSQL_DATABASE=appdb
+      - MYSQL_USER=appuser
+      - MYSQL_PASSWORD={$dbPassword}
+    volumes:
+      - {$containerName}_db_data:/var/lib/mysql
+    networks:
+      - webbadeploy_webbadeploy
+    restart: unless-stopped
+";
+        } elseif ($dbType === 'postgresql') {
+            $compose .= "
+  {$containerName}_db:
+    image: postgres:15
+    container_name: {$containerName}_db
+    environment:
+      - POSTGRES_DB=appdb
+      - POSTGRES_USER=appuser
+      - POSTGRES_PASSWORD={$dbPassword}
+    volumes:
+      - {$containerName}_db_data:/var/lib/postgresql/data
+    networks:
+      - webbadeploy_webbadeploy
+    restart: unless-stopped
+";
+        }
+    }
+    
+    $compose .= "
 volumes:
-  {$containerName}_data:
+  {$containerName}_data:";
+    
+    if ($useDedicatedDb) {
+        $compose .= "
+  {$containerName}_db_data:";
+    }
+    
+    $compose .= "
 
 networks:
   webbadeploy_webbadeploy:
