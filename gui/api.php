@@ -184,6 +184,10 @@ try {
         restartTraefik();
         break;
     
+    case "restart_webgui":
+        restartWebGui();
+        break;
+    
     case "execute_docker_command":
         executeDockerCommandAPI();
         break;
@@ -2136,6 +2140,28 @@ function restartTraefik() {
             ]);
         } else {
             throw new Exception("Failed to restart Traefik: " . implode("\n", $output));
+        }
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode([
+            "success" => false,
+            "error" => $e->getMessage()
+        ]);
+    }
+}
+
+function restartWebGui() {
+    try {
+        // Use docker-compose to restart web-gui
+        exec("cd /opt/webbadeploy && docker-compose restart web-gui 2>&1", $output, $returnCode);
+        
+        if ($returnCode === 0) {
+            echo json_encode([
+                "success" => true,
+                "message" => "Web-GUI restarted successfully"
+            ]);
+        } else {
+            throw new Exception("Failed to restart Web-GUI: " . implode("\n", $output));
         }
     } catch (Exception $e) {
         http_response_code(500);

@@ -111,7 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $result = updateDashboardTraefikConfig($newDashboardDomain, $enableSSL);
             
             if ($result['success']) {
-                $successMessage = 'Dashboard domain updated successfully! ' . $result['message'];
+                $successMessage = 'Dashboard domain updated successfully! <button class="btn btn-sm btn-warning ms-2" onclick="restartWebGui()"><i class="bi bi-arrow-clockwise me-1"></i>Restart Now</button>';
                 $dashboardDomain = $newDashboardDomain;
                 $dashboardSSL = $enableSSL;
             } else {
@@ -581,6 +581,30 @@ function updateDashboardTraefikConfig($domain, $enableSSL) {
             `;
             checkSection.style.display = 'block';
             infoSection.style.display = 'none';
+        }
+        
+        async function restartWebGui() {
+            if (!confirm('Restart the web-gui container? The page will reload after restart.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api.php?action=restart_webgui', {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('Web-GUI is restarting... The page will reload in 5 seconds.');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 5000);
+                } else {
+                    alert('Failed to restart: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
         }
     </script>
 </body>
