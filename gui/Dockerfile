@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y \
     sqlite3 \
     libsqlite3-dev \
     git \
-    && docker-php-ext-install pdo pdo_sqlite \
+    && docker-php-ext-install pdo pdo_sqlite pdo_mysql mysqli \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy application files
