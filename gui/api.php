@@ -2213,6 +2213,9 @@ function getContainerLogs() {
 }
 
 function exportDatabase($db) {
+    // Immediate error logging to debug
+    error_log("exportDatabase called with site_id: " . ($_GET['site_id'] ?? 'NONE'));
+    
     try {
         $siteId = $_GET['site_id'] ?? '';
         
