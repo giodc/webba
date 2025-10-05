@@ -81,6 +81,11 @@ if [ "$UPDATE_MODE" = true ]; then
     docker-compose down
     docker-compose up -d
     
+    # Install MySQL extensions manually (in case build fails)
+    echo "Installing MySQL extensions..."
+    docker exec -u root webbadeploy_gui docker-php-ext-install pdo_mysql mysqli 2>/dev/null || true
+    docker exec webbadeploy_gui apache2ctl restart 2>/dev/null || true
+    
     echo ""
     echo "==============================="
     echo "Update completed successfully!"
@@ -125,6 +130,18 @@ if command -v ufw &> /dev/null; then
     ufw --force enable
 fi
 
+echo "Starting services..."
+cd /opt/webbadeploy
+docker-compose up -d
+
+echo "Installing MySQL extensions..."
+sleep 5  # Wait for container to start
+docker exec -u root webbadeploy_gui docker-php-ext-install pdo_mysql mysqli 2>/dev/null || true
+docker exec webbadeploy_gui apache2ctl restart 2>/dev/null || true
+
+echo ""
+echo "==============================="
 echo "Installation completed!"
-echo "Navigate to /opt/webbadeploy and run 'docker-compose up -d' to start the services"
-echo "Access the web GUI at http://your-server-ip"
+echo "==============================="
+echo "Access the web GUI at http://your-server-ip:9000"
+echo "Default credentials will be created on first access"
