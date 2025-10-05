@@ -2332,7 +2332,7 @@ function getDatabaseStats($db) {
             throw new Exception("This site uses a shared database. Stats not available.");
         }
         
-        $containerName = escapeshellarg($site['container_name'] . '_db');
+        $containerName = $site['container_name'] . '_db';
         
         // Get database size and table count
         $sqlCommand = "SELECT 
@@ -2342,7 +2342,13 @@ function getDatabaseStats($db) {
             WHERE table_schema = 'wordpress'";
         
         $password = $site['db_password'] ?? '';
-        $command = "docker exec {$containerName} sh -c 'MYSQL_PWD=" . escapeshellarg($password) . " mysql -u wordpress -e " . escapeshellarg($sqlCommand) . "' 2>&1";
+        // Use mariadb instead of mysql, and full path to docker
+        $command = sprintf(
+            "/usr/bin/docker exec %s sh -c \"MYSQL_PWD=%s mariadb -u wordpress -e %s\" 2>&1",
+            escapeshellarg($containerName),
+            $password,
+            escapeshellarg($sqlCommand)
+        );
         exec($command, $output, $returnCode);
         
         if ($returnCode === 0) {
