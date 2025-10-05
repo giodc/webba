@@ -600,7 +600,7 @@ networks:
     return $compose;
 }
 
-function createWordPressDockerCompose($site, $config) {
+function createWordPressDockerCompose($site, $config, &$generatedPassword = null) {
     $containerName = $site["container_name"];
     $domain = $site["domain"];
     
@@ -611,8 +611,8 @@ function createWordPressDockerCompose($site, $config) {
     // Generate random database password for this site
     $dbPassword = bin2hex(random_bytes(16)); // 32 character random password
     
-    // Store password in site config for reference
-    $site['db_password'] = $dbPassword;
+    // Return the password via reference parameter
+    $generatedPassword = $dbPassword;
     
     // Check if optimizations are enabled
     $wpOptimize = $config['wp_optimize'] ?? false;
@@ -770,13 +770,23 @@ function deployWordPress($site, $config) {
     
     // Create WordPress application containers
     $composePath = "/app/apps/wordpress/sites/{$site['container_name']}/docker-compose.yml";
-    $wpCompose = createWordPressDockerCompose($site, $config);
+    
+    // Generate the docker-compose and get the generated password
+    $dbPassword = null;
+    $wpCompose = createWordPressDockerCompose($site, $config, $dbPassword);
 
     $dir = dirname($composePath);
     if (!is_dir($dir)) {
         mkdir($dir, 0755, true);
     }
     file_put_contents($composePath, $wpCompose);
+    
+    // Save the database password to the database if it was generated
+    if ($dbPassword && ($config['wp_db_type'] ?? 'shared') === 'dedicated') {
+        global $db;
+        $stmt = $db->prepare("UPDATE sites SET db_password = ? WHERE container_name = ?");
+        $stmt->execute([$dbPassword, $site['container_name']]);
+    }
     
     // Create PHP configuration file if optimizations are enabled
     $wpOptimize = $config['wp_optimize'] ?? false;
