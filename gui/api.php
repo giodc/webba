@@ -2629,8 +2629,20 @@ function generateDbToken($db) {
         }
         
         // Check if site has a database
-        $dbType = $site['db_type'] ?? 'shared';
-        if ($dbType !== 'dedicated' && $site['type'] !== 'wordpress') {
+        $dbType = $site['db_type'] ?? 'none';
+        $siteType = $site['type'];
+        
+        // Check if site has database access
+        $hasDatabase = false;
+        if ($siteType === 'wordpress' && $dbType === 'dedicated') {
+            $hasDatabase = true;
+        } elseif ($siteType === 'php' && in_array($dbType, ['mysql', 'postgresql'])) {
+            $hasDatabase = true;
+        } elseif ($siteType === 'laravel' && in_array($dbType, ['mysql', 'postgresql'])) {
+            $hasDatabase = true;
+        }
+        
+        if (!$hasDatabase) {
             throw new Exception("This site does not have database access");
         }
         
