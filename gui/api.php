@@ -1105,9 +1105,9 @@ function updateSiteData($db) {
                 if ($updatedSite['type'] === 'wordpress') {
                     $newCompose = createWordPressDockerCompose($updatedSite, []);
                 } elseif ($updatedSite['type'] === 'php') {
-                    $newCompose = createPHPDockerCompose($updatedSite);
+                    $newCompose = createPHPDockerCompose($updatedSite, []);
                 } elseif ($updatedSite['type'] === 'laravel') {
-                    $newCompose = createLaravelDockerCompose($updatedSite);
+                    $newCompose = createLaravelDockerCompose($updatedSite, []);
                 }
                 
                 if ($newCompose) {
