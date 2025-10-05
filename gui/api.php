@@ -199,6 +199,10 @@ try {
     case "get_database_stats":
         getDatabaseStats($db);
         break;
+    
+    case "get_site_containers":
+        getSiteContainers($db, $_GET["id"]);
+        break;
         
     default:
         ob_clean();
@@ -2334,6 +2338,56 @@ function getDatabaseStats($db) {
         } else {
             throw new Exception("Failed to get database stats: " . implode("\n", $output));
         }
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode([
+            "success" => false,
+            "error" => $e->getMessage()
+        ]);
+    }
+}
+
+function getSiteContainers($db, $siteId) {
+    try {
+        $site = getSiteById($db, $siteId);
+        if (!$site) {
+            throw new Exception("Site not found");
+        }
+        
+        $containerName = $site['container_name'];
+        
+        // Get all containers related to this site
+        $cmd = "docker ps -a --filter name=" . escapeshellarg($containerName) . " --format '{{.Names}}|{{.Image}}|{{.Status}}|{{.State}}' 2>&1";
+        exec($cmd, $output, $returnCode);
+        
+        if ($returnCode !== 0) {
+            throw new Exception("Failed to get containers: " . implode("\n", $output));
+        }
+        
+        $containers = [];
+        foreach ($output as $line) {
+            $parts = explode('|', $line);
+            if (count($parts) >= 4) {
+                // Extract uptime from status (e.g., "Up 6 minutes")
+                $uptime = '';
+                if (preg_match('/Up (.+?)(?:\s+\(|$)/', $parts[2], $matches)) {
+                    $uptime = $matches[1];
+                }
+                
+                $containers[] = [
+                    'name' => $parts[0],
+                    'image' => $parts[1],
+                    'status' => strtolower($parts[3]),
+                    'uptime' => $uptime
+                ];
+            }
+        }
+        
+        echo json_encode([
+            "success" => true,
+            "containers" => $containers
+        ]);
+        
     } catch (Exception $e) {
         http_response_code(500);
         echo json_encode([

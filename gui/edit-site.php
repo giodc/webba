@@ -246,6 +246,28 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
 
                         <div class="card mt-4">
                             <div class="card-header">
+                                <i class="bi bi-boxes me-2"></i>Containers
+                                <button class="btn btn-sm btn-outline-secondary float-end" onclick="refreshContainers()">
+                                    <i class="bi bi-arrow-clockwise"></i>
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                <div id="containersListLoading">
+                                    <div class="text-center py-3">
+                                        <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                            <span class="visually-hidden">Loading...</span>
+                                        </div>
+                                        <p class="mt-2 mb-0 small text-muted">Loading containers...</p>
+                                    </div>
+                                </div>
+                                <div id="containersList" style="display: none;">
+                                    <!-- Containers will be loaded here -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card mt-4">
+                            <div class="card-header">
                                 <i class="bi bi-lightning me-2"></i>Quick Actions
                             </div>
                             <div class="card-body">
@@ -992,6 +1014,62 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
             document.querySelector('[data-section="backup"]').click();
         }
 
+        async function refreshContainers() {
+            const loading = document.getElementById('containersListLoading');
+            const list = document.getElementById('containersList');
+            
+            loading.style.display = 'block';
+            list.style.display = 'none';
+            
+            try {
+                const response = await fetch('/api.php?action=get_site_containers&id=' + siteId);
+                const result = await response.json();
+                
+                if (result.success && result.containers) {
+                    let html = '<div class="list-group list-group-flush">';
+                    
+                    result.containers.forEach(container => {
+                        const statusColor = container.status === 'running' ? 'success' : 
+                                          container.status === 'exited' ? 'danger' : 'warning';
+                        const statusIcon = container.status === 'running' ? 'play-circle-fill' : 
+                                         container.status === 'exited' ? 'stop-circle-fill' : 'pause-circle-fill';
+                        
+                        html += `
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">
+                                            <i class="bi bi-box me-2"></i>${container.name}
+                                        </h6>
+                                        <small class="text-muted">${container.image}</small>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="badge bg-${statusColor}">
+                                            <i class="bi bi-${statusIcon} me-1"></i>${container.status}
+                                        </span>
+                                        ${container.uptime ? `<br><small class="text-muted">${container.uptime}</small>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    html += '</div>';
+                    list.innerHTML = html;
+                    list.style.display = 'block';
+                    loading.style.display = 'none';
+                } else {
+                    list.innerHTML = '<p class="text-muted mb-0">No containers found</p>';
+                    list.style.display = 'block';
+                    loading.style.display = 'none';
+                }
+            } catch (error) {
+                list.innerHTML = '<p class="text-danger mb-0">Error loading containers: ' + error.message + '</p>';
+                list.style.display = 'block';
+                loading.style.display = 'none';
+            }
+        }
+
         async function refreshStats() {
             try {
                 const response = await fetch('/api.php?action=get_stats&id=' + siteId);
@@ -1036,8 +1114,12 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
         // Auto-refresh stats every 30 seconds
         setInterval(refreshStats, 30000);
         
-        // Load stats on page load
+        // Load stats and containers on page load
         refreshStats();
+        refreshContainers();
+        
+        // Refresh containers every 10 seconds
+        setInterval(refreshContainers, 10000);
         
         // SFTP Functions
         async function enableSFTP() {
