@@ -98,62 +98,17 @@ if ($dbType === 'dedicated') {
     $dbPassword = 'webbadeploy_pass';
 }
 
-// Set up Adminer auto-login
-$_GET['server'] = $dbHost;
+// Pre-fill Adminer login form with credentials
 $_GET['username'] = $dbUser;
-$_GET['db'] = $dbName;
 
-// Store password in session for Adminer
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-$_SESSION['adminer_password'] = $dbPassword;
-$_SESSION['adminer_site_name'] = $site['name'];
-$_SESSION['adminer_site_id'] = $site['id'];
-
-// Custom Adminer class for auto-login and customization
-class AdminerCustom {
-    function name() {
-        return 'Webbadeploy Database Manager';
-    }
-    
-    function credentials() {
-        // Auto-login with stored credentials
-        return array(
-            $_GET['server'],
-            $_GET['username'],
-            $_SESSION['adminer_password'] ?? ''
-        );
-    }
-    
-    function database() {
-        return $_GET['db'];
-    }
-    
-    function login($login, $password) {
-        // Always allow login with session credentials
-        return true;
-    }
-    
-    function permanentLogin() {
-        // Keep session for 5 minutes
-        return false;
-    }
-    
-    function operators() {
-        // Return default operators
-        return array();
-    }
-    
-    function csp() {
-        // Return Content Security Policy headers
-        return array();
-    }
+// Handle auto-login on form submission
+if (isset($_POST['auth'])) {
+    $_POST['auth']['driver'] = 'server';
+    $_POST['auth']['server'] = $dbHost;
+    $_POST['auth']['username'] = $dbUser;
+    $_POST['auth']['password'] = $dbPassword;
+    $_POST['auth']['db'] = $dbName;
 }
 
-function adminer_object() {
-    return new AdminerCustom;
-}
-
-// Include Adminer
-include 'adminer.php';
+// Include Adminer directly
+include './adminer.php';
