@@ -66,10 +66,14 @@ if (!$site) {
 }
 
 // Check if user has permission to access this site's database
+// Note: Currently all authenticated users can access all databases
+// TODO: Implement per-site user permissions when multi-user support is added
 $userRole = $currentUser['role'] ?? '';
 $userId = $currentUser['id'] ?? 0;
+$siteUserId = $site['user_id'] ?? null;
 
-if ($userRole !== 'admin' && $site['user_id'] !== $userId) {
+// If site has user_id and user is not admin, check ownership
+if ($siteUserId !== null && $userRole !== 'admin' && $siteUserId !== $userId) {
     http_response_code(403);
     die('You do not have permission to access this database');
 }
