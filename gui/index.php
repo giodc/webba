@@ -68,9 +68,26 @@ $customWildcardDomain = getSetting($db, 'custom_wildcard_domain', '');
                                 </div>
                                 <p class="card-text text-muted">
                                     <i class="bi bi-<?= getAppIcon($site['type']) ?> me-2"></i><?= ucfirst($site['type']) ?>
-                                    <?php if ($site['type'] === 'wordpress' && isset($site['db_type'])): ?>
-                                        <span class="badge bg-<?= $site['db_type'] === 'dedicated' ? 'info' : 'secondary' ?> ms-2" title="Database: <?= ucfirst($site['db_type']) ?>">
-                                            <i class="bi bi-database"></i> <?= ucfirst($site['db_type']) ?> DB
+                                    <?php 
+                                    // Show database badge for any site with a database
+                                    $dbType = $site['db_type'] ?? 'none';
+                                    $showDbBadge = false;
+                                    $dbLabel = '';
+                                    
+                                    if ($site['type'] === 'wordpress' && $dbType === 'dedicated') {
+                                        $showDbBadge = true;
+                                        $dbLabel = 'Dedicated DB';
+                                    } elseif ($site['type'] === 'php' && in_array($dbType, ['mysql', 'postgresql'])) {
+                                        $showDbBadge = true;
+                                        $dbLabel = strtoupper($dbType) . ' DB';
+                                    } elseif ($site['type'] === 'laravel' && in_array($dbType, ['mysql', 'postgresql'])) {
+                                        $showDbBadge = true;
+                                        $dbLabel = strtoupper($dbType) . ' DB';
+                                    }
+                                    ?>
+                                    <?php if ($showDbBadge): ?>
+                                        <span class="badge bg-info ms-2" title="Database: <?= htmlspecialchars($dbLabel) ?>">
+                                            <i class="bi bi-database"></i> <?= htmlspecialchars($dbLabel) ?>
                                         </span>
                                     <?php endif; ?>
                                 </p>
