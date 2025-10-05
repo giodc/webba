@@ -57,6 +57,12 @@ services:
       - ./gui:/var/www/html
     environment:
       - DB_PATH=/app/data/database.sqlite
+    
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.dashboard.rule=Host(`demo.test.local`)
+      - traefik.http.routers.dashboard.entrypoints=web
+      - traefik.http.services.dashboard.loadbalancer.server.port=80
     networks:
       - webbadeploy
     restart: unless-stopped
