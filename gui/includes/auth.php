@@ -249,10 +249,16 @@ function createUser($username, $password, $email = null) {
     // Hash password
     $passwordHash = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
     
+    // Check if this is the first user (should be admin)
+    $stmt = $db->query("SELECT COUNT(*) as count FROM users");
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    $isFirstUser = $result['count'] == 0;
+    $role = $isFirstUser ? 'admin' : 'user';
+    
     // Insert user
     try {
-        $stmt = $db->prepare("INSERT INTO users (username, password_hash, email) VALUES (?, ?, ?)");
-        $stmt->execute([$username, $passwordHash, $email]);
+        $stmt = $db->prepare("INSERT INTO users (username, password_hash, email, role) VALUES (?, ?, ?, ?)");
+        $stmt->execute([$username, $passwordHash, $email, $role]);
         
         return ['success' => true, 'user_id' => $db->lastInsertId()];
     } catch (PDOException $e) {

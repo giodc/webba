@@ -12,15 +12,16 @@ $currentUser = getCurrentUser();
 $setupCompleted = getSetting($db, 'setup_completed', '0');
 $skipSetup = isset($_GET['skip_setup']) && $_GET['skip_setup'] === '1';
 
-if ($setupCompleted === '0' && isAdmin() && !$skipSetup) {
-    // Mark as skipped if user chose to skip
-    header('Location: /setup-wizard.php');
-    exit;
-}
-
 // If user skipped setup, mark it as completed
 if ($skipSetup && isAdmin()) {
     setSetting($db, 'setup_completed', '1');
+    $setupCompleted = '1'; // Update local variable
+}
+
+// Redirect to setup wizard if not completed (check for '0', null, or empty)
+if (($setupCompleted === '0' || $setupCompleted === null || $setupCompleted === '') && isAdmin() && !$skipSetup) {
+    header('Location: /setup-wizard.php');
+    exit;
 }
 
 // Get sites based on user role and permissions

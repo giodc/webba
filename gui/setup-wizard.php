@@ -16,6 +16,7 @@ $setupCompleted = getSetting($db, 'setup_completed', '0');
 // Allow re-running setup if explicitly requested
 $forceSetup = isset($_GET['force']) && $_GET['force'] === '1';
 
+// Only redirect away if setup is explicitly completed (not on fresh install)
 if ($setupCompleted === '1' && !$forceSetup) {
     header('Location: /');
     exit;
