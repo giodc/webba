@@ -8,9 +8,14 @@ Webbadeploy is an open-source platform that makes deploying WordPress, PHP, and 
 
 - **🎯 One-Click Deployment**: Deploy WordPress, PHP, and Laravel apps instantly
 - **🔒 Security First**: Docker containerization with SSL via Let's Encrypt
+- **👥 User Management**: Role-based access control with admin and user roles
+- **🔐 Two-Factor Authentication**: Optional TOTP-based 2FA for enhanced security
+- **🔑 Site Permissions**: Granular access control - users can own or be granted access to specific sites
 - **⚡ WordPress Optimized**: High-performance WordPress setup with Redis, OPcache, and CDN-ready configuration
+- **🚀 Redis Support**: Built-in Redis caching for WordPress, PHP, and Laravel applications
 - **🌐 Domain Management**: Support for test domains and custom domains
 - **📱 Clean Web UI**: Modern, responsive interface for easy management
+- **📊 Audit Logging**: Track all user actions and system changes
 - **🔧 Zero Configuration**: Works out of the box on Ubuntu servers
 
 ## 🚀 Quick Start
@@ -154,6 +159,70 @@ git pull && docker-compose build --no-cache
 - **SSL/TLS**: Modern cipher suites, HSTS headers
 - **Rate Limiting**: Built-in DDoS protection
 - **File Permissions**: Proper ownership and permissions
+- **User Authentication**: Secure session-based authentication with BCrypt password hashing
+- **Two-Factor Authentication**: Optional TOTP-based 2FA with backup codes
+- **Role-Based Access Control**: Admin and user roles with granular permissions
+- **Audit Logging**: Complete audit trail of all user actions
+
+## 👥 User Management & Permissions
+
+### User Roles
+
+**Admin**
+- Full access to all features and sites
+- Can create, edit, and delete users
+- Can grant/revoke site permissions to other users
+- Can view audit logs
+- Can manage system settings
+
+**User**
+- Can view and manage assigned sites
+- Can create new sites (if enabled by admin)
+- Can access sites they own or have been granted permission to
+- Limited to their own sites unless explicitly granted access
+
+### Site Permissions
+
+Sites have three permission levels:
+- **View**: Read-only access to site information
+- **Edit**: Can modify site settings and content
+- **Manage**: Full control including deletion and advanced settings
+
+### Managing Users (Admin Only)
+
+1. Navigate to **Users** in the main menu
+2. Click **Add User** to create new users
+3. Set role (Admin/User) and permissions
+4. Toggle "Can create sites" to control site creation ability
+5. Click on **Manage Permissions** to grant site access to users
+
+## 🔐 Two-Factor Authentication (2FA)
+
+### Enabling 2FA
+
+1. Click on your username in the top-right corner
+2. Select **Two-Factor Auth**
+3. Scan the QR code with your authenticator app (Google Authenticator, Authy, etc.)
+4. Enter the 6-digit code to verify
+5. Save your backup codes in a secure location
+
+### Supported Authenticator Apps
+- Google Authenticator
+- Microsoft Authenticator
+- Authy
+- 1Password
+- Any TOTP-compatible app
+
+### Backup Codes
+- 10 backup codes are generated when enabling 2FA
+- Each code can be used once
+- Store them securely - they're your backup if you lose access to your authenticator
+- Backup codes are 8 characters long (e.g., `A1B2C3D4`)
+
+### Disabling 2FA
+1. Go to **Two-Factor Auth** settings
+2. Enter your password to confirm
+3. Click **Disable 2FA**
 
 ## 📊 System Requirements
 

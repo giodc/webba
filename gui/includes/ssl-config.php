@@ -147,5 +147,3 @@ function updateTraefikForDNSChallenge($dnsProvider, $credentials) {
     
     return true;
 }
-
-?>

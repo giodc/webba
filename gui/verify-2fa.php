@@ -1,38 +1,57 @@
 <?php
 require_once 'includes/auth.php';
 
-// Redirect if already logged in
-if (isLoggedIn()) {
-    header('Location: /index.php');
+// Check if 2FA verification is needed
+if (!isset($_SESSION['2fa_user_id'])) {
+    header('Location: /login.php');
     exit;
 }
 
-// Check if setup is needed
-if (!hasUsers()) {
-    header('Location: /setup.php');
+// Check if 2FA session has expired (5 minutes)
+if (time() - ($_SESSION['2fa_timestamp'] ?? 0) > 300) {
+    unset($_SESSION['2fa_user_id']);
+    unset($_SESSION['2fa_username']);
+    unset($_SESSION['2fa_timestamp']);
+    header('Location: /login.php?error=2fa_expired');
     exit;
 }
 
 $error = '';
 $success = '';
 
-// Handle login form submission
+// Handle 2FA verification
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = $_POST['username'] ?? '';
-    $password = $_POST['password'] ?? '';
+    $code = $_POST['code'] ?? '';
     $csrfToken = $_POST['csrf_token'] ?? '';
     
     if (!verifyCSRFToken($csrfToken)) {
         $error = 'Invalid request. Please try again.';
+    } elseif (empty($code)) {
+        $error = 'Please enter your verification code.';
     } else {
-        $result = authenticateUser($username, $password);
-        
-        if ($result['success']) {
-            // Check if 2FA is required
-            if (isset($result['requires_2fa']) && $result['requires_2fa']) {
-                header('Location: /verify-2fa.php');
-                exit;
-            }
+        // Verify the 2FA code
+        if (verify2FACode($_SESSION['2fa_user_id'], $code)) {
+            // Complete the login
+            $userId = $_SESSION['2fa_user_id'];
+            $username = $_SESSION['2fa_username'];
+            
+            // Clear 2FA session data
+            unset($_SESSION['2fa_user_id']);
+            unset($_SESSION['2fa_username']);
+            unset($_SESSION['2fa_timestamp']);
+            
+            // Set actual session
+            session_regenerate_id(true);
+            $_SESSION['user_id'] = $userId;
+            $_SESSION['username'] = $username;
+            $_SESSION['last_regeneration'] = time();
+            
+            // Update last login
+            $db = initAuthDatabase();
+            $stmt = $db->prepare("UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?");
+            $stmt->execute([$userId]);
+            
+            logAudit('login_2fa', 'user', $userId);
             
             // Redirect to original page or dashboard
             $redirect = $_SESSION['redirect_after_login'] ?? '/index.php';
@@ -40,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             header('Location: ' . $redirect);
             exit;
         } else {
-            $error = $result['error'];
+            $error = 'Invalid verification code. Please try again.';
         }
     }
 }
@@ -52,7 +71,7 @@ $csrfToken = generateCSRFToken();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Webbadeploy</title>
+    <title>Two-Factor Authentication - Webbadeploy</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <link href="css/custom.css" rel="stylesheet">
@@ -64,28 +83,28 @@ $csrfToken = generateCSRFToken();
             align-items: center;
             justify-content: center;
         }
-        .login-container {
+        .verify-container {
             max-width: 420px;
             width: 100%;
             padding: 0 1rem;
         }
-        .login-card {
+        .verify-card {
             background: white;
             border-radius: 1rem;
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
             padding: 2.5rem;
         }
-        .login-header {
+        .verify-header {
             text-align: center;
             margin-bottom: 2rem;
         }
-        .login-header h1 {
+        .verify-header h1 {
             font-size: 1.75rem;
             font-weight: 700;
             color: #1f2937;
             margin-bottom: 0.5rem;
         }
-        .login-header p {
+        .verify-header p {
             color: #6b7280;
             font-size: 0.875rem;
         }
@@ -101,21 +120,20 @@ $csrfToken = generateCSRFToken();
             color: white;
             font-size: 2rem;
         }
-        .form-label {
-            font-weight: 500;
-            color: #374151;
-            margin-bottom: 0.5rem;
-        }
         .form-control {
             padding: 0.75rem 1rem;
             border: 1px solid #d1d5db;
             border-radius: 0.5rem;
+            text-align: center;
+            font-size: 1.5rem;
+            letter-spacing: 0.5rem;
+            font-weight: 600;
         }
         .form-control:focus {
             border-color: #4b5563;
             box-shadow: 0 0 0 3px rgba(75, 85, 99, 0.1);
         }
-        .btn-login {
+        .btn-verify {
             width: 100%;
             padding: 0.75rem;
             font-weight: 600;
@@ -125,26 +143,31 @@ $csrfToken = generateCSRFToken();
             color: white;
             transition: all 0.2s;
         }
-        .btn-login:hover {
+        .btn-verify:hover {
             background: #111827;
             transform: translateY(-1px);
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
-        .alert {
+        .info-box {
+            background: #f3f4f6;
+            border-left: 4px solid #4b5563;
+            padding: 1rem;
             border-radius: 0.5rem;
+            margin-bottom: 1.5rem;
             font-size: 0.875rem;
+            color: #4b5563;
         }
     </style>
 </head>
 <body>
-    <div class="login-container">
-        <div class="login-card">
-            <div class="login-header">
+    <div class="verify-container">
+        <div class="verify-card">
+            <div class="verify-header">
                 <div class="logo-icon">
-                    <i class="bi bi-cloud-arrow-up"></i>
+                    <i class="bi bi-shield-lock"></i>
                 </div>
-                <h1>Webbadeploy</h1>
-                <p>Sign in to your account</p>
+                <h1>Two-Factor Authentication</h1>
+                <p>Enter the 6-digit code from your authenticator app</p>
             </div>
 
             <?php if ($error): ?>
@@ -153,45 +176,50 @@ $csrfToken = generateCSRFToken();
                 </div>
             <?php endif; ?>
 
-            <?php if ($success): ?>
-                <div class="alert alert-success" role="alert">
-                    <i class="bi bi-check-circle me-2"></i><?= htmlspecialchars($success) ?>
-                </div>
-            <?php endif; ?>
-
-            <form method="POST" action="/login.php">
+            <form method="POST" action="/verify-2fa.php">
                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
                 
                 <div class="mb-3">
-                    <label for="username" class="form-label">Username</label>
-                    <input type="text" class="form-control" id="username" name="username" required autofocus>
+                    <input type="text" class="form-control" id="code" name="code" 
+                           required autofocus maxlength="8" pattern="[0-9A-Z]{6,8}" 
+                           placeholder="000000" autocomplete="off">
                 </div>
 
-                <div class="mb-4">
-                    <label for="password" class="form-label">Password</label>
-                    <input type="password" class="form-control" id="password" name="password" required>
-                </div>
-
-                <button type="submit" class="btn btn-login">
-                    <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+                <button type="submit" class="btn btn-verify mb-3">
+                    <i class="bi bi-check-circle me-2"></i>Verify Code
                 </button>
             </form>
 
-            <div class="text-center mt-4">
-                <small class="text-muted">
-                    <i class="bi bi-shield-check me-1"></i>
-                    Secure authentication
-                </small>
+            <div class="info-box">
+                <i class="bi bi-info-circle me-2"></i>
+                <strong>Can't access your authenticator?</strong><br>
+                Use one of your backup codes instead.
+            </div>
+
+            <div class="text-center">
+                <a href="/login.php" class="text-muted text-decoration-none">
+                    <i class="bi bi-arrow-left me-1"></i>Back to login
+                </a>
             </div>
         </div>
 
         <div class="text-center mt-4">
             <small style="color: rgba(255,255,255,0.6);">
-                Webbadeploy - Easy App Deployment Platform
+                <i class="bi bi-shield-check me-1"></i>
+                Secure two-factor authentication
             </small>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Auto-submit when 6 digits are entered
+        document.getElementById('code').addEventListener('input', function(e) {
+            this.value = this.value.toUpperCase();
+            if (this.value.length === 6 || this.value.length === 8) {
+                this.form.submit();
+            }
+        });
+    </script>
 </body>
 </html>

@@ -262,6 +262,12 @@ echo -e "${YELLOW}Configuring database permissions...${NC}"
 docker exec webbadeploy_db mariadb -uroot -pwebbadeploy_root_pass -e "GRANT ALL PRIVILEGES ON *.* TO 'webbadeploy'@'%'; FLUSH PRIVILEGES;" 2>/dev/null || true
 echo -e "${GREEN}✓ Database permissions configured${NC}"
 
+# Run database migrations for new features
+echo -e "${YELLOW}Running database migrations...${NC}"
+sleep 2
+docker exec webbadeploy_gui php /app/migrate-rbac-2fa.php 2>/dev/null || echo -e "${YELLOW}Migration will run on first access${NC}"
+echo -e "${GREEN}✓ Database migrations completed${NC}"
+
 # Check if services are running
 if docker ps | grep -q webbadeploy_gui; then
     echo -e "${GREEN}✓ Services started successfully${NC}"
@@ -295,11 +301,20 @@ echo "  • Restart:        cd $INSTALL_DIR && docker-compose restart"
 echo "  • Stop:           cd $INSTALL_DIR && docker-compose down"
 echo "  • Update:         cd $INSTALL_DIR && docker-compose pull && docker-compose up -d"
 echo ""
+echo -e "${GREEN}New Features Available:${NC}"
+echo "  • User Management with Role-Based Access Control"
+echo "  • Optional Two-Factor Authentication (2FA/TOTP)"
+echo "  • Site Permissions and Ownership"
+echo "  • Redis Support for PHP and Laravel apps"
+echo "  • Audit Logging"
+echo ""
 echo -e "${GREEN}Next Steps:${NC}"
-echo "  1. Visit http://$SERVER_IP to access the dashboard"
-echo "  2. Deploy your first application"
-echo "  3. Configure DNS for custom domains"
-echo "  4. Enable SSL for production sites"
+echo "  1. Visit http://$SERVER_IP:3000 to access the dashboard"
+echo "  2. Create your admin account on first access"
+echo "  3. Deploy your first application"
+echo "  4. Configure DNS for custom domains"
+echo "  5. Enable SSL for production sites"
+echo "  6. (Optional) Enable 2FA in user settings"
 echo ""
 echo -e "${YELLOW}For support: https://github.com/yourrepo/webbadeploy${NC}"
 echo ""

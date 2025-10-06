@@ -210,6 +210,73 @@ try {
     case "generate_db_token":
         generateDbToken($db);
         break;
+    
+    // User Management API endpoints
+    case "create_user":
+        createUserHandler();
+        break;
+    
+    case "get_user":
+        getUserHandler();
+        break;
+    
+    case "update_user":
+        updateUserHandler();
+        break;
+    
+    case "delete_user":
+        deleteUserHandler();
+        break;
+    
+    case "grant_site_permission":
+        grantSitePermissionHandler();
+        break;
+    
+    case "revoke_site_permission":
+        revokeSitePermissionHandler();
+        break;
+    
+    case "get_user_permissions":
+        getUserPermissionsHandler($db);
+        break;
+    
+    // 2FA API endpoints
+    case "setup_2fa":
+        setup2FAHandler();
+        break;
+    
+    case "enable_2fa":
+        enable2FAHandler();
+        break;
+    
+    case "disable_2fa":
+        disable2FAHandler();
+        break;
+    
+    // Redis Management
+    case "enable_redis":
+        enableRedisHandler($db);
+        break;
+    
+    case "disable_redis":
+        disableRedisHandler($db);
+        break;
+    
+    case "flush_redis":
+        flushRedisHandler($db);
+        break;
+    
+    case "restart_redis":
+        restartRedisHandler($db);
+        break;
+    
+    case "update_setting":
+        updateSettingHandler($db);
+        break;
+    
+    case "verify_2fa_setup":
+        verify2FASetupHandler();
+        break;
         
     default:
         ob_clean();
@@ -229,6 +296,12 @@ try {
 
 function createSiteHandler($db) {
     try {
+        // Check if user has permission to create sites
+        if (!canCreateSites($_SESSION['user_id'])) {
+            http_response_code(403);
+            throw new Exception("You don't have permission to create sites. Contact an administrator.");
+        }
+        
         $input = json_decode(file_get_contents("php://input"), true);
         
         if (!$input) {
@@ -459,6 +532,11 @@ PHPEOF
         // Set proper permissions
         exec("docker exec {$containerName} chown www-data:www-data /var/www/html/index.php");
     }
+    
+    // Create Redis container if requested
+    if (isset($config['php_redis']) && $config['php_redis']) {
+        createRedisContainer($site, $db);
+    }
 }
 
 function createPHPDockerCompose($site, $config, &$generatedPassword = null) {
@@ -651,6 +729,11 @@ PHPEOF
         
         // Set proper permissions
         exec("docker exec {$containerName} chown www-data:www-data /var/www/html/index.php");
+    }
+    
+    // Create Redis container if requested
+    if (isset($config['laravel_redis']) && $config['laravel_redis']) {
+        createRedisContainer($site, $db);
     }
 }
 
@@ -2668,6 +2751,660 @@ function generateDbToken($db) {
             "success" => false,
             "error" => $e->getMessage()
         ]);
+    }
+}
+
+// ============================================
+// User Management Handlers
+// ============================================
+
+function createUserHandler() {
+    // Admin only
+    if (!isAdmin()) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'error' => 'Admin privileges required']);
+        return;
+    }
+    
+    try {
+        $username = $_POST['username'] ?? '';
+        $password = $_POST['password'] ?? '';
+        $email = $_POST['email'] ?? '';
+        $role = $_POST['role'] ?? 'user';
+        $canCreateSites = isset($_POST['can_create_sites']) ? 1 : 0;
+        
+        if (empty($username) || empty($password)) {
+            throw new Exception("Username and password are required");
+        }
+        
+        $result = createUser($username, $password, $email);
+        
+        if ($result['success']) {
+            // Update role and permissions
+            updateUser($result['user_id'], [
+                'role' => $role,
+                'can_create_sites' => $canCreateSites
+            ]);
+            
+            logAudit('user_created', 'user', $result['user_id'], ['username' => $username]);
+        }
+        
+        echo json_encode($result);
+        
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    }
+}
+
+function getUserHandler() {
+    try {
+        $userId = $_GET['id'] ?? '';
+        
+        // If no ID provided, return current user
+        if (empty($userId)) {
+            $user = getCurrentUser();
+            if (!$user) {
+                throw new Exception("Not logged in");
+            }
+            echo json_encode(['success' => true, 'user' => $user]);
+            return;
+        }
+        
+        // Admin only for viewing other users
+        if (!isAdmin()) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => 'Admin privileges required']);
+            return;
+        }
+        
+        $user = getUserById($userId);
+        
+        if (!$user) {
+            throw new Exception("User not found");
+        }
+        
+        echo json_encode(['success' => true, 'user' => $user]);
+        
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    }
+}
+
+function updateUserHandler() {
+    // Admin only
+    if (!isAdmin()) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'error' => 'Admin privileges required']);
+        return;
+    }
+    
+    try {
+        $userId = $_POST['user_id'] ?? '';
+        $email = $_POST['email'] ?? null;
+        $role = $_POST['role'] ?? null;
+        $canCreateSites = isset($_POST['can_create_sites']) ? 1 : 0;
+        
+        if (empty($userId)) {
+            throw new Exception("User ID is required");
+        }
+        
+        $data = [];
+        if ($email !== null) $data['email'] = $email;
+        if ($role !== null) $data['role'] = $role;
+        $data['can_create_sites'] = $canCreateSites;
+        
+        $result = updateUser($userId, $data);
+        
+        if ($result['success']) {
+            logAudit('user_updated', 'user', $userId, $data);
+        }
+        
+        echo json_encode($result);
+        
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    }
+}
+
+function deleteUserHandler() {
+    // Admin only
+    if (!isAdmin()) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'error' => 'Admin privileges required']);
+        return;
+    }
+    
+    try {
+        $userId = $_GET['id'] ?? '';
+        
+        if (empty($userId)) {
+            throw new Exception("User ID is required");
+        }
+        
+        $result = deleteUser($userId);
+        
+        if ($result['success']) {
+            logAudit('user_deleted', 'user', $userId);
+        }
+        
+        echo json_encode($result);
+        
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    }
+}
+
+function grantSitePermissionHandler() {
+    // Admin only
+    if (!isAdmin()) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'error' => 'Admin privileges required']);
+        return;
+    }
+    
+    try {
+        $userId = $_POST['user_id'] ?? '';
+        $siteId = $_POST['site_id'] ?? '';
+        $permission = $_POST['permission'] ?? 'view';
+        
+        if (empty($userId) || empty($siteId)) {
+            throw new Exception("User ID and Site ID are required");
+        }
+        
+        $result = grantSitePermission($userId, $siteId, $permission);
+        
+        if ($result['success']) {
+            logAudit('permission_granted', 'site', $siteId, ['user_id' => $userId, 'permission' => $permission]);
+        }
+        
+        echo json_encode($result);
+        
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    }
+}
+
+function revokeSitePermissionHandler() {
+    // Admin only
+    if (!isAdmin()) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'error' => 'Admin privileges required']);
+        return;
+    }
+    
+    try {
+        $userId = $_POST['user_id'] ?? '';
+        $siteId = $_POST['site_id'] ?? '';
+        
+        if (empty($userId) || empty($siteId)) {
+            throw new Exception("User ID and Site ID are required");
+        }
+        
+        $result = revokeSitePermission($userId, $siteId);
+        
+        if ($result['success']) {
+            logAudit('permission_revoked', 'site', $siteId, ['user_id' => $userId]);
+        }
+        
+        echo json_encode($result);
+        
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    }
+}
+
+function getUserPermissionsHandler($db) {
+    // Admin only
+    if (!isAdmin()) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'error' => 'Admin privileges required']);
+        return;
+    }
+    
+    try {
+        $userId = $_GET['user_id'] ?? '';
+        
+        if (empty($userId)) {
+            throw new Exception("User ID is required");
+        }
+        
+        // Get all sites with user permissions
+        $authDb = initAuthDatabase();
+        $stmt = $authDb->prepare("
+            SELECT sp.site_id, sp.permission, s.name as site_name, s.domain
+            FROM site_permissions sp
+            JOIN sites s ON sp.site_id = s.id
+            WHERE sp.user_id = ?
+            ORDER BY s.name
+        ");
+        $stmt->execute([$userId]);
+        $permissions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        echo json_encode(['success' => true, 'permissions' => $permissions]);
+        
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    }
+}
+
+// ============================================
+// 2FA Handlers
+// ============================================
+
+function setup2FAHandler() {
+    try {
+        $totp = new TOTP();
+        $secret = $totp->generateSecret();
+        $currentUser = getCurrentUser();
+        
+        $provisioningUri = $totp->getProvisioningUri($currentUser['username'], $secret);
+        
+        // Generate QR code directly and return as data URL
+        $qrCodeDataUrl = generateQRCodeDataUrl($provisioningUri);
+        
+        // Store secret temporarily in session
+        $_SESSION['2fa_setup_secret'] = $secret;
+        
+        echo json_encode([
+            'success' => true,
+            'secret' => $secret,
+            'qr_code_url' => $qrCodeDataUrl,
+            'provisioning_uri' => $provisioningUri
+        ]);
+        
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    }
+}
+
+function generateQRCodeDataUrl($data) {
+    $size = 250;
+    $encodedData = urlencode($data);
+    
+    // Try multiple APIs
+    $apis = [
+        "https://api.qrserver.com/v1/create-qr-code/?size={$size}x{$size}&data={$encodedData}",
+        "https://quickchart.io/qr?text={$encodedData}&size={$size}",
+        "https://chart.googleapis.com/chart?chs={$size}x{$size}&cht=qr&chl={$encodedData}"
+    ];
+    
+    foreach ($apis as $url) {
+        $context = stream_context_create([
+            'http' => [
+                'timeout' => 5,
+                'ignore_errors' => true
+            ]
+        ]);
+        
+        $imageData = @file_get_contents($url, false, $context);
+        
+        if ($imageData && strlen($imageData) > 100) {
+            // Convert to base64 data URL
+            $base64 = base64_encode($imageData);
+            return 'data:image/png;base64,' . $base64;
+        }
+    }
+    
+    // Fallback: return empty data URL
+    return '';
+}
+
+function verify2FASetupHandler() {
+    try {
+        $code = $_POST['code'] ?? '';
+        $secret = $_SESSION['2fa_setup_secret'] ?? '';
+        
+        if (empty($secret)) {
+            throw new Exception("No 2FA setup in progress");
+        }
+        
+        $totp = new TOTP();
+        if (!$totp->verifyCode($secret, $code)) {
+            throw new Exception("Invalid verification code");
+        }
+        
+        echo json_encode(['success' => true]);
+        
+    } catch (Exception $e) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    }
+}
+
+function enable2FAHandler() {
+    try {
+        $code = $_POST['code'] ?? '';
+        $secret = $_SESSION['2fa_setup_secret'] ?? '';
+        $currentUser = getCurrentUser();
+        
+        if (empty($secret)) {
+            throw new Exception("No 2FA setup in progress");
+        }
+        
+        $totp = new TOTP();
+        if (!$totp->verifyCode($secret, $code)) {
+            throw new Exception("Invalid verification code");
+        }
+        
+        // Generate backup codes
+        $backupCodes = generateBackupCodes();
+        
+        // Enable 2FA
+        $result = enable2FA($currentUser['id'], $secret, $backupCodes);
+        
+        if ($result['success']) {
+            unset($_SESSION['2fa_setup_secret']);
+            echo json_encode([
+                'success' => true,
+                'backup_codes' => $backupCodes
+            ]);
+        } else {
+            throw new Exception($result['error']);
+        }
+        
+    } catch (Exception $e) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    }
+}
+
+function disable2FAHandler() {
+    try {
+        $password = $_POST['password'] ?? '';
+        $currentUser = getCurrentUser();
+        
+        if (empty($password)) {
+            throw new Exception("Password is required to disable 2FA");
+        }
+        
+        // Verify password
+        $result = authenticateUser($currentUser['username'], $password);
+        if (!$result['success']) {
+            throw new Exception("Invalid password");
+        }
+        
+        $result = disable2FA($currentUser['id']);
+        echo json_encode($result);
+        
+    } catch (Exception $e) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    }
+}
+
+// ============================================
+// Redis Management Handlers
+// ============================================
+
+function createRedisContainer($site, $db) {
+    $containerName = $site['container_name'];
+    $redisContainerName = $containerName . '_redis';
+    $networkName = 'webbadeploy_webbadeploy';
+    
+    // Check if Redis container already exists
+    exec("docker ps -a --filter name=" . escapeshellarg($redisContainerName) . " --format '{{.Names}}' 2>&1", $checkOutput, $checkCode);
+    
+    if ($checkCode === 0 && !empty($checkOutput) && trim($checkOutput[0]) === $redisContainerName) {
+        // Already exists, just update database
+        $stmt = $db->prepare("UPDATE sites SET redis_enabled = 1, redis_host = ?, redis_port = 6379 WHERE id = ?");
+        $stmt->execute([$redisContainerName, $site['id']]);
+        return;
+    }
+    
+    // Create Redis container
+    $createCommand = sprintf(
+        "docker run -d --name %s --network %s --restart unless-stopped redis:alpine",
+        escapeshellarg($redisContainerName),
+        escapeshellarg($networkName)
+    );
+    
+    exec($createCommand . " 2>&1", $output, $returnCode);
+    
+    if ($returnCode === 0) {
+        // Update database
+        $stmt = $db->prepare("UPDATE sites SET redis_enabled = 1, redis_host = ?, redis_port = 6379 WHERE id = ?");
+        $stmt->execute([$redisContainerName, $site['id']]);
+        
+        logAudit('redis_enabled', 'site', $site['id']);
+    }
+}
+
+function enableRedisHandler($db) {
+    try {
+        $siteId = $_GET['id'] ?? '';
+        
+        if (empty($siteId)) {
+            throw new Exception("Site ID is required");
+        }
+        
+        // Check if user has access to this site
+        if (!canAccessSite($_SESSION['user_id'], $siteId, 'manage')) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => 'Access denied']);
+            return;
+        }
+        
+        $site = getSiteById($db, $siteId);
+        
+        if (!$site) {
+            throw new Exception("Site not found");
+        }
+        
+        $containerName = $site['container_name'];
+        $redisContainerName = $containerName . '_redis';
+        
+        // Check if Redis container already exists
+        exec("docker ps -a --filter name=" . escapeshellarg($redisContainerName) . " --format '{{.Names}}' 2>&1", $checkOutput, $checkCode);
+        
+        if ($checkCode === 0 && !empty($checkOutput) && trim($checkOutput[0]) === $redisContainerName) {
+            echo json_encode(['success' => true, 'message' => 'Redis is already enabled']);
+            return;
+        }
+        
+        // Create Redis container
+        $networkName = 'webbadeploy_webbadeploy';
+        $createCommand = sprintf(
+            "docker run -d --name %s --network %s --restart unless-stopped redis:alpine",
+            escapeshellarg($redisContainerName),
+            escapeshellarg($networkName)
+        );
+        
+        exec($createCommand . " 2>&1", $output, $returnCode);
+        
+        if ($returnCode !== 0) {
+            throw new Exception("Failed to create Redis container: " . implode("\n", $output));
+        }
+        
+        // Update database
+        $stmt = $db->prepare("UPDATE sites SET redis_enabled = 1, redis_host = ?, redis_port = 6379 WHERE id = ?");
+        $stmt->execute([$redisContainerName, $siteId]);
+        
+        logAudit('redis_enabled', 'site', $siteId);
+        
+        echo json_encode([
+            'success' => true,
+            'message' => 'Redis enabled successfully',
+            'redis_host' => $redisContainerName
+        ]);
+        
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    }
+}
+
+function disableRedisHandler($db) {
+    try {
+        $siteId = $_GET['id'] ?? '';
+        
+        if (empty($siteId)) {
+            throw new Exception("Site ID is required");
+        }
+        
+        // Check if user has access to this site
+        if (!canAccessSite($_SESSION['user_id'], $siteId, 'manage')) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => 'Access denied']);
+            return;
+        }
+        
+        $site = getSiteById($db, $siteId);
+        
+        if (!$site) {
+            throw new Exception("Site not found");
+        }
+        
+        $containerName = $site['container_name'];
+        $redisContainerName = $containerName . '_redis';
+        
+        // Stop and remove Redis container
+        exec("docker stop " . escapeshellarg($redisContainerName) . " 2>&1", $stopOutput, $stopCode);
+        exec("docker rm " . escapeshellarg($redisContainerName) . " 2>&1", $rmOutput, $rmCode);
+        
+        // Update database
+        $stmt = $db->prepare("UPDATE sites SET redis_enabled = 0, redis_host = NULL WHERE id = ?");
+        $stmt->execute([$siteId]);
+        
+        logAudit('redis_disabled', 'site', $siteId);
+        
+        echo json_encode([
+            'success' => true,
+            'message' => 'Redis disabled successfully'
+        ]);
+        
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    }
+}
+
+function flushRedisHandler($db) {
+    try {
+        $siteId = $_GET['id'] ?? '';
+        
+        if (empty($siteId)) {
+            throw new Exception("Site ID is required");
+        }
+        
+        // Check if user has access to this site
+        if (!canAccessSite($_SESSION['user_id'], $siteId, 'manage')) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => 'Access denied']);
+            return;
+        }
+        
+        $site = getSiteById($db, $siteId);
+        
+        if (!$site) {
+            throw new Exception("Site not found");
+        }
+        
+        $containerName = $site['container_name'];
+        $redisContainerName = $containerName . '_redis';
+        
+        // Flush Redis cache
+        exec("docker exec " . escapeshellarg($redisContainerName) . " redis-cli FLUSHALL 2>&1", $output, $returnCode);
+        
+        if ($returnCode !== 0) {
+            throw new Exception("Failed to flush Redis: " . implode("\n", $output));
+        }
+        
+        logAudit('redis_flushed', 'site', $siteId);
+        
+        echo json_encode([
+            'success' => true,
+            'message' => 'Redis cache flushed successfully',
+            'output' => implode("\n", $output)
+        ]);
+        
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    }
+}
+
+function restartRedisHandler($db) {
+    try {
+        $siteId = $_GET['id'] ?? '';
+        
+        if (empty($siteId)) {
+            throw new Exception("Site ID is required");
+        }
+        
+        // Check if user has access to this site
+        if (!canAccessSite($_SESSION['user_id'], $siteId, 'manage')) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => 'Access denied']);
+            return;
+        }
+        
+        $site = getSiteById($db, $siteId);
+        
+        if (!$site) {
+            throw new Exception("Site not found");
+        }
+        
+        $containerName = $site['container_name'];
+        $redisContainerName = $containerName . '_redis';
+        
+        // Restart Redis container
+        exec("docker restart " . escapeshellarg($redisContainerName) . " 2>&1", $output, $returnCode);
+        
+        if ($returnCode !== 0) {
+            throw new Exception("Failed to restart Redis: " . implode("\n", $output));
+        }
+        
+        logAudit('redis_restarted', 'site', $siteId);
+        
+        echo json_encode([
+            'success' => true,
+            'message' => 'Redis restarted successfully',
+            'output' => implode("\n", $output)
+        ]);
+        
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    }
+}
+
+function updateSettingHandler($db) {
+    try {
+        // Only admins can update settings
+        if (!isAdmin()) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => 'Admin privileges required']);
+            return;
+        }
+        
+        $input = json_decode(file_get_contents("php://input"), true);
+        $key = $input['key'] ?? '';
+        $value = $input['value'] ?? '';
+        
+        if (empty($key)) {
+            throw new Exception("Setting key is required");
+        }
+        
+        $result = setSetting($db, $key, $value);
+        
+        if ($result) {
+            logAudit('setting_updated', 'setting', null, ['key' => $key]);
+            echo json_encode(['success' => true, 'message' => 'Setting updated successfully']);
+        } else {
+            throw new Exception("Failed to update setting");
+        }
+        
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
     }
 }
 ?>

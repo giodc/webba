@@ -21,6 +21,20 @@ if (!$site) {
     exit;
 }
 
+// Check if user has access to this site
+if (!canAccessSite($_SESSION['user_id'], $siteId, 'view')) {
+    header('Location: /');
+    exit;
+}
+
+// Determine user's permission level for this site
+$userPermission = 'view'; // default
+if (canAccessSite($_SESSION['user_id'], $siteId, 'manage')) {
+    $userPermission = 'manage';
+} elseif (canAccessSite($_SESSION['user_id'], $siteId, 'edit')) {
+    $userPermission = 'edit';
+}
+
 // Get active tab from URL parameter (for bookmarking)
 $activeTab = $_GET['tab'] ?? 'overview';
 
@@ -106,6 +120,12 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                 <span class="badge bg-<?= $containerStatus === 'running' ? 'success' : 'secondary' ?> ms-2">
                     <?= ucfirst($containerStatus) ?>
                 </span>
+                <?php if (!isAdmin()): ?>
+                <span class="badge bg-<?= $userPermission === 'manage' ? 'primary' : ($userPermission === 'edit' ? 'info' : 'secondary') ?> ms-2">
+                    <i class="bi bi-<?= $userPermission === 'manage' ? 'shield-check' : ($userPermission === 'edit' ? 'pencil' : 'eye') ?> me-1"></i>
+                    <?= ucfirst($userPermission) ?> Access
+                </span>
+                <?php endif; ?>
             </h2>
             <a href="/" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
@@ -171,6 +191,10 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                             <span>Database</span>
                         </a>
                         <?php endif; ?>
+                        <a href="#redis" class="sidebar-nav-item" data-section="redis">
+                            <i class="bi bi-lightning-charge"></i>
+                            <span>Redis Cache</span>
+                        </a>
                         <a href="#sftp" class="sidebar-nav-item" data-section="sftp">
                             <i class="bi bi-hdd-network"></i>
                             <span>SFTP Access</span>
@@ -684,77 +708,6 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                     </div>
                 </div>
 
-                <?php
-                // Check if Redis container exists for this site
-                $redisContainerName = $site['container_name'] . '_redis';
-                exec("docker ps -a --filter name=" . escapeshellarg($redisContainerName) . " --format '{{.Names}}' 2>&1", $redisCheck, $redisReturnCode);
-                $hasRedis = ($redisReturnCode === 0 && !empty($redisCheck) && trim($redisCheck[0]) === $redisContainerName);
-                ?>
-                
-                <?php if ($hasRedis): ?>
-                <div class="card mt-4">
-                    <div class="card-header bg-dark text-white">
-                        <i class="bi bi-lightning-charge me-2"></i>Redis Cache
-                    </div>
-                    <div class="card-body">
-                        <div class="alert alert-info">
-                            <i class="bi bi-info-circle me-2"></i>
-                            This site has Redis enabled for caching and performance optimization.
-                        </div>
-
-                        <h6 class="mb-3">Redis Connection Information</h6>
-                        
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold">Redis Host</label>
-                                <div class="input-group">
-                                    <input type="text" class="form-control" id="redisHost" value="<?= htmlspecialchars($redisContainerName) ?>" readonly>
-                                    <button class="btn btn-outline-secondary" onclick="copyToClipboard('redisHost')">
-                                        <i class="bi bi-clipboard"></i>
-                                    </button>
-                                </div>
-                                <small class="text-muted">Internal Docker network hostname</small>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold">Redis Port</label>
-                                <div class="input-group">
-                                    <input type="text" class="form-control" id="redisPort" value="6379" readonly>
-                                    <button class="btn btn-outline-secondary" onclick="copyToClipboard('redisPort')">
-                                        <i class="bi bi-clipboard"></i>
-                                    </button>
-                                </div>
-                                <small class="text-muted">Default Redis port</small>
-                            </div>
-                        </div>
-
-                        <div class="alert alert-warning">
-                            <strong><i class="bi bi-plugin me-2"></i>WordPress Plugin Required:</strong><br>
-                            Install <strong>Redis Object Cache</strong> plugin from WordPress admin.<br>
-                            The plugin will auto-detect Redis using the hostname above.
-                        </div>
-
-                        <h6 class="mb-3">Redis Management</h6>
-                        
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <button class="btn btn-outline-danger w-100" onclick="flushRedis()">
-                                    <i class="bi bi-trash me-2"></i>Flush Cache
-                                </button>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <button class="btn btn-outline-success w-100" onclick="restartRedis()">
-                                    <i class="bi bi-arrow-clockwise me-2"></i>Restart Redis
-                                </button>
-                            </div>
-                        </div>
-
-                        <div id="redisOutput" class="mt-3" style="display: none;">
-                            <pre class="bg-dark text-light p-3 rounded" id="redisOutputContent"></pre>
-                        </div>
-                    </div>
-                </div>
-                <?php endif; ?>
-
                 <div class="card mt-4">
                     <div class="card-header">
                         <i class="bi bi-terminal me-2"></i>Quick Access Commands
@@ -789,6 +742,125 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                 </div>
             </div>
             <?php endif; ?>
+
+            <?php
+            // Check if Redis container exists for this site
+            $redisContainerName = $site['container_name'] . '_redis';
+            exec("docker ps -a --filter name=" . escapeshellarg($redisContainerName) . " --format '{{.Names}}' 2>&1", $redisCheck, $redisReturnCode);
+            $hasRedis = ($redisReturnCode === 0 && !empty($redisCheck) && trim($redisCheck[0]) === $redisContainerName);
+            ?>
+
+            <!-- Redis Section - Shows for all sites -->
+            <div id="redis-section" class="content-section" style="display: none;">
+                <div class="card">
+                    <div class="card-header bg-dark text-white">
+                        <i class="bi bi-lightning-charge me-2"></i>Redis Cache
+                    </div>
+                    <div class="card-body">
+                        <?php if ($hasRedis): ?>
+                            <div class="alert alert-success">
+                                <i class="bi bi-check-circle me-2"></i>
+                                <strong>Redis is enabled</strong> for caching and performance optimization.
+                            </div>
+
+                            <h6 class="mb-3">Redis Connection Information</h6>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Redis Host</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="redisHost" value="<?= htmlspecialchars($redisContainerName) ?>" readonly>
+                                        <button class="btn btn-outline-secondary" onclick="copyToClipboard('redisHost')">
+                                            <i class="bi bi-clipboard"></i>
+                                        </button>
+                                    </div>
+                                    <small class="text-muted">Internal Docker network hostname</small>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Redis Port</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="redisPort" value="6379" readonly>
+                                        <button class="btn btn-outline-secondary" onclick="copyToClipboard('redisPort')">
+                                            <i class="bi bi-clipboard"></i>
+                                        </button>
+                                    </div>
+                                    <small class="text-muted">Default Redis port</small>
+                                </div>
+                            </div>
+
+                            <?php if ($site['type'] === 'wordpress'): ?>
+                            <div class="alert alert-warning">
+                                <strong><i class="bi bi-plugin me-2"></i>WordPress Plugin Required:</strong><br>
+                                Install <strong>Redis Object Cache</strong> plugin from WordPress admin.<br>
+                                The plugin will auto-detect Redis using the hostname above.
+                            </div>
+                            <?php elseif ($site['type'] === 'php'): ?>
+                            <div class="alert alert-info">
+                                <strong><i class="bi bi-code me-2"></i>PHP Redis Configuration:</strong><br>
+                                Use the following code to connect to Redis in your PHP application:
+                                <pre class="bg-dark text-light p-2 mt-2 rounded"><code>$redis = new Redis();
+$redis->connect('<?= htmlspecialchars($redisContainerName) ?>', 6379);
+// Now you can use $redis->set(), $redis->get(), etc.</code></pre>
+                            </div>
+                            <?php elseif ($site['type'] === 'laravel'): ?>
+                            <div class="alert alert-info">
+                                <strong><i class="bi bi-code me-2"></i>Laravel Redis Configuration:</strong><br>
+                                Add to your <code>.env</code> file:
+                                <pre class="bg-dark text-light p-2 mt-2 rounded"><code>REDIS_HOST=<?= htmlspecialchars($redisContainerName) ?>
+
+REDIS_PORT=6379
+CACHE_DRIVER=redis
+SESSION_DRIVER=redis
+QUEUE_CONNECTION=redis</code></pre>
+                            </div>
+                            <?php endif; ?>
+
+                            <h6 class="mb-3">Redis Management</h6>
+                            
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <button class="btn btn-outline-danger w-100" onclick="flushRedis()">
+                                        <i class="bi bi-trash me-2"></i>Flush Cache
+                                    </button>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <button class="btn btn-outline-success w-100" onclick="restartRedis()">
+                                        <i class="bi bi-arrow-clockwise me-2"></i>Restart Redis
+                                    </button>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <button class="btn btn-outline-warning w-100" onclick="disableRedis()">
+                                        <i class="bi bi-x-circle me-2"></i>Disable Redis
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div id="redisOutput" class="mt-3" style="display: none;">
+                                <pre class="bg-dark text-light p-3 rounded" id="redisOutputContent"></pre>
+                            </div>
+                        <?php else: ?>
+                            <div class="alert alert-secondary">
+                                <i class="bi bi-info-circle me-2"></i>
+                                Redis is not currently enabled for this site.
+                            </div>
+
+                            <p class="text-muted">
+                                Enable Redis to improve performance with in-memory caching. 
+                                Redis is great for:
+                            </p>
+                            <ul class="text-muted">
+                                <li><strong>WordPress:</strong> Object caching, page caching</li>
+                                <li><strong>PHP:</strong> Session storage, data caching</li>
+                                <li><strong>Laravel:</strong> Cache, sessions, queues</li>
+                            </ul>
+
+                            <button class="btn btn-primary" onclick="enableRedis()">
+                                <i class="bi bi-lightning-charge me-2"></i>Enable Redis
+                            </button>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
 
             <!-- SFTP Section -->
             <div id="sftp-section" class="content-section" style="display: none;">
@@ -907,9 +979,16 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                     <div class="card-body">
                         <h6>Delete This Site</h6>
                         <p class="text-muted">Once you delete a site, there is no going back. Please be certain.</p>
+                        <?php if ($userPermission === 'manage'): ?>
                         <button class="btn btn-danger" onclick="deleteSite(<?= $site['id'] ?>)">
                             <i class="bi bi-trash me-2"></i>Delete Site
                         </button>
+                        <?php else: ?>
+                        <button class="btn btn-danger" disabled title="Requires 'Manage' permission">
+                            <i class="bi bi-lock me-2"></i>Delete Site (No Permission)
+                        </button>
+                        <small class="text-muted d-block mt-2">You need 'Manage' permission to delete this site.</small>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
@@ -1383,13 +1462,8 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
             document.getElementById('redisOutputContent').textContent = 'Flushing Redis cache...';
             
             try {
-                const response = await fetch('/api.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        action: 'execute_docker_command',
-                        command: `exec ${containerName}_redis redis-cli FLUSHALL`
-                    })
+                const response = await fetch('/api.php?action=flush_redis&id=<?= $site['id'] ?>', {
+                    method: 'POST'
                 });
                 
                 const result = await response.json();
@@ -1416,13 +1490,8 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
             document.getElementById('redisOutputContent').textContent = 'Restarting Redis...';
             
             try {
-                const response = await fetch('/api.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        action: 'execute_docker_command',
-                        command: `restart ${containerName}_redis`
-                    })
+                const response = await fetch('/api.php?action=restart_redis&id=<?= $site['id'] ?>', {
+                    method: 'POST'
                 });
                 
                 const result = await response.json();
@@ -1437,6 +1506,70 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
             } catch (error) {
                 document.getElementById('redisOutputContent').textContent = 'Network error: ' + error.message;
                 showAlert('danger', 'Network error: ' + error.message);
+            }
+        }
+        
+        async function enableRedis() {
+            if (!confirm('Enable Redis caching for this site? A Redis container will be created.')) {
+                return;
+            }
+            
+            const btn = event.target;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Enabling...';
+            btn.disabled = true;
+            
+            try {
+                const response = await fetch('/api.php?action=enable_redis&id=<?= $site['id'] ?>', {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('success', 'Redis enabled successfully! Reloading page...');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showAlert('danger', 'Failed to enable Redis: ' + (result.error || 'Unknown error'));
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }
+            } catch (error) {
+                showAlert('danger', 'Network error: ' + error.message);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+        
+        async function disableRedis() {
+            if (!confirm('Disable Redis caching? The Redis container will be removed and all cached data will be lost.')) {
+                return;
+            }
+            
+            const btn = event.target;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Disabling...';
+            btn.disabled = true;
+            
+            try {
+                const response = await fetch('/api.php?action=disable_redis&id=<?= $site['id'] ?>', {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('success', 'Redis disabled successfully! Reloading page...');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showAlert('danger', 'Failed to disable Redis: ' + (result.error || 'Unknown error'));
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }
+            } catch (error) {
+                showAlert('danger', 'Network error: ' + error.message);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
             }
         }
         

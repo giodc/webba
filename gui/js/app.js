@@ -1,4 +1,4 @@
-let createModal, editModal, passwordModal, updateModal;
+let createModal, editModal, passwordModal, updateModal, twoFactorModal;
 
 // Version check - if you see this in console, the new JS is loaded
 console.log("Webbadeploy JS v5.0 loaded - Async stats loading for performance!");
@@ -8,6 +8,7 @@ document.addEventListener("DOMContentLoaded", function() {
     editModal = new bootstrap.Modal(document.getElementById("editModal"));
     passwordModal = new bootstrap.Modal(document.getElementById("passwordModal"));
     updateModal = new bootstrap.Modal(document.getElementById("updateModal"));
+    twoFactorModal = new bootstrap.Modal(document.getElementById("twoFactorModal"));
     
     // Check for updates on page load
     checkForUpdatesBackground();
@@ -648,5 +649,243 @@ async function performUpdate() {
         `;
         updateBtn.innerHTML = originalText;
         updateBtn.disabled = false;
+    }
+}
+
+// ============================================
+// Two-Factor Authentication Functions
+// ============================================
+
+async function show2FAModal() {
+    twoFactorModal.show();
+    await load2FAStatus();
+}
+
+async function load2FAStatus() {
+    const content = document.getElementById("twoFactorContent");
+    
+    try {
+        // Check current 2FA status from user session/API
+        const response = await fetch("api.php?action=get_user");
+        const result = await response.json();
+        
+        if (result.success && result.user) {
+            const user = result.user;
+            
+            if (user.totp_enabled) {
+                // 2FA is enabled
+                content.innerHTML = `
+                    <div class="alert alert-success">
+                        <i class="bi bi-shield-check me-2"></i>
+                        <strong>Two-Factor Authentication is Enabled</strong>
+                        <p class="mb-0 mt-2">Your account is protected with 2FA.</p>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-body">
+                            <h6 class="card-title">Disable 2FA</h6>
+                            <p class="text-muted">Enter your password to disable two-factor authentication.</p>
+                            <form id="disable2FAForm" onsubmit="disable2FA(event)">
+                                <div class="mb-3">
+                                    <label class="form-label">Password</label>
+                                    <input type="password" class="form-control" name="password" required>
+                                </div>
+                                <button type="submit" class="btn btn-danger">
+                                    <i class="bi bi-shield-x me-2"></i>Disable 2FA
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // 2FA is not enabled
+                content.innerHTML = `
+                    <div class="alert alert-warning">
+                        <i class="bi bi-shield-exclamation me-2"></i>
+                        <strong>Two-Factor Authentication is Disabled</strong>
+                        <p class="mb-0 mt-2">Enable 2FA to add an extra layer of security to your account.</p>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-body">
+                            <h6 class="card-title">Enable 2FA</h6>
+                            <p class="text-muted">Scan the QR code with your authenticator app and enter the code to enable 2FA.</p>
+                            <button type="button" class="btn btn-primary" onclick="setup2FA()">
+                                <i class="bi bi-shield-plus me-2"></i>Setup Two-Factor Authentication
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+    } catch (error) {
+        content.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                Error loading 2FA status: ${error.message}
+            </div>
+        `;
+    }
+}
+
+async function setup2FA() {
+    const content = document.getElementById("twoFactorContent");
+    content.innerHTML = `
+        <div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2">Generating QR code...</p>
+        </div>
+    `;
+    
+    try {
+        const response = await fetch("api.php?action=setup_2fa", { method: "POST" });
+        const result = await response.json();
+        
+        if (result.success) {
+            content.innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Step 1: Add to Authenticator App</h6>
+                        <p class="text-muted small">Scan this QR code with your authenticator app:</p>
+                        <div class="text-center mb-3 p-3 bg-white border rounded" id="qr-container">
+                            <img src="${result.qr_code_url}" alt="QR Code" class="img-fluid" style="max-width: 250px; min-height: 250px;" 
+                                 onload="console.log('QR code loaded successfully')"
+                                 onerror="console.error('QR code failed to load'); this.style.display='none'; document.getElementById('qr-error').style.display='block';">
+                            <div id="qr-error" style="display: none;" class="alert alert-warning mt-2 mb-0">
+                                <small><i class="bi bi-exclamation-triangle me-1"></i>QR code could not be loaded. Please use manual entry below.</small>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-secondary">
+                            <p class="mb-2 small"><strong>Manual Entry:</strong></p>
+                            <p class="mb-1 small">Account: <strong>Webbadeploy</strong></p>
+                            <p class="mb-2 small">Secret Key:</p>
+                            <div class="input-group input-group-sm">
+                                <input type="text" class="form-control font-monospace" id="secretKey" value="${result.secret}" readonly>
+                                <button class="btn btn-outline-secondary" onclick="navigator.clipboard.writeText('${result.secret}'); showAlert('success', 'Secret copied to clipboard!')">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <p class="text-muted small">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Supported apps: Google Authenticator, Microsoft Authenticator, Authy, 1Password
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Step 2: Verify Code</h6>
+                        <p class="text-muted small">Enter the 6-digit code from your authenticator app:</p>
+                        <form id="enable2FAForm" onsubmit="enable2FA(event)">
+                            <div class="mb-3">
+                                <input type="text" class="form-control form-control-lg text-center font-monospace" 
+                                       name="code" maxlength="6" pattern="[0-9]{6}" 
+                                       placeholder="000000" required autofocus
+                                       style="letter-spacing: 0.5rem; font-size: 2rem;">
+                            </div>
+                            <button type="submit" class="btn btn-success w-100">
+                                <i class="bi bi-check-circle me-2"></i>Enable 2FA
+                            </button>
+                            <button type="button" class="btn btn-secondary w-100 mt-2" onclick="load2FAStatus()">
+                                <i class="bi bi-arrow-left me-2"></i>Cancel
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            `;
+        } else {
+            throw new Error(result.error || "Failed to setup 2FA");
+        }
+    } catch (error) {
+        content.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                Error: ${error.message}
+            </div>
+            <button class="btn btn-secondary" onclick="load2FAStatus()">Back</button>
+        `;
+    }
+}
+
+async function enable2FA(event) {
+    event.preventDefault();
+    const formData = new FormData(event.target);
+    const submitBtn = event.target.querySelector("button[type='submit']");
+    const originalText = submitBtn.innerHTML;
+    
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Verifying...';
+    submitBtn.disabled = true;
+    
+    try {
+        const response = await fetch("api.php?action=enable_2fa", {
+            method: "POST",
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            const content = document.getElementById("twoFactorContent");
+            content.innerHTML = `
+                <div class="alert alert-success">
+                    <i class="bi bi-check-circle me-2"></i>
+                    <strong>2FA Enabled Successfully!</strong>
+                </div>
+                
+                <div class="card bg-light">
+                    <div class="card-body">
+                        <h6 class="card-title"><i class="bi bi-key me-2"></i>Backup Codes</h6>
+                        <p class="text-danger small"><strong>Important:</strong> Save these backup codes in a secure location. Each code can be used once if you lose access to your authenticator app.</p>
+                        <div class="row">
+                            ${result.backup_codes.map(code => `
+                                <div class="col-6 col-md-4 mb-2">
+                                    <code class="d-block p-2 bg-white border rounded">${code}</code>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <button class="btn btn-primary mt-3" onclick="twoFactorModal.hide(); location.reload();">
+                            <i class="bi bi-check-circle me-2"></i>Done
+                        </button>
+                    </div>
+                </div>
+            `;
+        } else {
+            throw new Error(result.error || "Failed to enable 2FA");
+        }
+    } catch (error) {
+        showAlert("danger", error.message);
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    }
+}
+
+async function disable2FA(event) {
+    event.preventDefault();
+    const formData = new FormData(event.target);
+    const submitBtn = event.target.querySelector("button[type='submit']");
+    const originalText = submitBtn.innerHTML;
+    
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Disabling...';
+    submitBtn.disabled = true;
+    
+    try {
+        const response = await fetch("api.php?action=disable_2fa", {
+            method: "POST",
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showAlert("success", "2FA has been disabled successfully");
+            twoFactorModal.hide();
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            throw new Error(result.error || "Failed to disable 2FA");
+        }
+    } catch (error) {
+        showAlert("danger", error.message);
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
     }
 }

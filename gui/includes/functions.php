@@ -74,12 +74,13 @@ function setSetting($pdo, $key, $value) {
 }
 
 function createSite($pdo, $data) {
-    $stmt = $pdo->prepare("INSERT INTO sites (name, type, domain, ssl, ssl_config, container_name, config, db_password, db_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmt = $pdo->prepare("INSERT INTO sites (name, type, domain, ssl, ssl_config, container_name, config, db_password, db_type, owner_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     $containerName = $data['container_name'] ?? '';
     $config = json_encode($data['config'] ?? []);
     $sslConfig = isset($data['ssl_config']) ? json_encode($data['ssl_config']) : null;
     $dbPassword = $data['db_password'] ?? null;
     $dbType = $data['db_type'] ?? 'shared';
+    $ownerId = $data['owner_id'] ?? $_SESSION['user_id'] ?? 1;
     
     
     return $stmt->execute([
@@ -91,7 +92,8 @@ function createSite($pdo, $data) {
         $containerName,
         $config,
         $dbPassword,
-        $dbType
+        $dbType,
+        $ownerId
     ]);
 }
 
@@ -422,4 +424,3 @@ networks:
   webbadeploy_webbadeploy:
     external: true";
 }
-?>

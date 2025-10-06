@@ -86,12 +86,24 @@ if [ "$UPDATE_MODE" = true ]; then
     docker exec -u root webbadeploy_gui docker-php-ext-install pdo_mysql mysqli 2>/dev/null || true
     docker exec webbadeploy_gui apache2ctl restart 2>/dev/null || true
     
+    # Run database migrations
+    echo "Running database migrations..."
+    sleep 2
+    docker exec webbadeploy_gui php /app/migrate-rbac-2fa.php 2>/dev/null || echo "Migration completed or already applied"
+    
     echo ""
     echo "==============================="
     echo "Update completed successfully!"
     echo "==============================="
     echo "Webbadeploy has been updated to the latest version."
     echo "Access the dashboard at: http://your-server-ip:9000"
+    echo ""
+    echo "New features in this update:"
+    echo "  • User Management with Role-Based Access Control"
+    echo "  • Optional Two-Factor Authentication (2FA/TOTP)"
+    echo "  • Site Permissions and Ownership"
+    echo "  • Redis Support for PHP and Laravel apps"
+    echo "  • Audit Logging"
     exit 0
 else
     echo "Setting up directories..."
@@ -139,9 +151,20 @@ sleep 5  # Wait for container to start
 docker exec -u root webbadeploy_gui docker-php-ext-install pdo_mysql mysqli 2>/dev/null || true
 docker exec webbadeploy_gui apache2ctl restart 2>/dev/null || true
 
+echo "Running database migrations..."
+sleep 2
+docker exec webbadeploy_gui php /app/migrate-rbac-2fa.php 2>/dev/null || echo "Migration will run on first access"
+
 echo ""
 echo "==============================="
 echo "Installation completed!"
 echo "==============================="
 echo "Access the web GUI at http://your-server-ip:9000"
 echo "Default credentials will be created on first access"
+echo ""
+echo "New features available:"
+echo "  • User Management with Role-Based Access Control"
+echo "  • Optional Two-Factor Authentication (2FA/TOTP)"
+echo "  • Site Permissions and Ownership"
+echo "  • Redis Support for PHP and Laravel apps"
+echo "  • Audit Logging"

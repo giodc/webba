@@ -7,7 +7,29 @@ requireAuth();
 
 $db = initDatabase();
 $currentUser = getCurrentUser();
-$sites = getAllSites($db);
+
+// Check if setup wizard should be shown (for admins on fresh install)
+$setupCompleted = getSetting($db, 'setup_completed', '0');
+$skipSetup = isset($_GET['skip_setup']) && $_GET['skip_setup'] === '1';
+
+if ($setupCompleted === '0' && isAdmin() && !$skipSetup) {
+    // Mark as skipped if user chose to skip
+    header('Location: /setup-wizard.php');
+    exit;
+}
+
+// If user skipped setup, mark it as completed
+if ($skipSetup && isAdmin()) {
+    setSetting($db, 'setup_completed', '1');
+}
+
+// Get sites based on user role and permissions
+if (isAdmin()) {
+    $sites = getAllSites($db);
+} else {
+    $sites = getUserSites($_SESSION['user_id']);
+}
+
 $customWildcardDomain = getSetting($db, 'custom_wildcard_domain', '');
 ?>
 <!DOCTYPE html>
@@ -35,9 +57,11 @@ $customWildcardDomain = getSetting($db, 'custom_wildcard_domain', '');
             <div class="col-md-12">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h2><i class="bi bi-grid me-2"></i>Your Applications</h2>
+                    <?php if (canCreateSites($_SESSION['user_id'])): ?>
                     <button class="btn btn-primary" onclick="showCreateModal()">
                         <i class="bi bi-plus me-2"></i>New App
                     </button>
+                    <?php endif; ?>
                 </div>
 
                 <div class="row" id="apps">
@@ -45,10 +69,14 @@ $customWildcardDomain = getSetting($db, 'custom_wildcard_domain', '');
                     <div class="col-12 text-center py-5">
                         <i class="bi bi-cloud text-muted" style="font-size: 4rem;"></i>
                         <h3 class="mt-3">No applications yet</h3>
+                        <?php if (canCreateSites($_SESSION['user_id'])): ?>
                         <p class="">Deploy your first application to get started</p>
                         <button class="btn btn-primary btn-lg" onclick="showCreateModal()">
-                <i class="bi bi-plus-circle me-2"></i>Deploy Your First App
-            </button>
+                            <i class="bi bi-plus-circle me-2"></i>Deploy Your First App
+                        </button>
+                        <?php else: ?>
+                        <p class="text-muted">You don't have access to any applications yet.<br>Contact an administrator to grant you access.</p>
+                        <?php endif; ?>
                     </div>
                     <?php else: ?>
                     <?php foreach ($sites as $site): 
@@ -144,9 +172,15 @@ $customWildcardDomain = getSetting($db, 'custom_wildcard_domain', '');
                                     <button class="btn btn-outline-info btn-sm" onclick="window.location.href='/edit/<?= $site['id'] ?>/'" title="Settings & Management">
                                         <i class="bi bi-gear"></i>
                                     </button>
+                                    <?php if (canAccessSite($_SESSION['user_id'], $site['id'], 'manage')): ?>
                                     <button class="btn btn-outline-danger btn-sm" onclick="deleteSite(<?= $site['id'] ?>)" title="Delete Site">
                                         <i class="bi bi-trash"></i>
                                     </button>
+                                    <?php else: ?>
+                                    <button class="btn btn-outline-secondary btn-sm" disabled title="Requires 'Manage' permission">
+                                        <i class="bi bi-lock"></i>
+                                    </button>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>
@@ -363,6 +397,13 @@ $customWildcardDomain = getSetting($db, 'custom_wildcard_domain', '');
                                     Select a database if your PHP app needs one
                                 </div>
                             </div>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" name="php_redis" id="phpRedis">
+                                <label class="form-check-label" for="phpRedis">
+                                    <i class="bi bi-lightning-charge me-1"></i>Enable Redis Cache
+                                </label>
+                                <div class="form-text">Redis for session storage and data caching</div>
+                            </div>
                         </div>
 
                         <div id="laravelOptions" style="display: none;">
@@ -379,6 +420,13 @@ $customWildcardDomain = getSetting($db, 'custom_wildcard_domain', '');
                                     <i class="bi bi-info-circle me-1"></i>
                                     Laravel works best with MySQL or PostgreSQL
                                 </div>
+                            </div>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" name="laravel_redis" id="laravelRedis" checked>
+                                <label class="form-check-label" for="laravelRedis">
+                                    <i class="bi bi-lightning-charge me-1"></i>Enable Redis Cache
+                                </label>
+                                <div class="form-text">Redis for cache, sessions, and queues (Recommended)</div>
                             </div>
                         </div>
                     </div>
@@ -521,6 +569,28 @@ $customWildcardDomain = getSetting($db, 'custom_wildcard_domain', '');
                         </button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Two-Factor Authentication Modal -->
+    <div class="modal fade" id="twoFactorModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-shield-check me-2"></i>Two-Factor Authentication</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="twoFactorContent">
+                        <div class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Loading 2FA settings...</p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

@@ -159,18 +159,36 @@ function authenticateUser($username, $password) {
         return ['success' => false, 'error' => 'Invalid username or password.'];
     }
     
-    // Successful login
+    // Successful login - check if 2FA is enabled
     // Reset failed attempts
-    $stmt = $db->prepare("UPDATE users SET failed_attempts = 0, locked_until = NULL, last_login = CURRENT_TIMESTAMP WHERE id = ?");
+    $stmt = $db->prepare("UPDATE users SET failed_attempts = 0, locked_until = NULL WHERE id = ?");
     $stmt->execute([$user['id']]);
     
-    // Set session variables
+    // Check if 2FA is enabled
+    if ($user['totp_enabled'] == 1) {
+        // Store temporary session data for 2FA verification
+        session_regenerate_id(true);
+        $_SESSION['2fa_user_id'] = $user['id'];
+        $_SESSION['2fa_username'] = $user['username'];
+        $_SESSION['2fa_timestamp'] = time();
+        
+        logLoginAttempt($db, $username, $ipAddress, false); // Not fully logged in yet
+        
+        return ['success' => true, 'requires_2fa' => true, 'user' => $user];
+    }
+    
+    // No 2FA - complete login
     session_regenerate_id(true);
     $_SESSION['user_id'] = $user['id'];
     $_SESSION['username'] = $user['username'];
     $_SESSION['last_regeneration'] = time();
     
+    // Update last login
+    $stmt = $db->prepare("UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?");
+    $stmt->execute([$user['id']]);
+    
     logLoginAttempt($db, $username, $ipAddress, true);
+    logAudit('login', 'user', $user['id']);
     
     return ['success' => true, 'user' => $user];
 }
@@ -239,7 +257,7 @@ function getCurrentUser() {
     }
     
     $db = initAuthDatabase();
-    $stmt = $db->prepare("SELECT id, username, email, created_at, last_login FROM users WHERE id = ?");
+    $stmt = $db->prepare("SELECT id, username, email, role, totp_enabled, created_at, last_login FROM users WHERE id = ?");
     $stmt->execute([$_SESSION['user_id']]);
     return $stmt->fetch(PDO::FETCH_ASSOC);
 }
@@ -260,4 +278,369 @@ function generateCSRFToken() {
 function verifyCSRFToken($token) {
     return isset($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], $token);
 }
-?>
+
+/**
+ * Check if user is admin
+ */
+function isAdmin() {
+    if (!isLoggedIn()) {
+        return false;
+    }
+    
+    $db = initAuthDatabase();
+    $stmt = $db->prepare("SELECT role FROM users WHERE id = ?");
+    $stmt->execute([$_SESSION['user_id']]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    return $user && $user['role'] === 'admin';
+}
+
+/**
+ * Require admin role
+ */
+function requireAdmin() {
+    requireAuth();
+    if (!isAdmin()) {
+        http_response_code(403);
+        die('Access denied. Admin privileges required.');
+    }
+}
+
+/**
+ * Get all users (admin only)
+ */
+function getAllUsers() {
+    $db = initAuthDatabase();
+    $stmt = $db->query("SELECT id, username, email, role, can_create_sites, totp_enabled, created_at, last_login FROM users ORDER BY created_at ASC");
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+/**
+ * Get user by ID
+ */
+function getUserById($userId) {
+    $db = initAuthDatabase();
+    $stmt = $db->prepare("SELECT id, username, email, role, can_create_sites, totp_enabled, totp_secret, created_at, last_login FROM users WHERE id = ?");
+    $stmt->execute([$userId]);
+    return $stmt->fetch(PDO::FETCH_ASSOC);
+}
+
+/**
+ * Update user
+ */
+function updateUser($userId, $data) {
+    $db = initAuthDatabase();
+    
+    $updates = [];
+    $params = [];
+    
+    if (isset($data['role'])) {
+        $updates[] = "role = ?";
+        $params[] = $data['role'];
+    }
+    
+    if (isset($data['can_create_sites'])) {
+        $updates[] = "can_create_sites = ?";
+        $params[] = $data['can_create_sites'] ? 1 : 0;
+    }
+    
+    if (isset($data['email'])) {
+        $updates[] = "email = ?";
+        $params[] = $data['email'];
+    }
+    
+    if (empty($updates)) {
+        return ['success' => false, 'error' => 'No fields to update'];
+    }
+    
+    $params[] = $userId;
+    $sql = "UPDATE users SET " . implode(', ', $updates) . " WHERE id = ?";
+    
+    try {
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        return ['success' => true];
+    } catch (PDOException $e) {
+        return ['success' => false, 'error' => $e->getMessage()];
+    }
+}
+
+/**
+ * Delete user
+ */
+function deleteUser($userId) {
+    $db = initAuthDatabase();
+    
+    // Prevent deleting the last admin
+    $stmt = $db->query("SELECT COUNT(*) as count FROM users WHERE role = 'admin'");
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    $stmt = $db->prepare("SELECT role FROM users WHERE id = ?");
+    $stmt->execute([$userId]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if ($user['role'] === 'admin' && $result['count'] <= 1) {
+        return ['success' => false, 'error' => 'Cannot delete the last admin user'];
+    }
+    
+    try {
+        $stmt = $db->prepare("DELETE FROM users WHERE id = ?");
+        $stmt->execute([$userId]);
+        return ['success' => true];
+    } catch (PDOException $e) {
+        return ['success' => false, 'error' => $e->getMessage()];
+    }
+}
+
+/**
+ * Check if user can create sites
+ */
+function canCreateSites($userId = null) {
+    if ($userId === null && isset($_SESSION['user_id'])) {
+        $userId = $_SESSION['user_id'];
+    }
+    
+    if (!$userId) {
+        return false;
+    }
+    
+    // Admins can always create sites
+    if (isAdmin()) {
+        return true;
+    }
+    
+    $db = initAuthDatabase();
+    $stmt = $db->prepare("SELECT can_create_sites FROM users WHERE id = ?");
+    $stmt->execute([$userId]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    return $user && $user['can_create_sites'] == 1;
+}
+
+/**
+ * Check if user can access site
+ */
+function canAccessSite($userId, $siteId, $permission = 'view') {
+    // Admins can access everything
+    if (isAdmin()) {
+        return true;
+    }
+    
+    $mainDb = initDatabase();
+    
+    // Check if user owns the site
+    $stmt = $mainDb->prepare("SELECT owner_id FROM sites WHERE id = ?");
+    $stmt->execute([$siteId]);
+    $site = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if ($site && $site['owner_id'] == $userId) {
+        return true;
+    }
+    
+    // Check site permissions
+    $authDb = initAuthDatabase();
+    $stmt = $authDb->prepare("SELECT permission FROM site_permissions WHERE user_id = ? AND site_id = ?");
+    $stmt->execute([$userId, $siteId]);
+    $perm = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if (!$perm) {
+        return false;
+    }
+    
+    // Permission hierarchy: manage > edit > view
+    $permLevels = ['view' => 1, 'edit' => 2, 'manage' => 3];
+    $requiredLevel = $permLevels[$permission] ?? 1;
+    $userLevel = $permLevels[$perm['permission']] ?? 0;
+    
+    return $userLevel >= $requiredLevel;
+}
+
+/**
+ * Get sites accessible by user
+ */
+function getUserSites($userId) {
+    $mainDb = initDatabase();
+    
+    // Admins see all sites
+    if (isAdmin()) {
+        $stmt = $mainDb->query("SELECT * FROM sites ORDER BY created_at DESC");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+    
+    // Get owned sites and sites with permissions
+    $stmt = $mainDb->prepare("
+        SELECT DISTINCT s.* 
+        FROM sites s
+        LEFT JOIN site_permissions sp ON s.id = sp.site_id
+        WHERE s.owner_id = ? OR sp.user_id = ?
+        ORDER BY s.created_at DESC
+    ");
+    $stmt->execute([$userId, $userId]);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+/**
+ * Grant site permission to user
+ */
+function grantSitePermission($userId, $siteId, $permission = 'view') {
+    $db = initAuthDatabase();
+    
+    try {
+        $stmt = $db->prepare("INSERT OR REPLACE INTO site_permissions (user_id, site_id, permission) VALUES (?, ?, ?)");
+        $stmt->execute([$userId, $siteId, $permission]);
+        return ['success' => true];
+    } catch (PDOException $e) {
+        return ['success' => false, 'error' => $e->getMessage()];
+    }
+}
+
+/**
+ * Revoke site permission from user
+ */
+function revokeSitePermission($userId, $siteId) {
+    $db = initAuthDatabase();
+    
+    try {
+        $stmt = $db->prepare("DELETE FROM site_permissions WHERE user_id = ? AND site_id = ?");
+        $stmt->execute([$userId, $siteId]);
+        return ['success' => true];
+    } catch (PDOException $e) {
+        return ['success' => false, 'error' => $e->getMessage()];
+    }
+}
+
+/**
+ * Get site permissions for a user
+ */
+function getSitePermissions($siteId) {
+    $db = initAuthDatabase();
+    
+    $stmt = $db->prepare("
+        SELECT u.id, u.username, u.email, sp.permission, sp.created_at
+        FROM site_permissions sp
+        JOIN users u ON sp.user_id = u.id
+        WHERE sp.site_id = ?
+        ORDER BY u.username
+    ");
+    $stmt->execute([$siteId]);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+/**
+ * Log audit event
+ */
+function logAudit($action, $resourceType = null, $resourceId = null, $details = null) {
+    if (!isLoggedIn()) {
+        return;
+    }
+    
+    $db = initAuthDatabase();
+    $ipAddress = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+    
+    $stmt = $db->prepare("INSERT INTO audit_log (user_id, action, resource_type, resource_id, details, ip_address) VALUES (?, ?, ?, ?, ?, ?)");
+    $stmt->execute([
+        $_SESSION['user_id'],
+        $action,
+        $resourceType,
+        $resourceId,
+        $details ? json_encode($details) : null,
+        $ipAddress
+    ]);
+}
+
+// ============================================
+// 2FA / TOTP Functions
+// ============================================
+
+require_once __DIR__ . '/totp.php';
+
+/**
+ * Enable 2FA for user
+ */
+function enable2FA($userId, $secret, $backupCodes) {
+    $db = initAuthDatabase();
+    
+    try {
+        $stmt = $db->prepare("UPDATE users SET totp_secret = ?, totp_enabled = 1, totp_backup_codes = ? WHERE id = ?");
+        $stmt->execute([$secret, json_encode($backupCodes), $userId]);
+        logAudit('2fa_enabled', 'user', $userId);
+        return ['success' => true];
+    } catch (PDOException $e) {
+        return ['success' => false, 'error' => $e->getMessage()];
+    }
+}
+
+/**
+ * Disable 2FA for user
+ */
+function disable2FA($userId) {
+    $db = initAuthDatabase();
+    
+    try {
+        $stmt = $db->prepare("UPDATE users SET totp_secret = NULL, totp_enabled = 0, totp_backup_codes = NULL WHERE id = ?");
+        $stmt->execute([$userId]);
+        logAudit('2fa_disabled', 'user', $userId);
+        return ['success' => true];
+    } catch (PDOException $e) {
+        return ['success' => false, 'error' => $e->getMessage()];
+    }
+}
+
+/**
+ * Verify 2FA code
+ */
+function verify2FACode($userId, $code) {
+    $db = initAuthDatabase();
+    
+    $stmt = $db->prepare("SELECT totp_secret, totp_backup_codes FROM users WHERE id = ? AND totp_enabled = 1");
+    $stmt->execute([$userId]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if (!$user || !$user['totp_secret']) {
+        return false;
+    }
+    
+    $totp = new TOTP();
+    
+    // Try TOTP code first
+    if ($totp->verifyCode($user['totp_secret'], $code)) {
+        return true;
+    }
+    
+    // Try backup codes
+    if ($user['totp_backup_codes']) {
+        $backupCodes = json_decode($user['totp_backup_codes'], true);
+        if (is_array($backupCodes) && in_array($code, $backupCodes)) {
+            // Remove used backup code
+            $backupCodes = array_diff($backupCodes, [$code]);
+            $stmt = $db->prepare("UPDATE users SET totp_backup_codes = ? WHERE id = ?");
+            $stmt->execute([json_encode(array_values($backupCodes)), $userId]);
+            logAudit('2fa_backup_code_used', 'user', $userId);
+            return true;
+        }
+    }
+    
+    return false;
+}
+
+/**
+ * Generate backup codes
+ */
+function generateBackupCodes($count = 10) {
+    $codes = [];
+    for ($i = 0; $i < $count; $i++) {
+        $codes[] = strtoupper(bin2hex(random_bytes(4)));
+    }
+    return $codes;
+}
+
+/**
+ * Check if user has 2FA enabled
+ */
+function has2FAEnabled($userId) {
+    $db = initAuthDatabase();
+    $stmt = $db->prepare("SELECT totp_enabled FROM users WHERE id = ?");
+    $stmt->execute([$userId]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    return isset($user['totp_enabled']) && $user['totp_enabled'] == 1;
+}
