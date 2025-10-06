@@ -21,7 +21,11 @@ function initDatabase() {
         sftp_username TEXT,
         sftp_password TEXT,
         sftp_port INTEGER,
-        db_password TEXT
+        db_password TEXT,
+        db_type TEXT DEFAULT 'shared',
+        owner_id INTEGER DEFAULT 1,
+        redis_enabled INTEGER DEFAULT 0,
+        redis_container TEXT
     )");
 
     // Create settings table
@@ -29,6 +33,37 @@ function initDatabase() {
         key TEXT PRIMARY KEY,
         value TEXT,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )");
+    
+    // Create RBAC tables
+    $pdo->exec("CREATE TABLE IF NOT EXISTS user_permissions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        permission_key TEXT NOT NULL,
+        permission_value INTEGER DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, permission_key)
+    )");
+    
+    $pdo->exec("CREATE TABLE IF NOT EXISTS site_permissions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        site_id INTEGER NOT NULL,
+        permission_level TEXT DEFAULT 'view',
+        granted_by INTEGER,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, site_id)
+    )");
+    
+    $pdo->exec("CREATE TABLE IF NOT EXISTS audit_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        action TEXT NOT NULL,
+        resource_type TEXT,
+        resource_id INTEGER,
+        details TEXT,
+        ip_address TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )");
 
     // Migrate existing databases - add columns if they don't exist
@@ -42,6 +77,15 @@ function initDatabase() {
         }
         if (!in_array('db_type', $columnNames)) {
             $pdo->exec("ALTER TABLE sites ADD COLUMN db_type TEXT DEFAULT 'shared'");
+        }
+        if (!in_array('owner_id', $columnNames)) {
+            $pdo->exec("ALTER TABLE sites ADD COLUMN owner_id INTEGER DEFAULT 1");
+        }
+        if (!in_array('redis_enabled', $columnNames)) {
+            $pdo->exec("ALTER TABLE sites ADD COLUMN redis_enabled INTEGER DEFAULT 0");
+        }
+        if (!in_array('redis_container', $columnNames)) {
+            $pdo->exec("ALTER TABLE sites ADD COLUMN redis_container TEXT");
         }
     } catch (Exception $e) {
         // Columns might already exist or other error, continue

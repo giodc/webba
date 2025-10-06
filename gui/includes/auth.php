@@ -25,11 +25,33 @@ function initAuthDatabase() {
         username TEXT UNIQUE NOT NULL,
         password_hash TEXT NOT NULL,
         email TEXT,
+        role TEXT DEFAULT 'user',
+        totp_secret TEXT,
+        totp_enabled INTEGER DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         last_login DATETIME,
         failed_attempts INTEGER DEFAULT 0,
         locked_until DATETIME
     )");
+    
+    // Migrate existing users table if columns are missing
+    try {
+        $db->exec("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'");
+    } catch (PDOException $e) {
+        // Column already exists, ignore
+    }
+    
+    try {
+        $db->exec("ALTER TABLE users ADD COLUMN totp_secret TEXT");
+    } catch (PDOException $e) {
+        // Column already exists, ignore
+    }
+    
+    try {
+        $db->exec("ALTER TABLE users ADD COLUMN totp_enabled INTEGER DEFAULT 0");
+    } catch (PDOException $e) {
+        // Column already exists, ignore
+    }
     
     // Create sessions table for tracking
     $db->exec("CREATE TABLE IF NOT EXISTS login_attempts (
