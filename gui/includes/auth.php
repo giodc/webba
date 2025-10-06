@@ -333,8 +333,28 @@ function requireAdmin() {
  */
 function getAllUsers() {
     $db = initAuthDatabase();
-    $stmt = $db->query("SELECT id, username, email, role, can_create_sites, totp_enabled, created_at, last_login FROM users ORDER BY created_at ASC");
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $stmt = $db->query("SELECT id, username, email, role, totp_enabled, created_at, last_login FROM users ORDER BY created_at ASC");
+    $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Add permissions for each user
+    $mainDb = initDatabase();
+    foreach ($users as &$user) {
+        $stmt = $mainDb->prepare("SELECT permission_key, permission_value FROM user_permissions WHERE user_id = ?");
+        $stmt->execute([$user['id']]);
+        $permissions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Add can_create_sites permission for backward compatibility
+        $canCreateSites = true; // Default
+        foreach ($permissions as $perm) {
+            if ($perm['permission_key'] === 'can_create_sites') {
+                $canCreateSites = $perm['permission_value'] == 1;
+                break;
+            }
+        }
+        $user['can_create_sites'] = $canCreateSites ? 1 : 0;
+    }
+    
+    return $users;
 }
 
 /**
@@ -342,9 +362,29 @@ function getAllUsers() {
  */
 function getUserById($userId) {
     $db = initAuthDatabase();
-    $stmt = $db->prepare("SELECT id, username, email, role, can_create_sites, totp_enabled, totp_secret, created_at, last_login FROM users WHERE id = ?");
+    $stmt = $db->prepare("SELECT id, username, email, role, totp_enabled, totp_secret, created_at, last_login FROM users WHERE id = ?");
     $stmt->execute([$userId]);
-    return $stmt->fetch(PDO::FETCH_ASSOC);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if ($user) {
+        // Add permissions from user_permissions table
+        $mainDb = initDatabase();
+        $stmt = $mainDb->prepare("SELECT permission_key, permission_value FROM user_permissions WHERE user_id = ?");
+        $stmt->execute([$userId]);
+        $permissions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Add can_create_sites permission for backward compatibility
+        $canCreateSites = true; // Default
+        foreach ($permissions as $perm) {
+            if ($perm['permission_key'] === 'can_create_sites') {
+                $canCreateSites = $perm['permission_value'] == 1;
+                break;
+            }
+        }
+        $user['can_create_sites'] = $canCreateSites ? 1 : 0;
+    }
+    
+    return $user;
 }
 
 /**
@@ -431,12 +471,14 @@ function canCreateSites($userId = null) {
         return true;
     }
     
-    $db = initAuthDatabase();
-    $stmt = $db->prepare("SELECT can_create_sites FROM users WHERE id = ?");
+    // Check user_permissions table
+    $mainDb = initDatabase();
+    $stmt = $mainDb->prepare("SELECT permission_value FROM user_permissions WHERE user_id = ? AND permission_key = 'can_create_sites'");
     $stmt->execute([$userId]);
-    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    $permission = $stmt->fetch(PDO::FETCH_ASSOC);
     
-    return $user && $user['can_create_sites'] == 1;
+    // Default to true if no permission record exists (backward compatibility)
+    return $permission ? ($permission['permission_value'] == 1) : true;
 }
 
 /**
