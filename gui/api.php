@@ -1563,7 +1563,7 @@ function getContainerStats($db, $id) {
             "success" => true,
             "stats" => [
                 "uptime" => $uptime,
-                "volume_size" => trim($sizeResult['output']) ?: 'N/A',
+                "volume_size" => $volumeSize,
                 "status" => getDockerContainerStatus($site['container_name']),
                 "cpu" => $cpu,
                 "cpu_percent" => $cpuPercent,
