@@ -62,11 +62,15 @@ if [ "$UPDATE_MODE" = true ]; then
     
     # Set permissions on docker-compose.yml
     echo "Setting permissions on docker-compose.yml..."
-    chmod 666 docker-compose.yml
+    chmod 664 docker-compose.yml
+    chown www-data:www-data docker-compose.yml
     
-    # Set Docker socket permissions
+    # Set Docker socket permissions (use docker group instead of world-writable)
     echo "Setting Docker socket permissions..."
-    chmod 666 /var/run/docker.sock
+    groupadd -f docker
+    usermod -aG docker www-data
+    chmod 660 /var/run/docker.sock
+    chown root:docker /var/run/docker.sock
     
     # Create backup directory if it doesn't exist
     echo "Ensuring backup directory exists..."
@@ -117,11 +121,15 @@ else
     
     # Set permissions on docker-compose.yml
     echo "Setting permissions on docker-compose.yml..."
-    chmod 666 /opt/webbadeploy/docker-compose.yml
+    chmod 664 /opt/webbadeploy/docker-compose.yml
+    chown www-data:www-data /opt/webbadeploy/docker-compose.yml
     
-    # Set Docker socket permissions
+    # Set Docker socket permissions (use docker group instead of world-writable)
     echo "Setting Docker socket permissions..."
-    chmod 666 /var/run/docker.sock
+    groupadd -f docker
+    usermod -aG docker www-data
+    chmod 660 /var/run/docker.sock
+    chown root:docker /var/run/docker.sock
     
     # Create backup directory
     echo "Creating backup directory..."

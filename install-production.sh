@@ -178,6 +178,8 @@ services:
   gui:
     build: ./gui
     container_name: webbadeploy_gui
+    ports:
+      - "9000:80"  # Dashboard accessible on port 9000
     volumes:
       - ./apps:/app/apps
       - ./data:/app/data
@@ -185,17 +187,11 @@ services:
       - /usr/bin/docker:/usr/bin/docker:ro
       - /usr/local/bin/docker-compose:/usr/local/bin/docker-compose:ro
       - /var/run/docker.sock:/var/run/docker.sock
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.gui.rule=PathPrefix(`/`)"
-      - "traefik.http.routers.gui.entrypoints=web"
-      - "traefik.http.services.gui.loadbalancer.server.port=80"
     networks:
       - webbadeploy
     restart: unless-stopped
     depends_on:
       - db
-
 networks:
   webbadeploy:
     name: webbadeploy_webbadeploy
