@@ -29,7 +29,7 @@ if ($result) {
     echo "Username: $username\n";
     echo "Password: $newPassword\n";
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
-    echo "\nYou can now login at: http://192.168.64.4:3000/\n";
+    echo "\nYou can now login at: http://192.168.64.4:9000/\n";
 } else {
     echo "❌ Failed to reset password\n";
     exit(1);

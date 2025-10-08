@@ -337,7 +337,8 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                     <div class="col-md-4">
                         <div class="card">
                             <div class="card-header">
-                                <i class="bi bi-graph-up me-2"></i>Container Stats
+                                <i class="bi bi-graph-up me-2"></i>Resource Usage
+                                <small class="text-muted d-block" style="font-size: 0.75rem; font-weight: normal;">All containers combined</small>
                             </div>
                             <div class="card-body">
                                 <div class="mb-3">
@@ -347,6 +348,24 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                                 <div class="mb-3">
                                     <small class="text-muted">Uptime</small>
                                     <h5 id="containerUptime">Loading...</h5>
+                                </div>
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <small class="text-muted"><i class="bi bi-cpu"></i> CPU</small>
+                                        <small class="fw-bold" id="cpuUsage"><span class="spinner-border spinner-border-sm"></span></small>
+                                    </div>
+                                    <div class="progress" style="height: 6px;">
+                                        <div class="progress-bar bg-primary" id="cpuBar" role="progressbar" style="width: 0%"></div>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <small class="text-muted"><i class="bi bi-memory"></i> Memory</small>
+                                        <small class="fw-bold" id="memoryUsage"><span class="spinner-border spinner-border-sm"></span></small>
+                                    </div>
+                                    <div class="progress" style="height: 6px;">
+                                        <div class="progress-bar bg-info" id="memoryBar" role="progressbar" style="width: 0%"></div>
+                                    </div>
                                 </div>
                                 <div class="mb-3">
                                     <small class="text-muted">Volume Size</small>
@@ -1273,6 +1292,20 @@ QUEUE_CONNECTION=redis</code></pre>
                     document.getElementById('containerStatus').textContent = result.stats.status.charAt(0).toUpperCase() + result.stats.status.slice(1);
                     document.getElementById('containerUptime').textContent = result.stats.uptime;
                     document.getElementById('volumeSize').textContent = result.stats.volume_size;
+                    
+                    // Update CPU stats if available
+                    if (result.stats.cpu) {
+                        document.getElementById('cpuUsage').textContent = result.stats.cpu;
+                        const cpuPercent = parseFloat(result.stats.cpu_percent) || 0;
+                        document.getElementById('cpuBar').style.width = Math.min(cpuPercent, 100) + '%';
+                    }
+                    
+                    // Update Memory stats if available
+                    if (result.stats.memory) {
+                        document.getElementById('memoryUsage').textContent = result.stats.memory;
+                        const memPercent = parseFloat(result.stats.mem_percent) || 0;
+                        document.getElementById('memoryBar').style.width = Math.min(memPercent, 100) + '%';
+                    }
                 } else {
                     console.error('Error loading stats:', result.error);
                 }

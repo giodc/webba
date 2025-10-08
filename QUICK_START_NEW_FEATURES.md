@@ -26,7 +26,7 @@ This guide will help you quickly set up and use the new features in Webbadeploy.
    ```
 
 2. **Access the Dashboard:**
-   - Open `http://your-server-ip:3000`
+   - Open `http://your-server-ip:9000`
    - You'll be redirected to the setup page
 
 3. **Create Admin Account:**

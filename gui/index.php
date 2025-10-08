@@ -142,30 +142,6 @@ $customWildcardDomain = getSetting($db, 'custom_wildcard_domain', '');
                                     <?php endif; ?>
                                 </div>
                                 
-                                <?php if ($containerStatus === 'running'): ?>
-                                <!-- Statistics (loaded asynchronously) -->
-                                <div class="mb-3 stats-section" id="stats-<?= $site['id'] ?>">
-                                    <div class="stat-item mb-2">
-                                        <div class="d-flex justify-content-between align-items-center mb-1">
-                                            <small class="text-muted"><i class="bi bi-cpu"></i> CPU</small>
-                                            <small class="fw-bold stats-cpu"><span class="spinner-border spinner-border-sm"></span></small>
-                                        </div>
-                                        <div class="progress" style="height: 4px;">
-                                            <div class="progress-bar bg-primary stats-cpu-bar" role="progressbar" style="width: 0%"></div>
-                                        </div>
-                                    </div>
-                                    <div class="stat-item">
-                                        <div class="d-flex justify-content-between align-items-center mb-1">
-                                            <small class="text-muted"><i class="bi bi-memory"></i> Memory</small>
-                                            <small class="fw-bold stats-memory"><span class="spinner-border spinner-border-sm"></span></small>
-                                        </div>
-                                        <div class="progress" style="height: 4px;">
-                                            <div class="progress-bar bg-info stats-memory-bar" role="progressbar" style="width: 0%"></div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <?php endif; ?>
-                                
                                 <div class="btn-group w-100" role="group">
                                     <button class="btn btn-outline-primary btn-sm" onclick="viewSite('<?= $site['domain'] ?>', <?= $site['ssl'] ? 'true' : 'false' ?>)" title="View Site">
                                         <i class="bi bi-eye"></i>

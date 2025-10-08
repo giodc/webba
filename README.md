@@ -34,7 +34,7 @@ sudo -u webbadeploy docker-compose up -d
 ```
 
 3. **Access the web interface**:
-   - Open your browser and navigate to `http://your-server-ip:3000`
+   - Open your browser and navigate to `http://your-server-ip:9000`
    - Complete the initial setup (create admin account)
    - Complete the setup wizard (configure domains, SSL, etc.)
    - Start deploying applications!
@@ -163,7 +163,7 @@ If you need to access the setup wizard again after completing it:
 
 1. **Force access via URL parameter:**
    ```
-   http://your-server-ip:3000/setup-wizard.php?force=1
+   http://your-server-ip:9000/setup-wizard.php?force=1
    ```
 
 2. **Reset via database (requires admin access):**
@@ -174,7 +174,7 @@ If you need to access the setup wizard again after completing it:
 
 3. **Skip the wizard:**
    - Click "Skip Setup" during any step
-   - Or access: `http://your-server-ip:3000/?skip_setup=1`
+   - Or access: `http://your-server-ip:9000/?skip_setup=1`
 
 All settings configured in the wizard can be changed later from the **Settings** page.
 

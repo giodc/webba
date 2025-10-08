@@ -1458,12 +1458,98 @@ function getContainerStats($db, $id) {
             }
         }
         
+        // Get CPU and Memory stats for all related containers
+        $cpu = 'N/A';
+        $cpuPercent = 0;
+        $memory = 'N/A';
+        $memPercent = 0;
+        $totalCpuPercent = 0;
+        $totalMemMB = 0;
+        $totalMemPercent = 0;
+        $containerCount = 0;
+        
+        // List of potential containers for this site
+        $containers = [$site['container_name']];
+        
+        // Add database container if it exists
+        $dbContainer = $site['container_name'] . '_db';
+        $dbCheck = executeDockerCommand("ps -a --filter name=^{$dbContainer}$ --format '{{.Names}}'");
+        if ($dbCheck['return_code'] === 0 && trim($dbCheck['output']) === $dbContainer) {
+            $containers[] = $dbContainer;
+        }
+        
+        // Add Redis container if it exists
+        $redisContainer = $site['container_name'] . '_redis';
+        $redisCheck = executeDockerCommand("ps -a --filter name=^{$redisContainer}$ --format '{{.Names}}'");
+        if ($redisCheck['return_code'] === 0 && trim($redisCheck['output']) === $redisContainer) {
+            $containers[] = $redisContainer;
+        }
+        
+        // Add SFTP container if it exists
+        $sftpContainer = $site['container_name'] . '_sftp';
+        $sftpCheck = executeDockerCommand("ps -a --filter name=^{$sftpContainer}$ --format '{{.Names}}'");
+        if ($sftpCheck['return_code'] === 0 && trim($sftpCheck['output']) === $sftpContainer) {
+            $containers[] = $sftpContainer;
+        }
+        
+        // Get stats for all containers
+        foreach ($containers as $containerName) {
+            $statsResult = executeDockerCommand("stats {$containerName} --no-stream --format '{{.CPUPerc}}|{{.MemUsage}}|{{.MemPerc}}'");
+            if ($statsResult['return_code'] === 0 && !empty($statsResult['output'])) {
+                $parts = explode('|', trim($statsResult['output']));
+                if (count($parts) >= 3) {
+                    $containerCpu = floatval(str_replace('%', '', trim($parts[0])));
+                    $containerMem = trim($parts[1]);
+                    $containerMemPercent = floatval(str_replace('%', '', trim($parts[2])));
+                    
+                    $totalCpuPercent += $containerCpu;
+                    $totalMemPercent += $containerMemPercent;
+                    
+                    // Parse memory (e.g., "45.5MiB / 1.5GiB")
+                    if (preg_match('/([0-9.]+)([A-Za-z]+)/', $containerMem, $matches)) {
+                        $memValue = floatval($matches[1]);
+                        $memUnit = strtoupper($matches[2]);
+                        
+                        // Convert to MB
+                        if ($memUnit === 'GIB' || $memUnit === 'GB') {
+                            $totalMemMB += $memValue * 1024;
+                        } else if ($memUnit === 'MIB' || $memUnit === 'MB') {
+                            $totalMemMB += $memValue;
+                        } else if ($memUnit === 'KIB' || $memUnit === 'KB') {
+                            $totalMemMB += $memValue / 1024;
+                        }
+                    }
+                    
+                    $containerCount++;
+                }
+            }
+        }
+        
+        // Format the combined stats
+        if ($containerCount > 0) {
+            $cpuPercent = round($totalCpuPercent, 2);
+            $cpu = $cpuPercent . '%';
+            
+            // Format memory
+            if ($totalMemMB >= 1024) {
+                $memory = round($totalMemMB / 1024, 2) . ' GiB';
+            } else {
+                $memory = round($totalMemMB, 2) . ' MiB';
+            }
+            
+            $memPercent = round($totalMemPercent, 2);
+        }
+        
         echo json_encode([
             "success" => true,
             "stats" => [
                 "uptime" => $uptime,
                 "volume_size" => trim($sizeResult['output']) ?: 'N/A',
-                "status" => getDockerContainerStatus($site['container_name'])
+                "status" => getDockerContainerStatus($site['container_name']),
+                "cpu" => $cpu,
+                "cpu_percent" => $cpuPercent,
+                "memory" => $memory,
+                "mem_percent" => $memPercent
             ]
         ]);
 
