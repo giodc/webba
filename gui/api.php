@@ -1437,18 +1437,22 @@ function getContainerStats($db, $id) {
         
         // Get volume size - use a simpler approach
         $volumeName = $site['type'] === 'wordpress' ? "wp_{$site['container_name']}_data" : "{$site['container_name']}_data";
-        
-        // Try to get volume size using docker volume inspect
-        $volumeInspect = executeDockerCommand("volume inspect {$volumeName} --format '{{.Mountpoint}}'");
         $volumeSize = 'N/A';
         
-        if ($volumeInspect['return_code'] === 0 && !empty($volumeInspect['output'])) {
-            $mountpoint = trim($volumeInspect['output']);
-            // Get directory size
-            exec("du -sh {$mountpoint} 2>/dev/null | awk '{print $1}'", $sizeOutput, $sizeReturnCode);
-            if ($sizeReturnCode === 0 && !empty($sizeOutput)) {
-                $volumeSize = trim($sizeOutput[0]);
+        // Try to get volume size using docker volume inspect
+        try {
+            $volumeInspect = executeDockerCommand("volume inspect {$volumeName} --format '{{.Mountpoint}}'");
+            
+            if ($volumeInspect['success'] && !empty($volumeInspect['output'])) {
+                $mountpoint = trim($volumeInspect['output']);
+                // Get directory size
+                exec("du -sh {$mountpoint} 2>/dev/null | awk '{print $1}'", $sizeOutput, $sizeReturnCode);
+                if ($sizeReturnCode === 0 && !empty($sizeOutput)) {
+                    $volumeSize = trim($sizeOutput[0]);
+                }
             }
+        } catch (Exception $e) {
+            // Volume size will remain N/A
         }
         
         // Calculate uptime
@@ -1487,21 +1491,21 @@ function getContainerStats($db, $id) {
         // Add database container if it exists
         $dbContainer = $site['container_name'] . '_db';
         $dbCheck = executeDockerCommand("ps -a --filter name=^{$dbContainer}$ --format '{{.Names}}'");
-        if ($dbCheck['return_code'] === 0 && trim($dbCheck['output']) === $dbContainer) {
+        if ($dbCheck['success'] && trim($dbCheck['output']) === $dbContainer) {
             $containers[] = $dbContainer;
         }
         
         // Add Redis container if it exists
         $redisContainer = $site['container_name'] . '_redis';
         $redisCheck = executeDockerCommand("ps -a --filter name=^{$redisContainer}$ --format '{{.Names}}'");
-        if ($redisCheck['return_code'] === 0 && trim($redisCheck['output']) === $redisContainer) {
+        if ($redisCheck['success'] && trim($redisCheck['output']) === $redisContainer) {
             $containers[] = $redisContainer;
         }
         
         // Add SFTP container if it exists
         $sftpContainer = $site['container_name'] . '_sftp';
         $sftpCheck = executeDockerCommand("ps -a --filter name=^{$sftpContainer}$ --format '{{.Names}}'");
-        if ($sftpCheck['return_code'] === 0 && trim($sftpCheck['output']) === $sftpContainer) {
+        if ($sftpCheck['success'] && trim($sftpCheck['output']) === $sftpContainer) {
             $containers[] = $sftpContainer;
         }
         
@@ -1509,12 +1513,12 @@ function getContainerStats($db, $id) {
         foreach ($containers as $containerName) {
             // Check if container is running first
             $statusCheck = executeDockerCommand("inspect --format='{{.State.Running}}' {$containerName}");
-            if ($statusCheck['return_code'] !== 0 || trim($statusCheck['output']) !== 'true') {
+            if (!$statusCheck['success'] || trim($statusCheck['output']) !== 'true') {
                 continue; // Skip stopped containers
             }
             
             $statsResult = executeDockerCommand("stats {$containerName} --no-stream --format '{{.CPUPerc}}|{{.MemUsage}}|{{.MemPerc}}'");
-            if ($statsResult['return_code'] === 0 && !empty($statsResult['output'])) {
+            if ($statsResult['success'] && !empty($statsResult['output'])) {
                 $parts = explode('|', trim($statsResult['output']));
                 if (count($parts) >= 3) {
                     $containerCpu = floatval(str_replace('%', '', trim($parts[0])));
