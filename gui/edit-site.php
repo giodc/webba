@@ -52,7 +52,7 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
     <link href="css/custom.css" rel="stylesheet">
     <style>
         .sidebar {
-            background: #f8f9fa;
+          
             padding: 1.5rem 0;
             min-height: calc(100vh - 56px);
         }
@@ -66,15 +66,13 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
             border-left: 3px solid transparent;
         }
         .sidebar-nav-item:hover {
-            background: #f3f4f6;
-            color: #1f2937;
-            border-left-color: #9ca3af;
+            color: #000;
+            font-weight: 600;
         }
         .sidebar-nav-item.active {
-            background: #e5e7eb;
-            color: #1f2937;
-            border-left-color: #4b5563;
-            font-weight: 500;
+           
+            color: #000;
+            font-weight: 600;
         }
         .sidebar-nav-item i {
             width: 20px;

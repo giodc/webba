@@ -338,6 +338,38 @@ function updateDashboardTraefikConfig($domain, $enableSSL) {
                     </div>
                 </div>
 
+
+               
+
+                     <!-- System Information -->
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-info-circle me-2"></i>Debugs
+                    </div>
+                    <div class="card-body">
+                    <ul>
+                  
+                <li class="nav-item">
+                    <a class="nav-link <?= $currentPage === 'traefik-logs.php' ? 'active fw-semibold' : '' ?>" href="/traefik-logs.php">
+                        <i class="bi bi-file-text me-1"></i>SSL Logs
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link <?= $currentPage === 'ssl-debug.php' ? 'active fw-semibold' : '' ?>" href="/ssl-debug.php">
+                        <i class="bi bi-shield-lock me-1"></i>SSL Debug
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link <?= $currentPage === 'debug.php' ? 'active fw-semibold' : '' ?>" href="/debug.php">
+                        <i class="bi bi-bug me-1"></i>Debug
+                    </a>
+                </li>
+                        </ul>
+                    </div>
+                </div>           
+
+
+
                 <!-- System Information -->
                 <div class="card">
                     <div class="card-header">

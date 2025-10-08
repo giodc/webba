@@ -1231,16 +1231,58 @@ function deleteSiteById($db, $id) {
         // Check if user wants to keep data
         $keepData = $_GET['keep_data'] ?? false;
         
-        // Stop and remove containers
-        $composePath = "/app/apps/{$site['type']}/sites/{$site['container_name']}/docker-compose.yml";
+        $containerName = $site['container_name'];
+        
+        // Stop and remove containers using docker-compose
+        $composePath = "/app/apps/{$site['type']}/sites/{$containerName}/docker-compose.yml";
         if (file_exists($composePath)) {
             // Use 'down' without -v to preserve volumes, or 'down -v' to delete them
             $command = $keepData ? "down" : "down -v";
             executeDockerCompose($composePath, $command);
-            unlink($composePath);
-            if (is_dir(dirname($composePath))) {
-                rmdir(dirname($composePath));
+        }
+        
+        // Remove standalone Redis container if it exists (created separately from docker-compose)
+        $redisContainerName = $containerName . '_redis';
+        exec("docker ps -a --filter name=" . escapeshellarg($redisContainerName) . " --format '{{.Names}}' 2>&1", $redisCheck, $redisCode);
+        if ($redisCode === 0 && !empty($redisCheck) && trim($redisCheck[0]) === $redisContainerName) {
+            exec("docker rm -f " . escapeshellarg($redisContainerName) . " 2>&1");
+        }
+        
+        // Remove database container if it exists (might be created separately)
+        $dbContainerName = $containerName . '_db';
+        exec("docker ps -a --filter name=" . escapeshellarg($dbContainerName) . " --format '{{.Names}}' 2>&1", $dbCheck, $dbCode);
+        if ($dbCode === 0 && !empty($dbCheck) && trim($dbCheck[0]) === $dbContainerName) {
+            exec("docker rm -f " . escapeshellarg($dbContainerName) . " 2>&1");
+        }
+        
+        // Remove main container if it still exists
+        exec("docker ps -a --filter name=" . escapeshellarg($containerName) . " --format '{{.Names}}' 2>&1", $mainCheck, $mainCode);
+        if ($mainCode === 0 && !empty($mainCheck) && trim($mainCheck[0]) === $containerName) {
+            exec("docker rm -f " . escapeshellarg($containerName) . " 2>&1");
+        }
+        
+        // Remove volumes if not keeping data
+        if (!$keepData) {
+            // Remove all volumes associated with this site
+            $volumePatterns = [
+                "wp_{$containerName}_data",
+                "{$containerName}_data",
+                "{$containerName}_db_data"
+            ];
+            
+            foreach ($volumePatterns as $volumeName) {
+                exec("docker volume ls --format '{{.Name}}' | grep -x " . escapeshellarg($volumeName) . " 2>&1", $volCheck, $volCode);
+                if ($volCode === 0 && !empty($volCheck)) {
+                    exec("docker volume rm " . escapeshellarg($volumeName) . " 2>&1");
+                }
             }
+        }
+        
+        // Delete the entire site directory
+        $siteDir = "/app/apps/{$site['type']}/sites/{$containerName}";
+        if (is_dir($siteDir)) {
+            // Recursively delete the directory
+            exec("rm -rf " . escapeshellarg($siteDir) . " 2>&1");
         }
 
         // Delete database record

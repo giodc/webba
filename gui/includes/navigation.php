@@ -17,24 +17,9 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ms-auto">
-                <li class="nav-item">
+            <li class="nav-item">
                     <a class="nav-link <?= $currentPage === 'index.php' ? 'active fw-semibold' : '' ?>" href="/">
                         <i class="bi bi-grid me-1"></i>Dashboard
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link <?= $currentPage === 'traefik-logs.php' ? 'active fw-semibold' : '' ?>" href="/traefik-logs.php">
-                        <i class="bi bi-file-text me-1"></i>SSL Logs
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link <?= $currentPage === 'ssl-debug.php' ? 'active fw-semibold' : '' ?>" href="/ssl-debug.php">
-                        <i class="bi bi-shield-lock me-1"></i>SSL Debug
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link <?= $currentPage === 'debug.php' ? 'active fw-semibold' : '' ?>" href="/debug.php">
-                        <i class="bi bi-bug me-1"></i>Debug
                     </a>
                 </li>
                 <?php if (isAdmin()): ?>
@@ -61,7 +46,10 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                 </li>
                 <li class="nav-item">
                     <span class="nav-link text-muted">
-                        <i class="bi bi-tag me-1"></i>v<?= file_exists('/app/VERSION') ? trim(file_get_contents('/app/VERSION')) : '1.0.0' ?>
+                        <i class="bi bi-tag me-1"></i>v<?php 
+                                    $versionFile = '/var/www/html/../VERSION';
+                                    echo file_exists($versionFile) ? trim(file_get_contents($versionFile)) : '1.0.0';
+                                ?>
                     </span>
                 </li>
                 <li class="nav-item dropdown">

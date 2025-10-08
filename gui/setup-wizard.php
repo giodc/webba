@@ -40,7 +40,7 @@ $currentUser = getCurrentUser();
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <style>
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background:rgb(106, 106, 106);
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -58,7 +58,7 @@ $currentUser = getCurrentUser();
             overflow: hidden;
         }
         .setup-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #434343 0%, #000000 100%        );
             color: white;
             padding: 30px;
             text-align: center;
@@ -89,7 +89,7 @@ $currentUser = getCurrentUser();
             position: relative;
         }
         .step-dot.active {
-            background: #667eea;
+            background: #000;
             color: white;
         }
         .step-dot.completed {
@@ -163,7 +163,7 @@ $currentUser = getCurrentUser();
                     <a href="/?skip_setup=1" class="btn btn-outline-secondary btn-setup">
                         <i class="bi bi-skip-forward me-2"></i>Skip Setup
                     </a>
-                    <button class="btn btn-primary btn-setup" onclick="nextStep()">
+                    <button class="btn btn-dark btn-setup" onclick="nextStep()">
                         Get Started <i class="bi bi-arrow-right ms-2"></i>
                     </button>
                 </div>
@@ -203,7 +203,7 @@ $currentUser = getCurrentUser();
                         <button class="btn btn-outline-secondary btn-setup me-2" onclick="skipStep()">
                             Skip
                         </button>
-                        <button class="btn btn-primary btn-setup" onclick="saveAndNext('customWildcard', 'custom_wildcard_domain')">
+                        <button class="btn btn-dark btn-setup" onclick="saveAndNext('customWildcard', 'custom_wildcard_domain')">
                             Next <i class="bi bi-arrow-right ms-2"></i>
                         </button>
                     </div>
@@ -246,7 +246,7 @@ $currentUser = getCurrentUser();
                         <button class="btn btn-outline-secondary btn-setup me-2" onclick="skipStep()">
                             Skip
                         </button>
-                        <button class="btn btn-primary btn-setup" onclick="saveAndNext('dashboardDomain', 'dashboard_domain')">
+                        <button class="btn btn-dark btn-setup" onclick="saveAndNext('dashboardDomain', 'dashboard_domain')">
                             Next <i class="bi bi-arrow-right ms-2"></i>
                         </button>
                     </div>
@@ -287,7 +287,7 @@ $currentUser = getCurrentUser();
                         <button class="btn btn-outline-secondary btn-setup me-2" onclick="skipStep()">
                             Skip
                         </button>
-                        <button class="btn btn-primary btn-setup" onclick="saveSslAndNext()">
+                        <button class="btn btn-dark btn-setup" onclick="saveSslAndNext()">
                             Next <i class="bi bi-arrow-right ms-2"></i>
                         </button>
                     </div>

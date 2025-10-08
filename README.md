@@ -36,6 +36,7 @@ sudo -u webbadeploy docker-compose up -d
 3. **Access the web interface**:
    - Open your browser and navigate to `http://your-server-ip:3000`
    - Complete the initial setup (create admin account)
+   - Complete the setup wizard (configure domains, SSL, etc.)
    - Start deploying applications!
 
 ### First Application
@@ -95,9 +96,11 @@ Webbadeploy automatically handles SSL certificates using Let's Encrypt:
 - **Requirements**: Domain must point to your server before SSL request
 
 ### SSL Certificate Management
-- Certificates auto-renew every 90 days
-- Manual renewal: `docker exec webbadeploy_nginx certbot renew`
-- Certificate status visible in the web interface
+- **Automatic Renewal**: Traefik automatically renews certificates 30 days before expiry
+- **Certificate Duration**: 90 days (Let's Encrypt standard)
+- **No Manual Intervention**: Renewal happens automatically in the background
+- **Monitoring**: Check Traefik logs for renewal status: `docker logs webbadeploy_traefik`
+- **Storage**: Certificates stored in `/letsencrypt/acme.json` within Traefik container
 
 ## 🎛️ Management
 
@@ -145,6 +148,35 @@ git pull && docker-compose build --no-cache
 ```
 
 ## 🔧 Configuration
+
+### Setup Wizard
+
+After creating your admin account, you'll be guided through a setup wizard to configure:
+- Custom wildcard domain for applications (e.g., `*.apps.example.com`)
+- Custom domain for the dashboard (e.g., `deploy.example.com`)
+- SSL certificate for the dashboard
+- Let's Encrypt email for SSL notifications
+
+**Re-running the Setup Wizard:**
+
+If you need to access the setup wizard again after completing it:
+
+1. **Force access via URL parameter:**
+   ```
+   http://your-server-ip:3000/setup-wizard.php?force=1
+   ```
+
+2. **Reset via database (requires admin access):**
+   - Navigate to **Settings** in the web interface
+   - Find the `setup_completed` setting
+   - Change value from `1` to `0`
+   - Refresh the dashboard to see the wizard
+
+3. **Skip the wizard:**
+   - Click "Skip Setup" during any step
+   - Or access: `http://your-server-ip:3000/?skip_setup=1`
+
+All settings configured in the wizard can be changed later from the **Settings** page.
 
 ### WordPress Performance Tweaks
 - **OPcache**: Enabled with optimized settings
@@ -258,6 +290,19 @@ sudo usermod -aG docker $USER
 - Ensure domain points to server IP
 - Check firewall allows ports 80/443
 - Verify DNS propagation: `nslookup yourdomain.com`
+- Check Traefik logs: `docker logs webbadeploy_traefik`
+
+**SSL certificate renewal monitoring**
+```bash
+# Check Traefik logs for renewal activity
+docker logs webbadeploy_traefik 2>&1 | grep -i "renew\|certificate"
+
+# View current certificates
+docker exec webbadeploy_traefik cat /letsencrypt/acme.json
+
+# Check Traefik dashboard for certificate status
+# Access: http://your-server:8080/dashboard/
+```
 
 ### Getting Help
 - **Logs**: Check `docker-compose logs` for detailed error information
