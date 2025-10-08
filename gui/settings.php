@@ -126,16 +126,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 function updateDashboardTraefikConfig($domain, $enableSSL) {
     $dockerComposePath = '/opt/webbadeploy/docker-compose.yml';
     
-    if (!file_exists($dockerComposePath) || !is_writable($dockerComposePath)) {
-        return ['success' => false, 'error' => 'Cannot access docker-compose.yml'];
+    if (!file_exists($dockerComposePath)) {
+        return ['success' => false, 'error' => 'docker-compose.yml not found at: ' . $dockerComposePath];
     }
     
-    $content = file_get_contents($dockerComposePath);
+    // Try to read the file first
+    $content = @file_get_contents($dockerComposePath);
+    if ($content === false) {
+        return ['success' => false, 'error' => 'Cannot read docker-compose.yml. Check file permissions.'];
+    }
     
     if (empty($domain)) {
         // Remove Traefik labels if domain is empty
         $content = preg_replace('/\s+labels:.*?(?=\n\s{4}[a-z]|\n[a-z]|$)/s', '', $content);
-        file_put_contents($dockerComposePath, $content);
+        $result = @file_put_contents($dockerComposePath, $content);
+        if ($result === false) {
+            return ['success' => false, 'error' => 'Cannot write to docker-compose.yml. Check file permissions.'];
+        }
         return ['success' => true, 'message' => 'Dashboard domain removed. Restart web-gui to apply changes.'];
     }
     
@@ -180,9 +187,13 @@ function updateDashboardTraefikConfig($domain, $enableSSL) {
         );
     }
     
-    file_put_contents($dockerComposePath, $content);
+    // Try to write the file
+    $result = @file_put_contents($dockerComposePath, $content);
+    if ($result === false) {
+        return ['success' => false, 'error' => 'Cannot write to docker-compose.yml. Check file permissions: ' . error_get_last()['message']];
+    }
     
-    return ['success' => true, 'message' => 'Please restart web-gui container: docker-compose restart web-gui'];
+    return ['success' => true, 'message' => 'Dashboard configuration updated! Restart web-gui container: docker-compose restart web-gui'];
 }
 ?>
 <!DOCTYPE html>

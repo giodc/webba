@@ -527,16 +527,40 @@ $customWildcardDomain = getSetting($db, 'custom_wildcard_domain', '');
                     <div class="modal-body">
                         <div class="mb-3">
                             <label class="form-label">Current Password</label>
-                            <input type="password" class="form-control" name="current_password" required autocomplete="current-password">
+                            <div class="input-group">
+                                <input type="password" class="form-control" id="current_password" name="current_password" required autocomplete="current-password">
+                                <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('current_password')">
+                                    <i class="bi bi-eye" id="current_password_icon"></i>
+                                </button>
+                            </div>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">New Password</label>
-                            <input type="password" class="form-control" name="new_password" required minlength="6" autocomplete="new-password">
-                            <div class="form-text">Minimum 6 characters</div>
+                            <div class="input-group">
+                                <input type="password" class="form-control" id="new_password" name="new_password" required minlength="8" autocomplete="new-password">
+                                <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('new_password')">
+                                    <i class="bi bi-eye" id="new_password_icon"></i>
+                                </button>
+                                <button class="btn btn-outline-primary" type="button" onclick="generateRandomPassword()" title="Generate random password">
+                                    <i class="bi bi-arrow-clockwise"></i>
+                                </button>
+                            </div>
+                            <div class="form-text">Minimum 8 characters. Click <i class="bi bi-arrow-clockwise"></i> to generate a secure password.</div>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Confirm New Password</label>
-                            <input type="password" class="form-control" name="confirm_password" required minlength="6" autocomplete="new-password">
+                            <div class="input-group">
+                                <input type="password" class="form-control" id="confirm_password" name="confirm_password" required minlength="8" autocomplete="new-password">
+                                <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('confirm_password')">
+                                    <i class="bi bi-eye" id="confirm_password_icon"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div id="password_strength" class="mb-3" style="display: none;">
+                            <div class="progress" style="height: 5px;">
+                                <div id="password_strength_bar" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                            </div>
+                            <small id="password_strength_text" class="text-muted"></small>
                         </div>
                     </div>
                     <div class="modal-footer">

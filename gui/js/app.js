@@ -855,3 +855,131 @@ async function disable2FA(event) {
         submitBtn.disabled = false;
     }
 }
+
+// Password visibility toggle
+function togglePasswordVisibility(fieldId) {
+    const field = document.getElementById(fieldId);
+    const icon = document.getElementById(fieldId + '_icon');
+    
+    if (field.type === 'password') {
+        field.type = 'text';
+        icon.classList.remove('bi-eye');
+        icon.classList.add('bi-eye-slash');
+    } else {
+        field.type = 'password';
+        icon.classList.remove('bi-eye-slash');
+        icon.classList.add('bi-eye');
+    }
+}
+
+// Generate random secure password
+function generateRandomPassword() {
+    const length = 16;
+    const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=[]{}|;:,.<>?';
+    let password = '';
+    
+    // Ensure at least one of each type
+    const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+    const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const numbers = '0123456789';
+    const special = '!@#$%^&*()_+-=[]{}|;:,.<>?';
+    
+    password += lowercase[Math.floor(Math.random() * lowercase.length)];
+    password += uppercase[Math.floor(Math.random() * uppercase.length)];
+    password += numbers[Math.floor(Math.random() * numbers.length)];
+    password += special[Math.floor(Math.random() * special.length)];
+    
+    // Fill the rest randomly
+    for (let i = password.length; i < length; i++) {
+        password += charset[Math.floor(Math.random() * charset.length)];
+    }
+    
+    // Shuffle the password
+    password = password.split('').sort(() => Math.random() - 0.5).join('');
+    
+    // Set the password in both fields
+    const newPasswordField = document.getElementById('new_password');
+    const confirmPasswordField = document.getElementById('confirm_password');
+    
+    newPasswordField.value = password;
+    confirmPasswordField.value = password;
+    
+    // Show the password temporarily
+    newPasswordField.type = 'text';
+    confirmPasswordField.type = 'text';
+    document.getElementById('new_password_icon').classList.remove('bi-eye');
+    document.getElementById('new_password_icon').classList.add('bi-eye-slash');
+    document.getElementById('confirm_password_icon').classList.remove('bi-eye');
+    document.getElementById('confirm_password_icon').classList.add('bi-eye-slash');
+    
+    // Check password strength
+    checkPasswordStrength(password);
+    
+    // Show success message
+    showAlert('success', 'Secure password generated! Make sure to save it somewhere safe.');
+    
+    // Copy to clipboard
+    navigator.clipboard.writeText(password).then(() => {
+        console.log('Password copied to clipboard');
+    }).catch(err => {
+        console.error('Failed to copy password:', err);
+    });
+}
+
+// Check password strength
+function checkPasswordStrength(password) {
+    const strengthDiv = document.getElementById('password_strength');
+    const strengthBar = document.getElementById('password_strength_bar');
+    const strengthText = document.getElementById('password_strength_text');
+    
+    if (!password) {
+        strengthDiv.style.display = 'none';
+        return;
+    }
+    
+    strengthDiv.style.display = 'block';
+    
+    let strength = 0;
+    let feedback = [];
+    
+    // Length check
+    if (password.length >= 8) strength += 20;
+    if (password.length >= 12) strength += 10;
+    if (password.length >= 16) strength += 10;
+    
+    // Character variety
+    if (/[a-z]/.test(password)) strength += 15;
+    if (/[A-Z]/.test(password)) strength += 15;
+    if (/[0-9]/.test(password)) strength += 15;
+    if (/[^a-zA-Z0-9]/.test(password)) strength += 15;
+    
+    // Determine strength level
+    let level = 'Weak';
+    let color = 'danger';
+    
+    if (strength >= 80) {
+        level = 'Very Strong';
+        color = 'success';
+    } else if (strength >= 60) {
+        level = 'Strong';
+        color = 'success';
+    } else if (strength >= 40) {
+        level = 'Medium';
+        color = 'warning';
+    }
+    
+    strengthBar.style.width = strength + '%';
+    strengthBar.className = 'progress-bar bg-' + color;
+    strengthText.textContent = 'Password strength: ' + level;
+    strengthText.className = 'text-' + color;
+}
+
+// Add password strength checker on input
+document.addEventListener('DOMContentLoaded', function() {
+    const newPasswordField = document.getElementById('new_password');
+    if (newPasswordField) {
+        newPasswordField.addEventListener('input', function() {
+            checkPasswordStrength(this.value);
+        });
+    }
+});
