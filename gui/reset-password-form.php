@@ -1,5 +1,6 @@
 <?php
 require_once 'includes/auth.php';
+require_once 'includes/functions.php';
 
 // Redirect if already logged in
 if (isLoggedIn()) {
@@ -7,40 +8,54 @@ if (isLoggedIn()) {
     exit;
 }
 
-// Check if setup is needed
-if (!hasUsers()) {
-    header('Location: /setup.php');
-    exit;
-}
-
 $error = '';
 $success = '';
+$validToken = false;
+$db = initDatabase();
 
-// Handle login form submission
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = $_POST['username'] ?? '';
-    $password = $_POST['password'] ?? '';
+// Get token from URL
+$token = $_GET['token'] ?? '';
+
+if (empty($token)) {
+    $error = 'Invalid or missing reset token.';
+} else {
+    // Verify token
+    $stmt = $db->prepare('SELECT id, username FROM users WHERE reset_token = ? AND reset_token_expires > NOW()');
+    $stmt->execute([$token]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if ($user) {
+        $validToken = true;
+    } else {
+        $error = 'Invalid or expired reset token. Please request a new password reset.';
+    }
+}
+
+// Handle form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $validToken) {
+    $newPassword = $_POST['new_password'] ?? '';
+    $confirmPassword = $_POST['confirm_password'] ?? '';
     $csrfToken = $_POST['csrf_token'] ?? '';
     
     if (!verifyCSRFToken($csrfToken)) {
         $error = 'Invalid request. Please try again.';
+    } elseif (strlen($newPassword) < 6) {
+        $error = 'Password must be at least 6 characters long.';
+    } elseif ($newPassword !== $confirmPassword) {
+        $error = 'Passwords do not match.';
     } else {
-        $result = authenticateUser($username, $password);
+        // Hash the new password
+        $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
         
-        if ($result['success']) {
-            // Check if 2FA is required
-            if (isset($result['requires_2fa']) && $result['requires_2fa']) {
-                header('Location: /verify-2fa.php');
-                exit;
-            }
-            
-            // Redirect to original page or dashboard
-            $redirect = $_SESSION['redirect_after_login'] ?? '/index.php';
-            unset($_SESSION['redirect_after_login']);
-            header('Location: ' . $redirect);
-            exit;
+        // Update password and clear reset token
+        $stmt = $db->prepare('UPDATE users SET password_hash = ?, reset_token = NULL, reset_token_expires = NULL, failed_attempts = 0, locked_until = NULL WHERE reset_token = ?');
+        $result = $stmt->execute([$hashedPassword, $token]);
+        
+        if ($result) {
+            $success = 'Password reset successfully! You can now login with your new password.';
+            $validToken = false; // Prevent form from showing again
         } else {
-            $error = $result['error'];
+            $error = 'Failed to reset password. Please try again.';
         }
     }
 }
@@ -52,7 +67,7 @@ $csrfToken = generateCSRFToken();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Webbadeploy</title>
+    <title>Reset Password - Webbadeploy</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <link href="css/custom.css" rel="stylesheet">
@@ -115,7 +130,7 @@ $csrfToken = generateCSRFToken();
             border-color: #4b5563;
             box-shadow: 0 0 0 3px rgba(75, 85, 99, 0.1);
         }
-        .btn-login {
+        .btn-primary {
             width: 100%;
             padding: 0.75rem;
             font-weight: 600;
@@ -125,7 +140,7 @@ $csrfToken = generateCSRFToken();
             color: white;
             transition: all 0.2s;
         }
-        .btn-login:hover {
+        .btn-primary:hover {
             background: #111827;
             transform: translateY(-1px);
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
@@ -141,10 +156,12 @@ $csrfToken = generateCSRFToken();
         <div class="login-card">
             <div class="login-header">
                 <div class="logo-icon">
-                    <i class="bi bi-cloud-arrow-up"></i>
+                    <i class="bi bi-shield-lock"></i>
                 </div>
-                <h1>Webbadeploy</h1>
-                <p>Sign in to your account</p>
+                <h1>Reset Password</h1>
+                <?php if ($validToken): ?>
+                <p>Enter your new password for <strong><?= htmlspecialchars($user['username']) ?></strong></p>
+                <?php endif; ?>
             </div>
 
             <?php if ($error): ?>
@@ -157,36 +174,42 @@ $csrfToken = generateCSRFToken();
                 <div class="alert alert-success" role="alert">
                     <i class="bi bi-check-circle me-2"></i><?= htmlspecialchars($success) ?>
                 </div>
+                <div class="text-center mt-3">
+                    <a href="/login.php" class="btn btn-primary">
+                        <i class="bi bi-box-arrow-in-right me-2"></i>Go to Login
+                    </a>
+                </div>
+            <?php elseif ($validToken): ?>
+                <form method="POST" action="/reset-password-form.php?token=<?= htmlspecialchars($token) ?>">
+                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
+                    
+                    <div class="mb-3">
+                        <label for="new_password" class="form-label">New Password</label>
+                        <input type="password" class="form-control" id="new_password" name="new_password" required minlength="6" autofocus>
+                        <small class="text-muted">Minimum 6 characters</small>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="confirm_password" class="form-label">Confirm Password</label>
+                        <input type="password" class="form-control" id="confirm_password" name="confirm_password" required minlength="6">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle me-2"></i>Reset Password
+                    </button>
+                </form>
+            <?php else: ?>
+                <div class="text-center">
+                    <a href="/forgot-password.php" class="btn btn-primary">
+                        <i class="bi bi-arrow-clockwise me-2"></i>Request New Reset Link
+                    </a>
+                </div>
             <?php endif; ?>
 
-            <form method="POST" action="/login.php">
-                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
-                
-                <div class="mb-3">
-                    <label for="username" class="form-label">Username</label>
-                    <input type="text" class="form-control" id="username" name="username" required autofocus>
-                </div>
-
-                <div class="mb-4">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <label for="password" class="form-label mb-0">Password</label>
-                        <a href="/forgot-password.php" class="text-decoration-none" style="font-size: 0.875rem; color: #4b5563;">
-                            Forgot password?
-                        </a>
-                    </div>
-                    <input type="password" class="form-control" id="password" name="password" required>
-                </div>
-
-                <button type="submit" class="btn btn-login">
-                    <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
-                </button>
-            </form>
-
             <div class="text-center mt-4">
-                <small class="text-muted">
-                    <i class="bi bi-shield-check me-1"></i>
-                    Secure authentication
-                </small>
+                <a href="/login.php" class="text-decoration-none" style="color: #4b5563; font-size: 0.875rem;">
+                    <i class="bi bi-arrow-left me-1"></i>Back to Login
+                </a>
             </div>
         </div>
 

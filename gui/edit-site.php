@@ -1294,17 +1294,23 @@ QUEUE_CONNECTION=redis</code></pre>
                     document.getElementById('volumeSize').textContent = result.stats.volume_size;
                     
                     // Update CPU stats if available
-                    if (result.stats.cpu) {
+                    if (result.stats.cpu && result.stats.cpu !== 'N/A') {
                         document.getElementById('cpuUsage').textContent = result.stats.cpu;
                         const cpuPercent = parseFloat(result.stats.cpu_percent) || 0;
                         document.getElementById('cpuBar').style.width = Math.min(cpuPercent, 100) + '%';
+                    } else {
+                        document.getElementById('cpuUsage').textContent = 'N/A';
+                        document.getElementById('cpuBar').style.width = '0%';
                     }
                     
                     // Update Memory stats if available
-                    if (result.stats.memory) {
+                    if (result.stats.memory && result.stats.memory !== 'N/A') {
                         document.getElementById('memoryUsage').textContent = result.stats.memory;
                         const memPercent = parseFloat(result.stats.mem_percent) || 0;
                         document.getElementById('memoryBar').style.width = Math.min(memPercent, 100) + '%';
+                    } else {
+                        document.getElementById('memoryUsage').textContent = 'N/A';
+                        document.getElementById('memoryBar').style.width = '0%';
                     }
                 } else {
                     console.error('Error loading stats:', result.error);

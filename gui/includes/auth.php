@@ -53,6 +53,18 @@ function initAuthDatabase() {
         // Column already exists, ignore
     }
     
+    try {
+        $db->exec("ALTER TABLE users ADD COLUMN reset_token TEXT");
+    } catch (PDOException $e) {
+        // Column already exists, ignore
+    }
+    
+    try {
+        $db->exec("ALTER TABLE users ADD COLUMN reset_token_expires DATETIME");
+    } catch (PDOException $e) {
+        // Column already exists, ignore
+    }
+    
     // Create sessions table for tracking
     $db->exec("CREATE TABLE IF NOT EXISTS login_attempts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,

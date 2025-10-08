@@ -1492,8 +1492,14 @@ function getContainerStats($db, $id) {
             $containers[] = $sftpContainer;
         }
         
-        // Get stats for all containers
+        // Get stats for all containers (only running ones)
         foreach ($containers as $containerName) {
+            // Check if container is running first
+            $statusCheck = executeDockerCommand("inspect --format='{{.State.Running}}' {$containerName}");
+            if ($statusCheck['return_code'] !== 0 || trim($statusCheck['output']) !== 'true') {
+                continue; // Skip stopped containers
+            }
+            
             $statsResult = executeDockerCommand("stats {$containerName} --no-stream --format '{{.CPUPerc}}|{{.MemUsage}}|{{.MemPerc}}'");
             if ($statsResult['return_code'] === 0 && !empty($statsResult['output'])) {
                 $parts = explode('|', trim($statsResult['output']));
