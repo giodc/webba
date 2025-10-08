@@ -1361,8 +1361,8 @@ QUEUE_CONNECTION=redis</code></pre>
             }, 5000);
         }
         
-        // Auto-refresh stats every 30 seconds
-        setInterval(refreshStats, 30000);
+        // Auto-refresh stats every 3 minutes
+        setInterval(refreshStats, 180000);
         
         // Load stats and containers on page load
         refreshStats();

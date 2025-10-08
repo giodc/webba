@@ -391,11 +391,14 @@ function deploySFTPContainer($site) {
         // Create a directory for this site's files
         $bindPath = "/app/apps/{$site['type']}/sites/{$site['container_name']}/html";
         if (!is_dir($bindPath)) {
-            if (!mkdir($bindPath, 0777, true)) {
+            if (!mkdir($bindPath, 0755, true)) {
                 throw new Exception("Failed to create SFTP directory: {$bindPath}");
             }
-            // Set proper permissions using chmod instead of chown (which may fail in container)
-            chmod($bindPath, 0777);
+            // Set proper permissions - 755 instead of 777 for security
+            chmod($bindPath, 0755);
+            // Ensure www-data ownership
+            chown($bindPath, 'www-data');
+            chgrp($bindPath, 'www-data');
         }
     }
     
@@ -440,9 +443,14 @@ function createSFTPDockerCompose($site, $containerName, $volumeName, $useBindMou
         $volumeMount = "      - {$bindPath}:/config/files";
         $volumeSection = "";
     } else {
-        $volumeMount = "      - {$volumeName}:/config/files";
+        $volumeMount = "      - {$volumeName}:/config/files:rw";
         $volumeSection = "\nvolumes:\n  {$volumeName}:\n    external: true\n";
     }
+    
+    // SECURITY: Bind to localhost only by default
+    // Users should use SSH tunneling or configure firewall rules for remote access
+    // Change "127.0.0.1" to "0.0.0.0" only if you have proper firewall rules
+    $bindAddress = "127.0.0.1";
     
     return "services:
   {$containerName}:
@@ -450,7 +458,7 @@ function createSFTPDockerCompose($site, $containerName, $volumeName, $useBindMou
     container_name: {$containerName}
     hostname: {$containerName}
     ports:
-      - \"{$port}:2222\"
+      - \"{$bindAddress}:{$port}:2222\"
     volumes:
 {$volumeMount}
     environment:
@@ -460,9 +468,17 @@ function createSFTPDockerCompose($site, $containerName, $volumeName, $useBindMou
       - USER_NAME={$username}
       - USER_PASSWORD={$password}
       - PASSWORD_ACCESS=true
+      - PUBLIC_KEY_DIR=/config/.ssh/authorized_keys
+      - SUDO_ACCESS=false
+      - LOG_STDOUT=true
     restart: unless-stopped
     networks:
       - webbadeploy_webbadeploy
+    security_opt:
+      - no-new-privileges:true
+    read_only: false
+    tmpfs:
+      - /tmp
 {$volumeSection}
 networks:
   webbadeploy_webbadeploy:

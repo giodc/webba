@@ -231,13 +231,21 @@ fi
 # Set permissions
 echo -e "\n${YELLOW}Setting permissions...${NC}"
 chmod -R 755 "$INSTALL_DIR"
-chmod -R 777 "$INSTALL_DIR/apps"
-chmod -R 777 "$INSTALL_DIR/data"
+# SECURITY: Use 755 instead of 777 - no world-writable directories
+chmod -R 755 "$INSTALL_DIR/apps"
+chmod -R 755 "$INSTALL_DIR/data"
+# Ensure www-data owns the directories
+chown -R www-data:www-data "$INSTALL_DIR/apps"
+chown -R www-data:www-data "$INSTALL_DIR/data"
 
 # Fix Docker socket permissions for container access
 echo -e "${YELLOW}Configuring Docker socket permissions...${NC}"
-chmod 666 /var/run/docker.sock
-echo -e "${GREEN}✓ Docker socket permissions configured${NC}"
+# SECURITY: Use 660 with docker group instead of 666 (world-writable)
+groupadd -f docker
+usermod -aG docker www-data
+chmod 660 /var/run/docker.sock
+chown root:docker /var/run/docker.sock
+echo -e "${GREEN}✓ Docker socket permissions configured (660 with docker group)${NC}"
 
 # Fix docker-compose.yml permissions for web GUI to update Let's Encrypt email
 echo -e "${YELLOW}Setting docker-compose.yml permissions...${NC}"
