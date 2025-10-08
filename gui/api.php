@@ -16,6 +16,7 @@ set_error_handler(function($errno, $errstr, $errfile, $errline) {
     http_response_code(500);
     echo json_encode([
         'success' => false,
+        'error' => $errstr . ' in ' . $errfile . ' on line ' . $errline
     ]);
     exit;
 });
@@ -1658,8 +1659,15 @@ function changePasswordHandler($db) {
             throw new Exception("New password must be at least 6 characters long");
         }
         
-        // Get current user
-        $currentUser = getCurrentUser();
+        // Get current user with password hash
+        if (!isset($_SESSION['user_id'])) {
+            throw new Exception("User not logged in");
+        }
+        
+        $stmt = $db->prepare("SELECT id, username, password_hash FROM users WHERE id = ?");
+        $stmt->execute([$_SESSION['user_id']]);
+        $currentUser = $stmt->fetch(PDO::FETCH_ASSOC);
+        
         if (!$currentUser) {
             throw new Exception("User not found");
         }
