@@ -21,9 +21,11 @@ if (function_exists('opcache_reset')) {
 $dockerComposeContent = @file_get_contents($dockerComposePath);
 
 // If that fails, try using exec as fallback
-if ($dockerComposeContent === false || empty($dockerComposeContent)) {
+if ($dockerComposeContent === false) {
+    $output = [];
+    $returnCode = 0;
     exec("cat $dockerComposePath 2>&1", $output, $returnCode);
-    $dockerComposeContent = $returnCode === 0 ? implode("\n", $output) : '';
+    $dockerComposeContent = ($returnCode === 0 && !empty($output)) ? implode("\n", $output) : '';
 }
 
 preg_match('/acme\.email=([^\s"]+)/', $dockerComposeContent, $matches);
@@ -56,8 +58,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             // If file_get_contents fails, try exec as fallback
             if ($fileContent === false) {
+                $output = [];
+                $returnCode = 0;
                 exec("cat $dockerComposePath 2>&1", $output, $returnCode);
-                if ($returnCode === 0) {
+                if ($returnCode === 0 && !empty($output)) {
                     $fileContent = implode("\n", $output);
                 }
             }
@@ -85,6 +89,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 // If that fails, try using shell command
                 if ($writeResult === false) {
+                    $output = [];
+                    $returnCode = 0;
                     $tempFile = tempnam(sys_get_temp_dir(), 'docker-compose-');
                     file_put_contents($tempFile, $newContent);
                     exec("cat $tempFile > $dockerComposePath 2>&1", $output, $returnCode);
@@ -172,15 +178,19 @@ function updateDashboardTraefikConfig($domain, $enableSSL) {
     $content = @file_get_contents($dockerComposePath);
     
     // If file_get_contents fails, try exec as fallback
-    if ($content === false || empty($content)) {
+    if ($content === false) {
+        $output = [];
+        $returnCode = 0;
         exec("cat $dockerComposePath 2>&1", $output, $returnCode);
-        if ($returnCode === 0) {
+        if ($returnCode === 0 && !empty($output)) {
             $content = implode("\n", $output);
         }
     }
     
     if ($content === false || empty($content)) {
-        return ['success' => false, 'error' => 'Cannot access docker-compose.yml at ' . $dockerComposePath . '. File may not be mounted or accessible.'];
+        $lastError = error_get_last();
+        $errorDetail = $lastError ? ' PHP Error: ' . $lastError['message'] : '';
+        return ['success' => false, 'error' => 'Cannot access docker-compose.yml at ' . $dockerComposePath . '. File may not be mounted or accessible.' . $errorDetail];
     }
     
     if (empty($domain)) {
@@ -239,6 +249,8 @@ function updateDashboardTraefikConfig($domain, $enableSSL) {
     
     // If that fails, try using shell command
     if ($result === false) {
+        $output = [];
+        $returnCode = 0;
         $tempFile = tempnam(sys_get_temp_dir(), 'docker-compose-');
         file_put_contents($tempFile, $content);
         exec("cat $tempFile > $dockerComposePath 2>&1", $output, $returnCode);
