@@ -11,11 +11,14 @@ $currentUser = getCurrentUser();
 // Get current Let's Encrypt email from docker-compose.yml
 $dockerComposePath = '/opt/webbadeploy/docker-compose.yml';
 
-// Try to read the file directly first, fallback to exec if not accessible
-if (file_exists($dockerComposePath) && is_readable($dockerComposePath)) {
-    $dockerComposeContent = file_get_contents($dockerComposePath);
-} else {
-    // Fallback: try using exec to read the file
+// Clear stat cache to ensure fresh file checks
+clearstatcache(true, $dockerComposePath);
+
+// Try to read the file directly first
+$dockerComposeContent = @file_get_contents($dockerComposePath);
+
+// If that fails, try using exec as fallback
+if ($dockerComposeContent === false) {
     exec("cat $dockerComposePath 2>&1", $output, $returnCode);
     $dockerComposeContent = $returnCode === 0 ? implode("\n", $output) : '';
 }
@@ -121,14 +124,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 function updateDashboardTraefikConfig($domain, $enableSSL) {
     $dockerComposePath = '/opt/webbadeploy/docker-compose.yml';
     
-    if (!file_exists($dockerComposePath)) {
-        return ['success' => false, 'error' => 'docker-compose.yml not found at: ' . $dockerComposePath];
-    }
+    // Clear stat cache to ensure fresh file checks
+    clearstatcache(true, $dockerComposePath);
     
-    // Try to read the file first
+    // Try to read the file first (more reliable than file_exists)
     $content = @file_get_contents($dockerComposePath);
     if ($content === false) {
-        return ['success' => false, 'error' => 'Cannot read docker-compose.yml. Check file permissions.'];
+        return ['success' => false, 'error' => 'Cannot access docker-compose.yml at ' . $dockerComposePath . '. File may not be mounted or accessible.'];
     }
     
     if (empty($domain)) {

@@ -16,8 +16,9 @@ $sslSites = array_filter($sites, function($site) {
 
 // Get Let's Encrypt email from docker-compose.yml
 $dockerComposePath = '/opt/webbadeploy/docker-compose.yml';
-if (file_exists($dockerComposePath) && is_readable($dockerComposePath)) {
-    $dockerComposeContent = file_get_contents($dockerComposePath);
+clearstatcache(true, $dockerComposePath);
+$dockerComposeContent = @file_get_contents($dockerComposePath);
+if ($dockerComposeContent !== false) {
     preg_match('/acme\.email=([^\s"]+)/', $dockerComposeContent, $matches);
     $letsEncryptEmail = $matches[1] ?? 'Not configured';
 } else {
