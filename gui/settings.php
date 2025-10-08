@@ -11,14 +11,17 @@ $currentUser = getCurrentUser();
 // Get current Let's Encrypt email from docker-compose.yml
 $dockerComposePath = '/opt/webbadeploy/docker-compose.yml';
 
-// Clear stat cache to ensure fresh file checks
-clearstatcache(true, $dockerComposePath);
+// Clear ALL caches to ensure fresh file checks
+clearstatcache(true);
+if (function_exists('opcache_reset')) {
+    @opcache_reset();
+}
 
 // Try to read the file directly first
 $dockerComposeContent = @file_get_contents($dockerComposePath);
 
 // If that fails, try using exec as fallback
-if ($dockerComposeContent === false) {
+if ($dockerComposeContent === false || empty($dockerComposeContent)) {
     exec("cat $dockerComposePath 2>&1", $output, $returnCode);
     $dockerComposeContent = $returnCode === 0 ? implode("\n", $output) : '';
 }
@@ -42,14 +45,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $newEmail = trim($_POST['letsencrypt_email']);
         
         if (filter_var($newEmail, FILTER_VALIDATE_EMAIL)) {
-            // Clear PHP file stat cache to ensure fresh check
-            clearstatcache(true, $dockerComposePath);
+            // Clear ALL PHP caches to ensure fresh file access
+            clearstatcache(true);
+            if (function_exists('opcache_reset')) {
+                @opcache_reset();
+            }
             
             // Try to read the file first (this is more reliable than file_exists)
             $fileContent = @file_get_contents($dockerComposePath);
             
+            // If file_get_contents fails, try exec as fallback
             if ($fileContent === false) {
+                exec("cat $dockerComposePath 2>&1", $output, $returnCode);
+                if ($returnCode === 0) {
+                    $fileContent = implode("\n", $output);
+                }
+            }
+            
+            if ($fileContent === false || empty($fileContent)) {
+                $lastError = error_get_last();
                 $errorMessage = 'Cannot access docker-compose.yml at ' . $dockerComposePath . '. Check if file exists and has proper permissions.';
+                if ($lastError) {
+                    $errorMessage .= ' Error: ' . $lastError['message'];
+                }
             } else {
                 // Create backup first
                 $backupPath = $dockerComposePath . '.backup';
@@ -62,16 +80,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $fileContent
                 );
                 
-                // Write the updated content
+                // Write the updated content - try file_put_contents first
                 $writeResult = @file_put_contents($dockerComposePath, $newContent);
+                
+                // If that fails, try using shell command
+                if ($writeResult === false) {
+                    $tempFile = tempnam(sys_get_temp_dir(), 'docker-compose-');
+                    file_put_contents($tempFile, $newContent);
+                    exec("cat $tempFile > $dockerComposePath 2>&1", $output, $returnCode);
+                    unlink($tempFile);
+                    $writeResult = ($returnCode === 0);
+                }
+                
                 if ($writeResult !== false) {
+                    // Clear caches again after write
+                    clearstatcache(true);
+                    if (function_exists('opcache_reset')) {
+                        @opcache_reset();
+                    }
+                    
                     $successMessage = 'Let\'s Encrypt email updated successfully! Please restart Traefik for changes to take effect.';
                     $currentEmail = $newEmail;
                     $dockerComposeContent = $newContent;
                 } else {
                     // Restore backup if write failed
                     @file_put_contents($dockerComposePath, $fileContent);
+                    $lastError = error_get_last();
                     $errorMessage = 'Failed to write to docker-compose.yml. Check file permissions.';
+                    if ($lastError) {
+                        $errorMessage .= ' Error: ' . $lastError['message'];
+                    }
                 }
             }
         } else {
@@ -124,12 +162,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 function updateDashboardTraefikConfig($domain, $enableSSL) {
     $dockerComposePath = '/opt/webbadeploy/docker-compose.yml';
     
-    // Clear stat cache to ensure fresh file checks
-    clearstatcache(true, $dockerComposePath);
+    // Clear ALL caches to ensure fresh file checks
+    clearstatcache(true);
+    if (function_exists('opcache_reset')) {
+        @opcache_reset();
+    }
     
     // Try to read the file first (more reliable than file_exists)
     $content = @file_get_contents($dockerComposePath);
-    if ($content === false) {
+    
+    // If file_get_contents fails, try exec as fallback
+    if ($content === false || empty($content)) {
+        exec("cat $dockerComposePath 2>&1", $output, $returnCode);
+        if ($returnCode === 0) {
+            $content = implode("\n", $output);
+        }
+    }
+    
+    if ($content === false || empty($content)) {
         return ['success' => false, 'error' => 'Cannot access docker-compose.yml at ' . $dockerComposePath . '. File may not be mounted or accessible.'];
     }
     
@@ -184,10 +234,28 @@ function updateDashboardTraefikConfig($domain, $enableSSL) {
         );
     }
     
-    // Try to write the file
+    // Try to write the file - try file_put_contents first
     $result = @file_put_contents($dockerComposePath, $content);
+    
+    // If that fails, try using shell command
     if ($result === false) {
-        return ['success' => false, 'error' => 'Cannot write to docker-compose.yml. Check file permissions: ' . error_get_last()['message']];
+        $tempFile = tempnam(sys_get_temp_dir(), 'docker-compose-');
+        file_put_contents($tempFile, $content);
+        exec("cat $tempFile > $dockerComposePath 2>&1", $output, $returnCode);
+        unlink($tempFile);
+        $result = ($returnCode === 0);
+    }
+    
+    if ($result === false) {
+        $lastError = error_get_last();
+        $errorMsg = $lastError ? $lastError['message'] : 'Unknown error';
+        return ['success' => false, 'error' => 'Cannot write to docker-compose.yml. Check file permissions: ' . $errorMsg];
+    }
+    
+    // Clear caches after write
+    clearstatcache(true);
+    if (function_exists('opcache_reset')) {
+        @opcache_reset();
     }
     
     return ['success' => true, 'message' => 'Dashboard configuration updated! Restart web-gui container: docker-compose restart web-gui'];
