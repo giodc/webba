@@ -1288,10 +1288,21 @@ QUEUE_CONNECTION=redis</code></pre>
                 const response = await fetch('/api.php?action=get_stats&id=' + siteId);
                 const result = await response.json();
                 
-                if (result.success) {
-                    document.getElementById('containerStatus').textContent = result.stats.status.charAt(0).toUpperCase() + result.stats.status.slice(1);
-                    document.getElementById('containerUptime').textContent = result.stats.uptime;
-                    document.getElementById('volumeSize').textContent = result.stats.volume_size;
+                console.log('Stats response:', result); // Debug log
+                
+                if (result.success && result.stats) {
+                    // Update status and uptime
+                    if (result.stats.status) {
+                        document.getElementById('containerStatus').textContent = result.stats.status.charAt(0).toUpperCase() + result.stats.status.slice(1);
+                    }
+                    
+                    if (result.stats.uptime) {
+                        document.getElementById('containerUptime').textContent = result.stats.uptime;
+                    }
+                    
+                    if (result.stats.volume_size) {
+                        document.getElementById('volumeSize').textContent = result.stats.volume_size;
+                    }
                     
                     // Update CPU stats if available
                     if (result.stats.cpu && result.stats.cpu !== 'N/A') {
@@ -1313,10 +1324,16 @@ QUEUE_CONNECTION=redis</code></pre>
                         document.getElementById('memoryBar').style.width = '0%';
                     }
                 } else {
-                    console.error('Error loading stats:', result.error);
+                    console.error('Error loading stats:', result.error || 'Unknown error');
+                    // Set error state
+                    document.getElementById('containerUptime').textContent = 'Error';
+                    document.getElementById('volumeSize').textContent = 'Error';
                 }
             } catch (error) {
                 console.error('Network error:', error.message);
+                // Set error state
+                document.getElementById('containerUptime').textContent = 'Error';
+                document.getElementById('volumeSize').textContent = 'Error';
             }
         }
 

@@ -69,9 +69,39 @@ function isUpdateAvailable() {
 function getGitStatus() {
     exec('cd /var/www/html/.. && git status --porcelain 2>&1', $output, $returnCode);
     
+    // Filter out files that should be ignored (data/, logs/, etc.)
+    $ignoredPatterns = [
+        'data/',
+        'logs/',
+        'ssl/',
+        'volumes/',
+        '.env',
+        'docker-compose.yml',
+        'nginx/sites/',
+        '*.log',
+        '*.tmp',
+        '*.backup',
+        '*.bak'
+    ];
+    
+    $relevantChanges = [];
+    foreach ($output as $line) {
+        $shouldIgnore = false;
+        foreach ($ignoredPatterns as $pattern) {
+            if (strpos($line, $pattern) !== false) {
+                $shouldIgnore = true;
+                break;
+            }
+        }
+        if (!$shouldIgnore && !empty(trim($line))) {
+            $relevantChanges[] = $line;
+        }
+    }
+    
     return [
-        'has_changes' => !empty($output),
-        'changes' => $output,
+        'has_changes' => !empty($relevantChanges),
+        'changes' => $relevantChanges,
+        'all_changes' => $output,
         'is_git_repo' => $returnCode === 0
     ];
 }

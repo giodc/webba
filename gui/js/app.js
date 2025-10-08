@@ -511,10 +511,16 @@ function displayUpdateInfo(info, changelog) {
     }
     
     if (info.has_local_changes) {
+        let changesHtml = '';
+        if (info.changes && info.changes.length > 0) {
+            changesHtml = '<br><small class="mt-2 d-block">Modified files:<br><code class="d-block mt-1">' + 
+                          info.changes.join('<br>') + '</code></small>';
+        }
         html += `
             <div class="alert alert-warning">
                 <i class="bi bi-exclamation-triangle me-2"></i>
                 <strong>Warning:</strong> Local changes detected. They will be stashed before updating.
+                ${changesHtml}
             </div>
         `;
     }

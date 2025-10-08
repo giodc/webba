@@ -1435,9 +1435,21 @@ function getContainerStats($db, $id) {
         $uptimeResult = executeDockerCommand("inspect --format='{{.State.StartedAt}}' {$site['container_name']}");
         $startedAt = trim($uptimeResult['output']);
         
-        // Get volume size
+        // Get volume size - use a simpler approach
         $volumeName = $site['type'] === 'wordpress' ? "wp_{$site['container_name']}_data" : "{$site['container_name']}_data";
-        $sizeResult = executeDockerCommand("system df -v | grep {$volumeName} | awk '{print $3}' || echo 'N/A'");
+        
+        // Try to get volume size using docker volume inspect
+        $volumeInspect = executeDockerCommand("volume inspect {$volumeName} --format '{{.Mountpoint}}'");
+        $volumeSize = 'N/A';
+        
+        if ($volumeInspect['return_code'] === 0 && !empty($volumeInspect['output'])) {
+            $mountpoint = trim($volumeInspect['output']);
+            // Get directory size
+            exec("du -sh {$mountpoint} 2>/dev/null | awk '{print $1}'", $sizeOutput, $sizeReturnCode);
+            if ($sizeReturnCode === 0 && !empty($sizeOutput)) {
+                $volumeSize = trim($sizeOutput[0]);
+            }
+        }
         
         // Calculate uptime
         $uptime = 'N/A';
