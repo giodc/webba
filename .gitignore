@@ -36,12 +36,3 @@ apps/*/sites/
 .DS_Store?
 ._*
 .Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# Backup files
-*.backup
-*.bak
-*.olddocker-compose.yml
-docker-compose.yml
