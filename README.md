@@ -27,10 +27,12 @@ Webbadeploy is an open-source platform that makes deploying WordPress, PHP, and 
 curl -fsSL https://raw.githubusercontent.com/giodc/webba/master/install.sh | sudo bash
 ```
 
-2. **Start Webbadeploy**:
+2. **Webbadeploy starts automatically** after installation. To manage it manually:
 ```bash
 cd /opt/webbadeploy
-sudo -u webbadeploy docker-compose up -d
+docker-compose up -d    # Start
+docker-compose down     # Stop
+docker-compose restart  # Restart
 ```
 
 3. **Access the web interface**:

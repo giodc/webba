@@ -24,6 +24,10 @@ fi
 echo "Updating system packages..."
 apt update && apt upgrade -y
 
+# Install git (needed for cloning)
+echo "Installing git..."
+apt install -y git
+
 # Install Docker
 echo "Installing Docker..."
 if ! command -v docker &> /dev/null; then
@@ -111,8 +115,19 @@ if [ "$UPDATE_MODE" = true ]; then
     exit 0
 else
     echo "Setting up directories..."
-    mkdir -p /opt/webbadeploy
-    cp -r * /opt/webbadeploy/
+    
+    # Check if we're running from /opt/webbadeploy already
+    if [ "$PWD" = "/opt/webbadeploy" ]; then
+        echo "Already in /opt/webbadeploy, skipping clone..."
+    else
+        # Clone from GitHub if not already present
+        if [ ! -d "/opt/webbadeploy/.git" ]; then
+            echo "Cloning Webbadeploy from GitHub..."
+            git clone https://github.com/giodc/webba.git /opt/webbadeploy
+        fi
+    fi
+    
+    cd /opt/webbadeploy
     chown -R webbadeploy:webbadeploy /opt/webbadeploy
     
     # Create required directories
