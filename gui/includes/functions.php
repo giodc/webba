@@ -65,6 +65,18 @@ function initDatabase() {
         ip_address TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )");
+    
+    // Create compose_configs table for storing docker-compose YAML
+    $pdo->exec("CREATE TABLE IF NOT EXISTS compose_configs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        config_type TEXT NOT NULL,  -- 'main' or 'site'
+        site_id INTEGER,            -- NULL for main config, site ID for site configs
+        compose_yaml TEXT NOT NULL,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_by INTEGER,
+        FOREIGN KEY (site_id) REFERENCES sites(id) ON DELETE CASCADE,
+        UNIQUE(config_type, site_id)
+    )");
 
     // Migrate existing databases - add columns if they don't exist
     try {
@@ -483,4 +495,123 @@ function createSFTPDockerCompose($site, $containerName, $volumeName, $useBindMou
 networks:
   webbadeploy_webbadeploy:
     external: true";
+}
+
+// ============================================================================
+// COMPOSE CONFIG DATABASE FUNCTIONS
+// ============================================================================
+
+/**
+ * Get compose configuration from database
+ */
+function getComposeConfig($pdo, $siteId = null) {
+    if ($siteId === null) {
+        // Get main Traefik config
+        $stmt = $pdo->prepare("SELECT * FROM compose_configs WHERE config_type = 'main' LIMIT 1");
+        $stmt->execute();
+    } else {
+        // Get site-specific config
+        $stmt = $pdo->prepare("SELECT * FROM compose_configs WHERE config_type = 'site' AND site_id = ? LIMIT 1");
+        $stmt->execute([$siteId]);
+    }
+    return $stmt->fetch(PDO::FETCH_ASSOC);
+}
+
+/**
+ * Save or update compose configuration
+ */
+function saveComposeConfig($pdo, $yaml, $userId, $siteId = null) {
+    $configType = $siteId === null ? 'main' : 'site';
+    
+    // Check if config exists
+    $existing = getComposeConfig($pdo, $siteId);
+    
+    if ($existing) {
+        // Update existing
+        $stmt = $pdo->prepare("UPDATE compose_configs SET compose_yaml = ?, updated_at = CURRENT_TIMESTAMP, updated_by = ? WHERE id = ?");
+        $stmt->execute([$yaml, $userId, $existing['id']]);
+        return $existing['id'];
+    } else {
+        // Insert new
+        $stmt = $pdo->prepare("INSERT INTO compose_configs (config_type, site_id, compose_yaml, updated_by) VALUES (?, ?, ?, ?)");
+        $stmt->execute([$configType, $siteId, $yaml, $userId]);
+        return $pdo->lastInsertId();
+    }
+}
+
+/**
+ * Generate docker-compose.yml file from database
+ */
+function generateComposeFile($pdo, $siteId = null) {
+    $config = getComposeConfig($pdo, $siteId);
+    
+    if (!$config) {
+        return null;
+    }
+    
+    if ($siteId === null) {
+        // Main Traefik config
+        $outputPath = '/opt/webbadeploy/docker-compose.yml';
+    } else {
+        // Site-specific config
+        $site = getSiteById($pdo, $siteId);
+        if (!$site) {
+            return null;
+        }
+        $outputPath = "/app/apps/{$site['type']}/sites/{$site['container_name']}/docker-compose.yml";
+        
+        // Ensure directory exists
+        $dir = dirname($outputPath);
+        if (!is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+    }
+    
+    // Write YAML to file
+    $result = file_put_contents($outputPath, $config['compose_yaml']);
+    
+    if ($result === false) {
+        return null;
+    }
+    
+    return $outputPath;
+}
+
+/**
+ * Update a specific parameter in compose config (e.g., Let's Encrypt email)
+ */
+function updateComposeParameter($pdo, $paramKey, $paramValue, $userId, $siteId = null) {
+    $config = getComposeConfig($pdo, $siteId);
+    
+    if (!$config) {
+        throw new Exception("Compose configuration not found");
+    }
+    
+    $yaml = $config['compose_yaml'];
+    
+    // Update specific parameters based on key
+    switch ($paramKey) {
+        case 'letsencrypt_email':
+            $yaml = preg_replace('/acme\.email=[^\s"]+/', 'acme.email=' . $paramValue, $yaml);
+            break;
+        case 'dashboard_domain':
+            // This would be handled by updateDashboardTraefikConfig
+            break;
+        default:
+            throw new Exception("Unknown parameter: $paramKey");
+    }
+    
+    // Save updated YAML
+    saveComposeConfig($pdo, $yaml, $userId, $siteId);
+    
+    // Regenerate file
+    return generateComposeFile($pdo, $siteId);
+}
+
+/**
+ * Delete compose config (when site is deleted)
+ */
+function deleteComposeConfig($pdo, $siteId) {
+    $stmt = $pdo->prepare("DELETE FROM compose_configs WHERE config_type = 'site' AND site_id = ?");
+    return $stmt->execute([$siteId]);
 }

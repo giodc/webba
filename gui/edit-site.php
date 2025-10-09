@@ -49,7 +49,7 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
     <title>Edit Site - <?= htmlspecialchars($site['name']) ?> - Webbadeploy</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="css/custom.css" rel="stylesheet">
+    <link href="/css/custom.css" rel="stylesheet">
     <style>
         .sidebar {
           
@@ -201,6 +201,12 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                             <i class="bi bi-cloud-download"></i>
                             <span>Backup & Restore</span>
                         </a>
+                        <?php if (isAdmin()): ?>
+                        <a href="/compose-editor.php?site_id=<?= $siteId ?>" class="sidebar-nav-item" target="_blank">
+                            <i class="bi bi-file-earmark-code"></i>
+                            <span>Docker Compose <i class="bi bi-box-arrow-up-right ms-1" style="font-size: 0.8em;"></i></span>
+                        </a>
+                        <?php endif; ?>
                         <a href="#danger" class="sidebar-nav-item" data-section="danger">
                             <i class="bi bi-exclamation-triangle"></i>
                             <span>Danger Zone</span>
@@ -1049,8 +1055,14 @@ QUEUE_CONNECTION=redis</code></pre>
         // Navigation
         document.querySelectorAll('.sidebar-nav-item').forEach(item => {
             item.addEventListener('click', function(e) {
-                e.preventDefault();
                 const section = this.dataset.section;
+                
+                // Skip if no section (e.g., external links like Docker Compose editor)
+                if (!section) {
+                    return;
+                }
+                
+                e.preventDefault();
                 
                 // Update active state
                 document.querySelectorAll('.sidebar-nav-item').forEach(i => i.classList.remove('active'));
@@ -1058,7 +1070,10 @@ QUEUE_CONNECTION=redis</code></pre>
                 
                 // Show section
                 document.querySelectorAll('.content-section').forEach(s => s.style.display = 'none');
-                document.getElementById(section + '-section').style.display = 'block';
+                const sectionElement = document.getElementById(section + '-section');
+                if (sectionElement) {
+                    sectionElement.style.display = 'block';
+                }
                 
                 // Update URL with clean path for bookmarking
                 const siteId = <?= $siteId ?>;

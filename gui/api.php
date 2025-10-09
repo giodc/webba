@@ -480,6 +480,9 @@ function deployPHP($site, $config, $db) {
     }
 
     file_put_contents($composePath, $phpCompose);
+    
+    // Save to database
+    saveComposeConfig($db, $phpCompose, $site['owner_id'] ?? 1, $site['id']);
 
     // Save database password if generated
     if ($generatedPassword) {
@@ -678,6 +681,9 @@ function deployLaravel($site, $config, $db) {
     }
 
     file_put_contents($composePath, $laravelCompose);
+    
+    // Save to database
+    saveComposeConfig($db, $laravelCompose, $site['owner_id'] ?? 1, $site['id']);
 
     // Save database password if generated
     if ($generatedPassword) {
@@ -1035,6 +1041,9 @@ function deployWordPress($db, $site, $config) {
     }
     file_put_contents($composePath, $wpCompose);
     
+    // Save to database
+    saveComposeConfig($db, $wpCompose, $site['owner_id'] ?? 1, $site['id']);
+    
     // Save the database password to the database if it was generated
     if ($dbPassword && ($config['wp_db_type'] ?? 'shared') === 'dedicated') {
         $stmt = $db->prepare("UPDATE sites SET db_password = ? WHERE container_name = ?");
@@ -1196,6 +1205,9 @@ function updateSiteData($db) {
                 
                 if ($newCompose) {
                     file_put_contents($composePath, $newCompose);
+                    
+                    // Save to database
+                    saveComposeConfig($db, $newCompose, $updatedSite['owner_id'] ?? 1, $updatedSite['id']);
                     
                     // Recreate the container with new configuration
                     executeDockerCompose($composePath, "up -d --force-recreate");

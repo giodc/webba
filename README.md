@@ -24,7 +24,7 @@ Webbadeploy is an open-source platform that makes deploying WordPress, PHP, and 
 
 1. **Download and run the installer** (requires root privileges):
 ```bash
-curl -fsSL https://raw.githubusercontent.com/giodc/webba/master/install-production.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/giodc/webba/master/install.sh | sudo bash
 ```
 
 2. **Start Webbadeploy**:

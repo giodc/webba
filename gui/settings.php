@@ -8,28 +8,25 @@ requireAuth();
 $db = initDatabase();
 $currentUser = getCurrentUser();
 
-// Get current Let's Encrypt email from docker-compose.yml
-$dockerComposePath = '/opt/webbadeploy/docker-compose.yml';
+// Get current Let's Encrypt email from settings table (faster) or compose config
+$currentEmail = getSetting($db, 'letsencrypt_email', '');
 
-// Clear ALL caches to ensure fresh file checks
-clearstatcache(true);
-if (function_exists('opcache_reset')) {
-    @opcache_reset();
+// If not in settings, extract from compose config
+if (empty($currentEmail)) {
+    $composeConfig = getComposeConfig($db, null); // null = main Traefik config
+    
+    if ($composeConfig) {
+        preg_match('/acme\.email=([^\s"]+)/', $composeConfig['compose_yaml'], $matches);
+        $currentEmail = $matches[1] ?? 'admin@example.com';
+        
+        // Save to settings for next time
+        if ($currentEmail && $currentEmail !== 'admin@example.com') {
+            setSetting($db, 'letsencrypt_email', $currentEmail);
+        }
+    } else {
+        $currentEmail = 'admin@example.com';
+    }
 }
-
-// Try to read the file directly first
-$dockerComposeContent = @file_get_contents($dockerComposePath);
-
-// If that fails, try using exec as fallback
-if ($dockerComposeContent === false) {
-    $output = [];
-    $returnCode = 0;
-    exec("cat $dockerComposePath 2>&1", $output, $returnCode);
-    $dockerComposeContent = ($returnCode === 0 && !empty($output)) ? implode("\n", $output) : '';
-}
-
-preg_match('/acme\.email=([^\s"]+)/', $dockerComposeContent, $matches);
-$currentEmail = $matches[1] ?? 'admin@example.com';
 
 // Get custom wildcard domain from settings
 $customWildcardDomain = getSetting($db, 'custom_wildcard_domain', '');
@@ -47,76 +44,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $newEmail = trim($_POST['letsencrypt_email']);
         
         if (filter_var($newEmail, FILTER_VALIDATE_EMAIL)) {
-            // Clear ALL PHP caches to ensure fresh file access
-            clearstatcache(true);
-            if (function_exists('opcache_reset')) {
-                @opcache_reset();
-            }
-            
-            // Try to read the file first (this is more reliable than file_exists)
-            $fileContent = @file_get_contents($dockerComposePath);
-            
-            // If file_get_contents fails, try exec as fallback
-            if ($fileContent === false) {
-                $output = [];
-                $returnCode = 0;
-                exec("cat $dockerComposePath 2>&1", $output, $returnCode);
-                if ($returnCode === 0 && !empty($output)) {
-                    $fileContent = implode("\n", $output);
-                }
-            }
-            
-            if ($fileContent === false || empty($fileContent)) {
-                $lastError = error_get_last();
-                $errorMessage = 'Cannot access docker-compose.yml at ' . $dockerComposePath . '. Check if file exists and has proper permissions.';
-                if ($lastError) {
-                    $errorMessage .= ' Error: ' . $lastError['message'];
-                }
-            } else {
-                // Create backup first
-                $backupPath = $dockerComposePath . '.backup';
-                @file_put_contents($backupPath, $fileContent);
+            try {
+                // Update email in compose config (database)
+                updateComposeParameter($db, 'letsencrypt_email', $newEmail, $currentUser['id'], null);
                 
-                // Replace the email using preg_replace
-                $newContent = preg_replace(
-                    '/acme\.email=[^\s"]+/',
-                    'acme.email=' . $newEmail,
-                    $fileContent
-                );
+                // Also save to settings table for easy access
+                setSetting($db, 'letsencrypt_email', $newEmail);
                 
-                // Write the updated content - try file_put_contents first
-                $writeResult = @file_put_contents($dockerComposePath, $newContent);
+                $successMessage = 'Let\'s Encrypt email updated successfully! Please restart Traefik for changes to take effect.';
+                $currentEmail = $newEmail;
                 
-                // If that fails, try using shell command
-                if ($writeResult === false) {
-                    $output = [];
-                    $returnCode = 0;
-                    $tempFile = tempnam(sys_get_temp_dir(), 'docker-compose-');
-                    file_put_contents($tempFile, $newContent);
-                    exec("cat $tempFile > $dockerComposePath 2>&1", $output, $returnCode);
-                    unlink($tempFile);
-                    $writeResult = ($returnCode === 0);
-                }
-                
-                if ($writeResult !== false) {
-                    // Clear caches again after write
-                    clearstatcache(true);
-                    if (function_exists('opcache_reset')) {
-                        @opcache_reset();
-                    }
-                    
-                    $successMessage = 'Let\'s Encrypt email updated successfully! Please restart Traefik for changes to take effect.';
-                    $currentEmail = $newEmail;
-                    $dockerComposeContent = $newContent;
-                } else {
-                    // Restore backup if write failed
-                    @file_put_contents($dockerComposePath, $fileContent);
-                    $lastError = error_get_last();
-                    $errorMessage = 'Failed to write to docker-compose.yml. Check file permissions.';
-                    if ($lastError) {
-                        $errorMessage .= ' Error: ' . $lastError['message'];
-                    }
-                }
+                // Reload config
+                $composeConfig = getComposeConfig($db, null);
+            } catch (Exception $e) {
+                $errorMessage = 'Failed to update Let\'s Encrypt email: ' . $e->getMessage();
             }
         } else {
             $errorMessage = 'Please enter a valid email address.';
@@ -166,41 +107,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 function updateDashboardTraefikConfig($domain, $enableSSL) {
-    $dockerComposePath = '/opt/webbadeploy/docker-compose.yml';
+    global $db, $currentUser;
     
-    // Clear ALL caches to ensure fresh file checks
-    clearstatcache(true);
-    if (function_exists('opcache_reset')) {
-        @opcache_reset();
+    // Get main config from database
+    $config = getComposeConfig($db, null);
+    
+    if (!$config) {
+        return ['success' => false, 'error' => 'Main Traefik configuration not found in database'];
     }
     
-    // Try to read the file first (more reliable than file_exists)
-    $content = @file_get_contents($dockerComposePath);
-    
-    // If file_get_contents fails, try exec as fallback
-    if ($content === false) {
-        $output = [];
-        $returnCode = 0;
-        exec("cat $dockerComposePath 2>&1", $output, $returnCode);
-        if ($returnCode === 0 && !empty($output)) {
-            $content = implode("\n", $output);
-        }
-    }
-    
-    if ($content === false || empty($content)) {
-        $lastError = error_get_last();
-        $errorDetail = $lastError ? ' PHP Error: ' . $lastError['message'] : '';
-        return ['success' => false, 'error' => 'Cannot access docker-compose.yml at ' . $dockerComposePath . '. File may not be mounted or accessible.' . $errorDetail];
-    }
+    $content = $config['compose_yaml'];
     
     if (empty($domain)) {
         // Remove Traefik labels if domain is empty
         $content = preg_replace('/\s+labels:.*?(?=\n\s{4}[a-z]|\n[a-z]|$)/s', '', $content);
-        $result = @file_put_contents($dockerComposePath, $content);
-        if ($result === false) {
-            return ['success' => false, 'error' => 'Cannot write to docker-compose.yml. Check file permissions.'];
+        
+        // Save to database
+        try {
+            saveComposeConfig($db, $content, $currentUser['id'], null);
+            generateComposeFile($db, null);
+            return ['success' => true, 'message' => 'Dashboard domain removed. Restart web-gui to apply changes.'];
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => 'Failed to save configuration: ' . $e->getMessage()];
         }
-        return ['success' => true, 'message' => 'Dashboard domain removed. Restart web-gui to apply changes.'];
     }
     
     // Find the web-gui service section
@@ -244,33 +173,14 @@ function updateDashboardTraefikConfig($domain, $enableSSL) {
         );
     }
     
-    // Try to write the file - try file_put_contents first
-    $result = @file_put_contents($dockerComposePath, $content);
-    
-    // If that fails, try using shell command
-    if ($result === false) {
-        $output = [];
-        $returnCode = 0;
-        $tempFile = tempnam(sys_get_temp_dir(), 'docker-compose-');
-        file_put_contents($tempFile, $content);
-        exec("cat $tempFile > $dockerComposePath 2>&1", $output, $returnCode);
-        unlink($tempFile);
-        $result = ($returnCode === 0);
+    // Save to database and regenerate file
+    try {
+        saveComposeConfig($db, $content, $currentUser['id'], null);
+        generateComposeFile($db, null);
+        return ['success' => true, 'message' => 'Dashboard configuration updated! Restart web-gui container: docker-compose restart web-gui'];
+    } catch (Exception $e) {
+        return ['success' => false, 'error' => 'Failed to save configuration: ' . $e->getMessage()];
     }
-    
-    if ($result === false) {
-        $lastError = error_get_last();
-        $errorMsg = $lastError ? $lastError['message'] : 'Unknown error';
-        return ['success' => false, 'error' => 'Cannot write to docker-compose.yml. Check file permissions: ' . $errorMsg];
-    }
-    
-    // Clear caches after write
-    clearstatcache(true);
-    if (function_exists('opcache_reset')) {
-        @opcache_reset();
-    }
-    
-    return ['success' => true, 'message' => 'Dashboard configuration updated! Restart web-gui container: docker-compose restart web-gui'];
 }
 ?>
 <!DOCTYPE html>
@@ -406,6 +316,26 @@ function updateDashboardTraefikConfig($domain, $enableSSL) {
                                 <i class="bi bi-save me-2"></i>Save SSL Settings
                             </button>
                         </form>
+                    </div>
+                </div>
+
+                <!-- Docker Compose Editor -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <i class="bi bi-file-earmark-code me-2"></i>Advanced Configuration
+                    </div>
+                    <div class="card-body">
+                        <p class="mb-3">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Edit raw docker-compose YAML configurations for advanced debugging and customization.
+                        </p>
+                        <a href="/compose-editor.php" class="btn btn-warning">
+                            <i class="bi bi-code-slash me-2"></i>Edit Main Traefik Config (YAML)
+                        </a>
+                        <div class="form-text mt-2">
+                            <i class="bi bi-exclamation-triangle me-1 text-warning"></i>
+                            <strong>Warning:</strong> Only edit if you know what you're doing. Invalid YAML can break your deployment.
+                        </div>
                     </div>
                 </div>
 
