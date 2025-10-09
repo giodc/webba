@@ -135,9 +135,13 @@ else
     chown -R webbadeploy:webbadeploy /opt/webbadeploy
     
     # Set permissions on docker-compose.yml
-    echo "Setting permissions on docker-compose.yml..."
-    chmod 664 /opt/webbadeploy/docker-compose.yml
-    chown www-data:www-data /opt/webbadeploy/docker-compose.yml
+    if [ -f "/opt/webbadeploy/docker-compose.yml" ]; then
+        echo "Setting permissions on docker-compose.yml..."
+        chmod 664 /opt/webbadeploy/docker-compose.yml
+        chown www-data:www-data /opt/webbadeploy/docker-compose.yml
+    else
+        echo "Warning: docker-compose.yml not found, will be created on first run"
+    fi
     
     # Set Docker socket permissions (use docker group instead of world-writable)
     echo "Setting Docker socket permissions..."
