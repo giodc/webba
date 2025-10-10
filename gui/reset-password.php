@@ -4,13 +4,13 @@
  * Run this from command line to reset a user's password
  */
 
-require_once 'includes/functions.php';
+require_once 'includes/auth.php';
 
 if (php_sapi_name() !== 'cli') {
     die("This script can only be run from command line\n");
 }
 
-$db = initDatabase();
+$db = initAuthDatabase();
 
 // Get username
 $username = $argv[1] ?? 'admin';
