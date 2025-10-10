@@ -35,6 +35,8 @@ set_exception_handler(function($exception) {
 try {
     require_once 'includes/functions.php';
     require_once 'includes/auth.php';
+    require_once 'includes/encryption.php';
+    require_once 'includes/github-deploy.php';
 } catch (Throwable $e) {
     ob_clean();
     http_response_code(500);
@@ -375,6 +377,21 @@ function createSiteHandler($db) {
             $dbType = $data["laravel_db_type"] ?? 'mysql';
         }
         
+        // Extract GitHub deployment info based on site type
+        $githubRepo = null;
+        $githubBranch = 'main';
+        $githubToken = null;
+        
+        if ($data["type"] === 'php' && !empty($data["php_github_repo"])) {
+            $githubRepo = $data["php_github_repo"];
+            $githubBranch = $data["php_github_branch"] ?? 'main';
+            $githubToken = $data["php_github_token"] ?? null;
+        } elseif ($data["type"] === 'laravel' && !empty($data["laravel_github_repo"])) {
+            $githubRepo = $data["laravel_github_repo"];
+            $githubBranch = $data["laravel_github_branch"] ?? 'main';
+            $githubToken = $data["laravel_github_token"] ?? null;
+        }
+        
         $siteConfig = [
             "name" => $data["name"],
             "type" => $data["type"],
@@ -383,7 +400,10 @@ function createSiteHandler($db) {
             "ssl_config" => $sslConfig,
             "container_name" => $containerName,
             "config" => $data,
-            "db_type" => $dbType
+            "db_type" => $dbType,
+            "github_repo" => $githubRepo,
+            "github_branch" => $githubBranch,
+            "github_token" => $githubToken
         ];
 
         // Create site record
@@ -506,31 +526,51 @@ function deployPHP($site, $config, $db) {
     // Wait a moment for container to be fully ready
     sleep(2);
     
-    // Check if index.php already exists
-    $checkCmd = "docker exec {$containerName} test -f /var/www/html/index.php 2>/dev/null";
-    exec($checkCmd, $output, $returnCode);
-    
-    if ($returnCode !== 0) {
-        // File doesn't exist, create it from template
-        $templatePath = __DIR__ . '/templates/php-welcome.php';
-        $template = file_get_contents($templatePath);
+    // Check if GitHub deployment is configured
+    if (!empty($site['github_repo'])) {
+        // Deploy from GitHub
+        $deployResult = deployFromGitHub($site, $containerName);
         
-        // Replace placeholders
-        $siteName = htmlspecialchars($site['name'], ENT_QUOTES);
-        $content = str_replace('{{SITE_NAME}}', $siteName, $template);
+        if ($deployResult['success']) {
+            // Update site with commit hash
+            if (!empty($deployResult['commit_hash'])) {
+                $db->prepare("UPDATE sites SET github_last_commit = ?, github_last_pull = CURRENT_TIMESTAMP WHERE id = ?")
+                   ->execute([$deployResult['commit_hash'], $site['id']]);
+            }
+            
+            // Run composer install if composer.json exists
+            runComposerInstall($containerName);
+        } else {
+            throw new Exception("GitHub deployment failed: " . $deployResult['message']);
+        }
+    } else {
+        // Manual deployment - create welcome page
+        // Check if index.php already exists
+        $checkCmd = "docker exec {$containerName} test -f /var/www/html/index.php 2>/dev/null";
+        exec($checkCmd, $output, $returnCode);
         
-        // Create temporary file
-        $tempFile = tempnam(sys_get_temp_dir(), 'php_welcome_');
-        file_put_contents($tempFile, $content);
-        
-        // Copy to container
-        exec("docker cp {$tempFile} {$containerName}:/var/www/html/index.php");
-        
-        // Set proper permissions
-        exec("docker exec {$containerName} chown www-data:www-data /var/www/html/index.php");
-        
-        // Clean up temp file
-        unlink($tempFile);
+        if ($returnCode !== 0) {
+            // File doesn't exist, create it from template
+            $templatePath = __DIR__ . '/templates/php-welcome.php';
+            $template = file_get_contents($templatePath);
+            
+            // Replace placeholders
+            $siteName = htmlspecialchars($site['name'], ENT_QUOTES);
+            $content = str_replace('{{SITE_NAME}}', $siteName, $template);
+            
+            // Create temporary file
+            $tempFile = tempnam(sys_get_temp_dir(), 'php_welcome_');
+            file_put_contents($tempFile, $content);
+            
+            // Copy to container
+            exec("docker cp {$tempFile} {$containerName}:/var/www/html/index.php");
+            
+            // Set proper permissions
+            exec("docker exec {$containerName} chown www-data:www-data /var/www/html/index.php");
+            
+            // Clean up temp file
+            unlink($tempFile);
+        }
     }
     
     // Create Redis container if requested

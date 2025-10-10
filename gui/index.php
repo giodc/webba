@@ -395,6 +395,23 @@ $customWildcardDomain = getSetting($db, 'custom_wildcard_domain', '');
                                 </label>
                                 <div class="form-text">Redis for session storage and data caching</div>
                             </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label"><i class="bi bi-github me-1"></i>GitHub Deployment (Optional)</label>
+                                <input type="text" class="form-control" name="php_github_repo" placeholder="https://github.com/username/repo or username/repo">
+                                <div class="form-text">Deploy from GitHub repository. Leave empty to upload files manually via SFTP.</div>
+                            </div>
+                            <div class="row mb-3" id="phpGithubOptions" style="display: none;">
+                                <div class="col-md-6">
+                                    <label class="form-label">Branch</label>
+                                    <input type="text" class="form-control" name="php_github_branch" value="main" placeholder="main">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Personal Access Token (for private repos)</label>
+                                    <input type="password" class="form-control" name="php_github_token" placeholder="ghp_...">
+                                    <div class="form-text"><a href="https://github.com/settings/tokens" target="_blank">Generate token</a></div>
+                                </div>
+                            </div>
                         </div>
 
                         <div id="laravelOptions" style="display: none;">
@@ -418,6 +435,23 @@ $customWildcardDomain = getSetting($db, 'custom_wildcard_domain', '');
                                     <i class="bi bi-lightning-charge me-1"></i>Enable Redis Cache
                                 </label>
                                 <div class="form-text">Redis for cache, sessions, and queues (Recommended)</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label"><i class="bi bi-github me-1"></i>GitHub Deployment (Optional)</label>
+                                <input type="text" class="form-control" name="laravel_github_repo" placeholder="https://github.com/username/repo or username/repo">
+                                <div class="form-text">Deploy from GitHub repository. Leave empty to upload files manually via SFTP.</div>
+                            </div>
+                            <div class="row mb-3" id="laravelGithubOptions" style="display: none;">
+                                <div class="col-md-6">
+                                    <label class="form-label">Branch</label>
+                                    <input type="text" class="form-control" name="laravel_github_branch" value="main" placeholder="main">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Personal Access Token (for private repos)</label>
+                                    <input type="password" class="form-control" name="laravel_github_token" placeholder="ghp_...">
+                                    <div class="form-text"><a href="https://github.com/settings/tokens" target="_blank">Generate token</a></div>
+                                </div>
                             </div>
                         </div>
                     </div>

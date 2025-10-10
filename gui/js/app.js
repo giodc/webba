@@ -166,9 +166,33 @@ function toggleTypeOptions(type) {
     } else if (type === "php") {
         phpOptions.style.display = "block";
         phpVersionRow.style.display = "block"; // Show PHP version for PHP
+        
+        // Add GitHub repo input listener
+        setTimeout(() => {
+            const phpGithubRepo = document.querySelector("input[name=\"php_github_repo\"]");
+            if (phpGithubRepo && !phpGithubRepo.dataset.listenerAdded) {
+                phpGithubRepo.addEventListener("input", function() {
+                    const phpGithubOptions = document.getElementById("phpGithubOptions");
+                    phpGithubOptions.style.display = this.value.trim() ? "flex" : "none";
+                });
+                phpGithubRepo.dataset.listenerAdded = "true";
+            }
+        }, 100);
     } else if (type === "laravel") {
         laravelOptions.style.display = "block";
         phpVersionRow.style.display = "block"; // Show PHP version for Laravel
+        
+        // Add GitHub repo input listener
+        setTimeout(() => {
+            const laravelGithubRepo = document.querySelector("input[name=\"laravel_github_repo\"]");
+            if (laravelGithubRepo && !laravelGithubRepo.dataset.listenerAdded) {
+                laravelGithubRepo.addEventListener("input", function() {
+                    const laravelGithubOptions = document.getElementById("laravelGithubOptions");
+                    laravelGithubOptions.style.display = this.value.trim() ? "flex" : "none";
+                });
+                laravelGithubRepo.dataset.listenerAdded = "true";
+            }
+        }, 100);
     }
 }
 

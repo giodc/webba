@@ -25,7 +25,13 @@ function initDatabase() {
         db_type TEXT DEFAULT 'shared',
         owner_id INTEGER DEFAULT 1,
         redis_enabled INTEGER DEFAULT 0,
-        redis_container TEXT
+        redis_container TEXT,
+        github_repo TEXT,
+        github_branch TEXT DEFAULT 'main',
+        github_token TEXT,
+        github_last_commit TEXT,
+        github_last_pull DATETIME,
+        deployment_method TEXT DEFAULT 'manual'
     )");
 
     // Create settings table
@@ -130,7 +136,7 @@ function setSetting($pdo, $key, $value) {
 }
 
 function createSite($pdo, $data) {
-    $stmt = $pdo->prepare("INSERT INTO sites (name, type, domain, ssl, ssl_config, container_name, config, db_password, db_type, owner_id, php_version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmt = $pdo->prepare("INSERT INTO sites (name, type, domain, ssl, ssl_config, container_name, config, db_password, db_type, owner_id, php_version, github_repo, github_branch, github_token, deployment_method) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     $containerName = $data['container_name'] ?? '';
     $config = json_encode($data['config'] ?? []);
     $sslConfig = isset($data['ssl_config']) ? json_encode($data['ssl_config']) : null;
@@ -139,6 +145,16 @@ function createSite($pdo, $data) {
     $ownerId = $data['owner_id'] ?? $_SESSION['user_id'] ?? 1;
     $phpVersion = $data['php_version'] ?? '8.3';
     
+    // GitHub deployment fields
+    $githubRepo = $data['github_repo'] ?? null;
+    $githubBranch = $data['github_branch'] ?? 'main';
+    $githubToken = $data['github_token'] ?? null;
+    $deploymentMethod = $githubRepo ? 'github' : 'manual';
+    
+    // Encrypt GitHub token if provided
+    if ($githubToken) {
+        $githubToken = encryptGitHubToken($githubToken);
+    }
     
     return $stmt->execute([
         $data['name'],
@@ -151,7 +167,11 @@ function createSite($pdo, $data) {
         $dbPassword,
         $dbType,
         $ownerId,
-        $phpVersion
+        $phpVersion,
+        $githubRepo,
+        $githubBranch,
+        $githubToken,
+        $deploymentMethod
     ]);
 }
 
