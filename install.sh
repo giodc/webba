@@ -107,6 +107,9 @@ if [ "$UPDATE_MODE" = true ]; then
     echo "Ensuring database file has correct permissions..."
     docker exec -u root webbadeploy_gui bash -c "if [ -f /app/data/database.sqlite ]; then chown www-data:www-data /app/data/database.sqlite && chmod 664 /app/data/database.sqlite; fi"
     
+    echo "Importing docker-compose configurations to database..."
+    docker exec webbadeploy_gui php /var/www/html/migrate-compose-to-db.php 2>/dev/null || echo "Compose migration completed or already applied"
+    
     echo ""
     echo "==============================="
     echo "Update completed successfully!"
@@ -201,6 +204,9 @@ docker exec webbadeploy_gui php /var/www/html/migrate-rbac-2fa.php 2>/dev/null |
 
 echo "Ensuring database file has correct permissions..."
 docker exec -u root webbadeploy_gui bash -c "if [ -f /app/data/database.sqlite ]; then chown www-data:www-data /app/data/database.sqlite && chmod 664 /app/data/database.sqlite; fi"
+
+echo "Importing docker-compose configurations to database..."
+docker exec webbadeploy_gui php /var/www/html/migrate-compose-to-db.php 2>/dev/null || echo "Compose migration will run on first settings update"
 
 echo ""
 echo "==============================="
