@@ -94,6 +94,11 @@ if [ "$UPDATE_MODE" = true ]; then
     docker exec -u root webbadeploy_gui docker-php-ext-install pdo_mysql mysqli 2>/dev/null || true
     docker exec webbadeploy_gui apache2ctl restart 2>/dev/null || true
     
+    # Fix data directory permissions
+    echo "Fixing data directory permissions..."
+    docker exec -u root webbadeploy_gui chown -R www-data:www-data /app/data
+    docker exec -u root webbadeploy_gui chmod -R 775 /app/data
+    
     # Run database migrations
     echo "Running database migrations..."
     sleep 2
@@ -182,6 +187,10 @@ echo "Installing MySQL extensions..."
 sleep 5  # Wait for container to start
 docker exec -u root webbadeploy_gui docker-php-ext-install pdo_mysql mysqli 2>/dev/null || true
 docker exec webbadeploy_gui apache2ctl restart 2>/dev/null || true
+
+echo "Fixing data directory permissions..."
+docker exec -u root webbadeploy_gui chown -R www-data:www-data /app/data
+docker exec -u root webbadeploy_gui chmod -R 775 /app/data
 
 echo "Running database migrations..."
 sleep 2
