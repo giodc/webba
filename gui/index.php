@@ -195,6 +195,20 @@ $customWildcardDomain = getSetting($db, 'custom_wildcard_domain', '');
                             </div>
                         </div>
 
+                        <div class="row mb-3" id="phpVersionRow" style="display:none;">
+                            <div class="col-md-6">
+                                <label class="form-label">PHP Version</label>
+                                <select class="form-select" name="php_version">
+                                    <option value="8.3" selected>PHP 8.3 (Latest, Recommended)</option>
+                                    <option value="8.2">PHP 8.2</option>
+                                    <option value="8.1">PHP 8.1</option>
+                                    <option value="8.0">PHP 8.0</option>
+                                    <option value="7.4">PHP 7.4 (Legacy)</option>
+                                </select>
+                                <div class="form-text">Choose PHP version for your application</div>
+                            </div>
+                        </div>
+
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label class="form-label">Domain</label>

@@ -429,6 +429,36 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                     </div>
                 </div>
                 
+                <!-- PHP Version -->
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <i class="bi bi-code-slash me-2"></i>PHP Version
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Current PHP Version</label>
+                            <select class="form-select" id="phpVersionSelect">
+                                <option value="8.3" <?= ($site['php_version'] ?? '8.3') === '8.3' ? 'selected' : '' ?>>PHP 8.3 (Latest, Recommended)</option>
+                                <option value="8.2" <?= ($site['php_version'] ?? '8.3') === '8.2' ? 'selected' : '' ?>>PHP 8.2</option>
+                                <option value="8.1" <?= ($site['php_version'] ?? '8.3') === '8.1' ? 'selected' : '' ?>>PHP 8.1</option>
+                                <option value="8.0" <?= ($site['php_version'] ?? '8.3') === '8.0' ? 'selected' : '' ?>>PHP 8.0</option>
+                                <option value="7.4" <?= ($site['php_version'] ?? '8.3') === '7.4' ? 'selected' : '' ?>>PHP 7.4 (Legacy)</option>
+                            </select>
+                            <div class="form-text">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Current version: <strong>PHP <?= htmlspecialchars($site['php_version'] ?? '8.3') ?></strong>
+                            </div>
+                        </div>
+                        <button class="btn btn-warning" onclick="changePHPVersion()">
+                            <i class="bi bi-arrow-repeat me-2"></i>Switch PHP Version
+                        </button>
+                        <div class="alert alert-warning mt-3 mb-0">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            <strong>Warning:</strong> Changing PHP version will restart your container. Make sure your application is compatible with the selected version.
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- Environment Variables -->
                 <div class="card mt-3">
                     <div class="card-header">
@@ -1158,6 +1188,44 @@ QUEUE_CONNECTION=redis</code></pre>
         function viewSite(domain, ssl) {
             const protocol = ssl ? 'https' : 'http';
             window.open(protocol + '://' + domain, '_blank');
+        }
+
+        async function changePHPVersion() {
+            const newVersion = document.getElementById('phpVersionSelect').value;
+            const currentVersion = '<?= htmlspecialchars($site['php_version'] ?? '8.3') ?>';
+            
+            if (newVersion === currentVersion) {
+                showAlert('info', 'Already using PHP ' + newVersion);
+                return;
+            }
+            
+            if (!confirm(`Switch from PHP ${currentVersion} to PHP ${newVersion}?\n\nThis will:\n- Restart your container\n- Cause brief downtime\n- Require application compatibility\n\nContinue?`)) {
+                return;
+            }
+            
+            showAlert('info', 'Switching to PHP ' + newVersion + '...');
+            
+            try {
+                const response = await fetch('/api.php?action=change_php_version', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        site_id: siteId,
+                        php_version: newVersion
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('success', 'PHP version changed to ' + newVersion + '! Reloading...');
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    showAlert('danger', 'Error: ' + result.error);
+                }
+            } catch (error) {
+                showAlert('danger', 'Network error: ' + error.message);
+            }
         }
 
         async function restartContainer() {

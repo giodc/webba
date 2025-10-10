@@ -278,6 +278,10 @@ try {
     case "verify_2fa_setup":
         verify2FASetupHandler();
         break;
+    
+    case "change_php_version":
+        changePHPVersionHandler($db);
+        break;
         
     default:
         ob_clean();
@@ -546,6 +550,7 @@ PHPEOF
 function createPHPDockerCompose($site, $config, &$generatedPassword = null) {
     $containerName = $site["container_name"];
     $domain = $site["domain"];
+    $phpVersion = $site["php_version"] ?? '8.3';
     
     // Ensure container name is not empty
     if (empty($containerName)) {
@@ -568,7 +573,7 @@ function createPHPDockerCompose($site, $config, &$generatedPassword = null) {
     $compose = "version: '3.8'
 services:
   {$containerName}:
-    image: php:8.2-apache
+    image: php:{$phpVersion}-apache
     container_name: {$containerName}
     volumes:
       - {$containerName}_data:/var/www/html
@@ -747,6 +752,7 @@ PHPEOF
 function createLaravelDockerCompose($site, $config, &$generatedPassword = null) {
     $containerName = $site["container_name"];
     $domain = $site["domain"];
+    $phpVersion = $site["php_version"] ?? '8.3';
     
     // Check database type
     $dbType = $config['laravel_db_type'] ?? 'mysql';
@@ -759,7 +765,7 @@ function createLaravelDockerCompose($site, $config, &$generatedPassword = null) 
     $compose = "version: '3.8'
 services:
   {$containerName}:
-    image: php:8.2-apache
+    image: php:{$phpVersion}-apache
     container_name: {$containerName}
     volumes:
       - {$containerName}_data:/var/www/html
@@ -863,6 +869,7 @@ networks:
 function createWordPressDockerCompose($site, $config, &$generatedPassword = null) {
     $containerName = $site["container_name"];
     $domain = $site["domain"];
+    $phpVersion = $site["php_version"] ?? '8.3';
     
     // Check database type (shared or dedicated)
     $dbType = $config['wp_db_type'] ?? 'shared';
@@ -877,10 +884,13 @@ function createWordPressDockerCompose($site, $config, &$generatedPassword = null
     // Check if optimizations are enabled
     $wpOptimize = $config['wp_optimize'] ?? false;
     
+    // WordPress image with specific PHP version
+    $wpImage = "wordpress:php{$phpVersion}-apache";
+    
     $compose = "version: '3.8'
 services:
   {$containerName}:
-    image: wordpress:latest
+    image: {$wpImage}
     container_name: {$containerName}
     environment:";
     
@@ -3570,6 +3580,93 @@ function updateSettingHandler($db) {
             echo json_encode(['success' => true, 'message' => 'Setting updated successfully']);
         } else {
             throw new Exception("Failed to update setting");
+        }
+        
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    }
+}
+
+function changePHPVersionHandler($db) {
+    try {
+        $input = json_decode(file_get_contents("php://input"), true);
+        
+        if (!$input) {
+            throw new Exception("Invalid JSON data");
+        }
+        
+        $siteId = $input['site_id'] ?? null;
+        $newVersion = $input['php_version'] ?? null;
+        
+        if (!$siteId || !$newVersion) {
+            throw new Exception("Site ID and PHP version are required");
+        }
+        
+        // Validate PHP version
+        $validVersions = ['7.4', '8.0', '8.1', '8.2', '8.3'];
+        if (!in_array($newVersion, $validVersions)) {
+            throw new Exception("Invalid PHP version. Supported: " . implode(', ', $validVersions));
+        }
+        
+        // Get site
+        $site = getSiteById($db, $siteId);
+        if (!$site) {
+            throw new Exception("Site not found");
+        }
+        
+        // Check permission
+        if (!canManageSite($_SESSION['user_id'], $siteId)) {
+            throw new Exception("You don't have permission to manage this site");
+        }
+        
+        // Update database
+        $stmt = $db->prepare("UPDATE sites SET php_version = ? WHERE id = ?");
+        $stmt->execute([$newVersion, $siteId]);
+        
+        // Get updated site
+        $site = getSiteById($db, $siteId);
+        $site['php_version'] = $newVersion; // Ensure it's set
+        
+        // Regenerate docker-compose with new PHP version
+        $composePath = "/app/apps/{$site['type']}/sites/{$site['container_name']}/docker-compose.yml";
+        
+        $newCompose = '';
+        if ($site['type'] === 'wordpress') {
+            $newCompose = createWordPressDockerCompose($site, []);
+        } elseif ($site['type'] === 'php') {
+            $newCompose = createPHPDockerCompose($site, []);
+        } elseif ($site['type'] === 'laravel') {
+            $newCompose = createLaravelDockerCompose($site, []);
+        } else {
+            throw new Exception("PHP version switching not supported for this site type");
+        }
+        
+        if ($newCompose) {
+            // Save to database
+            saveComposeConfig($db, $newCompose, $_SESSION['user_id'], $siteId);
+            
+            // Write to file
+            file_put_contents($composePath, $newCompose);
+            
+            // Recreate container with new PHP version
+            $result = executeDockerCompose($composePath, "up -d --force-recreate");
+            
+            if ($result['success']) {
+                logAudit('php_version_changed', 'site', $siteId, [
+                    'new_version' => $newVersion,
+                    'site_name' => $site['name']
+                ]);
+                
+                echo json_encode([
+                    'success' => true,
+                    'message' => "PHP version changed to {$newVersion} successfully!"
+                ]);
+            } else {
+                throw new Exception("Failed to recreate container: " . $result['output']);
+            }
+        } else {
+            throw new Exception("Failed to generate docker-compose configuration");
         }
         
     } catch (Exception $e) {

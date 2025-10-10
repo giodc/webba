@@ -117,14 +117,17 @@ function toggleTypeOptions(type) {
     const wpOptions = document.getElementById("wordpressOptions");
     const phpOptions = document.getElementById("phpOptions");
     const laravelOptions = document.getElementById("laravelOptions");
+    const phpVersionRow = document.getElementById("phpVersionRow");
 
     // Hide all options first
     wpOptions.style.display = "none";
     phpOptions.style.display = "none";
     laravelOptions.style.display = "none";
+    phpVersionRow.style.display = "none";
 
     if (type === "wordpress") {
         wpOptions.style.display = "block";
+        phpVersionRow.style.display = "block"; // Show PHP version for WordPress
 
         // Generate strong password
         const passwordField = document.querySelector("input[name=\"wp_password\"]");
@@ -133,8 +136,10 @@ function toggleTypeOptions(type) {
         }
     } else if (type === "php") {
         phpOptions.style.display = "block";
+        phpVersionRow.style.display = "block"; // Show PHP version for PHP
     } else if (type === "laravel") {
         laravelOptions.style.display = "block";
+        phpVersionRow.style.display = "block"; // Show PHP version for Laravel
     }
 }
 

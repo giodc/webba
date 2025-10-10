@@ -107,6 +107,7 @@ if [ "$UPDATE_MODE" = true ]; then
     echo "Running database migrations..."
     sleep 2
     docker exec webbadeploy_gui php /var/www/html/migrate-rbac-2fa.php 2>/dev/null || echo "Migration completed or already applied"
+    docker exec webbadeploy_gui php /var/www/html/migrate-php-version.php 2>/dev/null || echo "PHP version migration completed or already applied"
     
     echo "Ensuring database file has correct permissions..."
     docker exec -u root webbadeploy_gui bash -c "if [ -f /app/data/database.sqlite ]; then chown www-data:www-data /app/data/database.sqlite && chmod 664 /app/data/database.sqlite; fi"
@@ -209,6 +210,7 @@ docker exec -u root webbadeploy_gui chmod -R 775 /app/apps
 echo "Running database migrations..."
 sleep 2
 docker exec webbadeploy_gui php /var/www/html/migrate-rbac-2fa.php 2>/dev/null || echo "Migration will run on first access"
+docker exec webbadeploy_gui php /var/www/html/migrate-php-version.php 2>/dev/null || echo "PHP version migration will run on first access"
 
 echo "Ensuring database file has correct permissions..."
 docker exec -u root webbadeploy_gui bash -c "if [ -f /app/data/database.sqlite ]; then chown www-data:www-data /app/data/database.sqlite && chmod 664 /app/data/database.sqlite; fi"
