@@ -487,6 +487,72 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                         </button>
                     </div>
                 </div>
+                
+                <!-- GitHub Deployment (PHP & Laravel only) -->
+                <?php if ($site['type'] === 'php' || $site['type'] === 'laravel'): ?>
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <i class="bi bi-github me-2"></i>GitHub Deployment
+                    </div>
+                    <div class="card-body">
+                        <form id="githubForm">
+                            <div class="mb-3">
+                                <label class="form-label">Repository</label>
+                                <input type="text" class="form-control" id="githubRepo" value="<?= htmlspecialchars($site['github_repo'] ?? '') ?>" placeholder="username/repo or https://github.com/username/repo">
+                                <div class="form-text">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    Leave empty to disable GitHub deployment and use SFTP instead
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Branch</label>
+                                    <input type="text" class="form-control" id="githubBranch" value="<?= htmlspecialchars($site['github_branch'] ?? 'main') ?>" placeholder="main">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Personal Access Token</label>
+                                    <input type="password" class="form-control" id="githubToken" placeholder="Leave empty to keep existing">
+                                    <div class="form-text">
+                                        Only needed for private repos. <a href="https://github.com/settings/tokens" target="_blank">Generate token</a>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <?php if (!empty($site['github_repo'])): ?>
+                            <div class="alert alert-info">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <small class="text-muted">Last Commit:</small><br>
+                                        <code><?= $site['github_last_commit'] ? substr($site['github_last_commit'], 0, 7) : '-' ?></code>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <small class="text-muted">Last Pull:</small><br>
+                                        <span><?= $site['github_last_pull'] ? date('Y-m-d H:i:s', strtotime($site['github_last_pull'])) : 'Never' ?></span>
+                                    </div>
+                                </div>
+                                <div class="mt-3">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="checkForGithubUpdates()">
+                                        <i class="bi bi-arrow-clockwise me-1"></i>Check for Updates
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-primary" onclick="pullFromGithubRepo()">
+                                        <i class="bi bi-download me-1"></i>Pull Latest Changes
+                                    </button>
+                                </div>
+                            </div>
+                            <?php endif; ?>
+                            
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle me-2"></i>Save GitHub Settings
+                            </button>
+                        </form>
+                        
+                        <div class="alert alert-secondary mt-3 mb-0">
+                            <strong><i class="bi bi-shield-lock me-2"></i>Security:</strong> Tokens are encrypted with AES-256-GCM before storage.
+                        </div>
+                    </div>
+                </div>
+                <?php endif; ?>
             </div>
 
             <!-- Domain Section -->
@@ -1150,6 +1216,83 @@ QUEUE_CONNECTION=redis</code></pre>
                 alert('Network error: ' + error.message);
             }
         });
+        
+        // GitHub Form
+        document.getElementById('githubForm')?.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const repo = document.getElementById('githubRepo').value;
+            const branch = document.getElementById('githubBranch').value;
+            const token = document.getElementById('githubToken').value;
+            
+            try {
+                const response = await fetch('/api.php?action=update_site', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        site_id: siteId,
+                        name: siteName,
+                        domain: siteDomain,
+                        ssl: siteSSL,
+                        github_repo: repo,
+                        github_branch: branch,
+                        github_token: token
+                    })
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    alert('GitHub settings updated successfully!');
+                    location.reload();
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('Network error: ' + error.message);
+            }
+        });
+        
+        // Check for GitHub updates
+        async function checkForGithubUpdates() {
+            try {
+                const response = await fetch(`/api.php?action=check_github_updates&id=${siteId}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    if (result.has_updates) {
+                        alert(`Updates available!\n\nLocal: ${result.local_commit}\nRemote: ${result.remote_commit}`);
+                    } else {
+                        alert('You\'re up to date! No new commits available.');
+                    }
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('Network error: ' + error.message);
+            }
+        }
+        
+        // Pull from GitHub
+        async function pullFromGithubRepo() {
+            if (!confirm('Pull latest changes from GitHub?\n\nThis will update all files in the container.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api.php?action=pull_from_github&id=${siteId}`, {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(result.message || 'Successfully pulled latest changes!');
+                    location.reload();
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('Network error: ' + error.message);
+            }
+        }
 
         // Domain Form
         document.getElementById('domainForm')?.addEventListener('submit', async function(e) {

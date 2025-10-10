@@ -108,6 +108,7 @@ if [ "$UPDATE_MODE" = true ]; then
     sleep 2
     docker exec webbadeploy_gui php /var/www/html/migrate-rbac-2fa.php 2>/dev/null || echo "Migration completed or already applied"
     docker exec webbadeploy_gui php /var/www/html/migrate-php-version.php 2>/dev/null || echo "PHP version migration completed or already applied"
+    docker exec webbadeploy_gui php /var/www/html/migrations/add_github_fields.php 2>/dev/null || echo "GitHub fields migration completed or already applied"
     
     echo "Ensuring database file has correct permissions..."
     docker exec -u root webbadeploy_gui bash -c "if [ -f /app/data/database.sqlite ]; then chown www-data:www-data /app/data/database.sqlite && chmod 664 /app/data/database.sqlite; fi"
@@ -211,6 +212,7 @@ echo "Running database migrations..."
 sleep 2
 docker exec webbadeploy_gui php /var/www/html/migrate-rbac-2fa.php 2>/dev/null || echo "Migration will run on first access"
 docker exec webbadeploy_gui php /var/www/html/migrate-php-version.php 2>/dev/null || echo "PHP version migration will run on first access"
+docker exec webbadeploy_gui php /var/www/html/migrations/add_github_fields.php 2>/dev/null || echo "GitHub fields migration will run on first access"
 
 echo "Ensuring database file has correct permissions..."
 docker exec -u root webbadeploy_gui bash -c "if [ -f /app/data/database.sqlite ]; then chown www-data:www-data /app/data/database.sqlite && chmod 664 /app/data/database.sqlite; fi"
