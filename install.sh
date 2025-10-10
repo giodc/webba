@@ -99,6 +99,10 @@ if [ "$UPDATE_MODE" = true ]; then
     docker exec -u root webbadeploy_gui chown -R www-data:www-data /app/data
     docker exec -u root webbadeploy_gui chmod -R 775 /app/data
     
+    echo "Fixing apps directory permissions..."
+    docker exec -u root webbadeploy_gui chown -R www-data:www-data /app/apps
+    docker exec -u root webbadeploy_gui chmod -R 775 /app/apps
+    
     # Run database migrations
     echo "Running database migrations..."
     sleep 2
@@ -197,6 +201,10 @@ docker exec webbadeploy_gui apache2ctl restart 2>/dev/null || true
 echo "Fixing data directory permissions..."
 docker exec -u root webbadeploy_gui chown -R www-data:www-data /app/data
 docker exec -u root webbadeploy_gui chmod -R 775 /app/data
+
+echo "Fixing apps directory permissions..."
+docker exec -u root webbadeploy_gui chown -R www-data:www-data /app/apps
+docker exec -u root webbadeploy_gui chmod -R 775 /app/apps
 
 echo "Running database migrations..."
 sleep 2
