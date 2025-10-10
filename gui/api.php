@@ -547,7 +547,7 @@ function deployPHP($site, $config, $db) {
                 </div>
                 <div class=\"info-row\">
                     <span class=\"label\">Server:</span>
-                    <span class=\"value\"><?php echo \$_SERVER[\\\"SERVER_SOFTWARE\\\"] ?? \\\"Apache\\\"; ?></span>
+                    <span class=\"value\"><?php echo \\\$_SERVER['SERVER_SOFTWARE'] ?? 'Apache'; ?></span>
                 </div>
                 <div class=\"info-row\">
                     <span class=\"label\">Document Root:</span>
@@ -555,7 +555,7 @@ function deployPHP($site, $config, $db) {
                 </div>
                 <div class=\"info-row\">
                     <span class=\"label\">Memory Limit:</span>
-                    <span class=\"value\"><?php echo ini_get(\\\"memory_limit\\\"); ?></span>
+                    <span class=\"value\"><?php echo ini_get('memory_limit'); ?></span>
                 </div>
             </div>
             
@@ -796,7 +796,7 @@ function deployLaravel($site, $config, $db) {
                 </div>
                 <div class=\"info-row\">
                     <span class=\"label\">Server:</span>
-                    <span class=\"value\"><?php echo \$_SERVER[\\\"SERVER_SOFTWARE\\\"] ?? \\\"Apache\\\"; ?></span>
+                    <span class=\"value\"><?php echo \\\$_SERVER['SERVER_SOFTWARE'] ?? 'Apache'; ?></span>
                 </div>
                 <div class=\"info-row\">
                     <span class=\"label\">Document Root:</span>
@@ -804,7 +804,7 @@ function deployLaravel($site, $config, $db) {
                 </div>
                 <div class=\"info-row\">
                     <span class=\"label\">Database:</span>
-                    <span class=\"value\"><?php echo !empty(\$_ENV[\\\"DB_HOST\\\"]) ? \\\"Configured\\\" : \\\"Not configured\\\"; ?></span>
+                    <span class=\"value\"><?php echo !empty(\\\$_ENV['DB_HOST']) ? 'Configured' : 'Not configured'; ?></span>
                 </div>
             </div>
             
