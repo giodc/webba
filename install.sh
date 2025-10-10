@@ -132,6 +132,11 @@ else
     
     # Create required directories
     mkdir -p /opt/webbadeploy/{data,nginx/sites,ssl,apps,web}
+    
+    # Set proper permissions for data directory (needs to be writable by www-data in container)
+    chown -R www-data:www-data /opt/webbadeploy/data
+    chmod -R 775 /opt/webbadeploy/data
+    
     chown -R webbadeploy:webbadeploy /opt/webbadeploy
     
     # Set permissions on docker-compose.yml
