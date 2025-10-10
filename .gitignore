@@ -16,7 +16,7 @@ volumes/
 
 # Application specific
 apps/*/sites/
-*/docker-compose.yml
+apps/*/sites/*/docker-compose.yml
 
 # Temporary files
 *.tmp
