@@ -279,6 +279,29 @@ async function editSite(id) {
             const createdDate = new Date(site.created_at);
             document.getElementById("editCreatedAt").textContent = createdDate.toLocaleString();
             
+            // GitHub deployment settings (only for PHP and Laravel)
+            const githubSection = document.getElementById("editGithubSection");
+            if (site.type === 'php' || site.type === 'laravel') {
+                githubSection.style.display = 'block';
+                
+                // Populate GitHub fields
+                document.getElementById("editGithubRepo").value = site.github_repo || '';
+                document.getElementById("editGithubBranch").value = site.github_branch || 'main';
+                document.getElementById("editGithubToken").value = ''; // Never show existing token
+                
+                // Show GitHub info if repo is configured
+                const githubInfo = document.getElementById("editGithubInfo");
+                if (site.github_repo) {
+                    githubInfo.style.display = 'block';
+                    document.getElementById("editGithubCommit").textContent = site.github_last_commit ? site.github_last_commit.substring(0, 7) : '-';
+                    document.getElementById("editGithubLastPull").textContent = site.github_last_pull ? new Date(site.github_last_pull).toLocaleString() : 'Never';
+                } else {
+                    githubInfo.style.display = 'none';
+                }
+            } else {
+                githubSection.style.display = 'none';
+            }
+            
             editModal.show();
         } else {
             showAlert("danger", result.error || "Failed to load site data");
@@ -1043,3 +1066,64 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// GitHub Deployment Functions
+async function checkGithubUpdates() {
+    const siteId = document.getElementById("editSiteId").value;
+    
+    try {
+        const result = await apiCall(`api.php?action=check_github_updates&id=${siteId}`);
+        
+        if (result.success) {
+            if (result.has_updates) {
+                showAlert("info", `Updates available! Local: ${result.local_commit}, Remote: ${result.remote_commit}`);
+            } else {
+                showAlert("success", "You're up to date! No new commits available.");
+            }
+        } else {
+            showAlert("danger", result.error || "Failed to check for updates");
+        }
+    } catch (error) {
+        if (error.message !== "SESSION_EXPIRED") {
+            showAlert("danger", "Network error: " + error.message);
+        }
+    }
+}
+
+async function pullFromGithub() {
+    const siteId = document.getElementById("editSiteId").value;
+    const siteName = document.getElementById("editName").value;
+    
+    if (!confirm(`Pull latest changes from GitHub for "${siteName}"?\n\nThis will update all files in the container.`)) {
+        return;
+    }
+    
+    try {
+        showAlert("info", "Pulling latest changes from GitHub...");
+        
+        const result = await apiCall(`api.php?action=pull_from_github&id=${siteId}`, {
+            method: "POST"
+        });
+        
+        if (result.success) {
+            showAlert("success", result.message || "Successfully pulled latest changes!");
+            
+            // Update the commit hash display
+            if (result.commit_hash) {
+                document.getElementById("editGithubCommit").textContent = result.commit_hash.substring(0, 7);
+            }
+            if (result.pull_time) {
+                document.getElementById("editGithubLastPull").textContent = new Date(result.pull_time).toLocaleString();
+            }
+            
+            // Reload site list
+            setTimeout(() => location.reload(), 2000);
+        } else {
+            showAlert("danger", result.error || "Failed to pull from GitHub");
+        }
+    } catch (error) {
+        if (error.message !== "SESSION_EXPIRED") {
+            showAlert("danger", "Network error: " + error.message);
+        }
+    }
+}

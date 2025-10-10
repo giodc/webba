@@ -535,6 +535,50 @@ $customWildcardDomain = getSetting($db, 'custom_wildcard_domain', '');
                             </div>
                         </div>
 
+                        <!-- GitHub Deployment -->
+                        <div class="mb-4" id="editGithubSection" style="display:none;">
+                            <h6 class="text-muted mb-3"><i class="bi bi-github me-2"></i>GitHub Deployment</h6>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Repository</label>
+                                <input type="text" class="form-control" name="github_repo" id="editGithubRepo" placeholder="username/repo or https://github.com/username/repo">
+                                <div class="form-text">Leave empty to disable GitHub deployment and use SFTP instead</div>
+                            </div>
+                            
+                            <div class="row mb-3" id="editGithubOptions">
+                                <div class="col-md-6">
+                                    <label class="form-label">Branch</label>
+                                    <input type="text" class="form-control" name="github_branch" id="editGithubBranch" value="main" placeholder="main">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Personal Access Token</label>
+                                    <input type="password" class="form-control" name="github_token" id="editGithubToken" placeholder="Leave empty to keep existing">
+                                    <div class="form-text">Only needed for private repos. <a href="https://github.com/settings/tokens" target="_blank">Generate token</a></div>
+                                </div>
+                            </div>
+                            
+                            <div id="editGithubInfo" class="alert alert-info" style="display:none;">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <small class="text-muted">Last Commit:</small><br>
+                                        <code id="editGithubCommit">-</code>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <small class="text-muted">Last Pull:</small><br>
+                                        <span id="editGithubLastPull">-</span>
+                                    </div>
+                                </div>
+                                <div class="mt-2">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="checkGithubUpdates()">
+                                        <i class="bi bi-arrow-clockwise me-1"></i>Check for Updates
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-primary" onclick="pullFromGithub()">
+                                        <i class="bi bi-download me-1"></i>Pull Latest Changes
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Container Info -->
                         <div class="alert alert-secondary">
                             <div class="row">

@@ -78,6 +78,14 @@ try {
         updateSiteData($db);
         break;
 
+    case "check_github_updates":
+        checkGitHubUpdatesHandler($db, $_GET["id"]);
+        break;
+    
+    case "pull_from_github":
+        pullFromGitHubHandler($db, $_GET["id"]);
+        break;
+
     case "delete_site":
         deleteSiteById($db, $_GET["id"]);
         break;
@@ -1197,12 +1205,32 @@ function updateSiteData($db) {
         $domainChanged = ($site['domain'] !== $input["domain"]);
         $sslChanged = ($site['ssl'] != ($input["ssl"] ? 1 : 0));
         
-        // Update basic site information
-        $stmt = $db->prepare("UPDATE sites SET name = ?, domain = ?, ssl = ? WHERE id = ?");
+        // Handle GitHub settings update
+        $githubRepo = $input["github_repo"] ?? null;
+        $githubBranch = $input["github_branch"] ?? 'main';
+        $githubToken = $input["github_token"] ?? null;
+        
+        // Encrypt new token if provided (empty means keep existing)
+        if (!empty($githubToken)) {
+            $githubToken = encryptGitHubToken($githubToken);
+        } else {
+            // Keep existing token
+            $githubToken = $site['github_token'];
+        }
+        
+        // Update deployment method
+        $deploymentMethod = $githubRepo ? 'github' : 'manual';
+        
+        // Update basic site information including GitHub settings
+        $stmt = $db->prepare("UPDATE sites SET name = ?, domain = ?, ssl = ?, github_repo = ?, github_branch = ?, github_token = ?, deployment_method = ? WHERE id = ?");
         $stmt->execute([
             $input["name"],
             $input["domain"], 
             $input["ssl"] ? 1 : 0,
+            $githubRepo,
+            $githubBranch,
+            $githubToken,
+            $deploymentMethod,
             $siteId
         ]);
 
@@ -3692,6 +3720,95 @@ function changePHPVersionHandler($db) {
             }
         } else {
             throw new Exception("Failed to generate docker-compose configuration");
+        }
+        
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    }
+}
+
+/**
+ * Check for GitHub updates
+ */
+function checkGitHubUpdatesHandler($db, $siteId) {
+    try {
+        // Check permissions
+        if (!canManageSite($_SESSION['user_id'], $siteId)) {
+            http_response_code(403);
+            throw new Exception("You don't have permission to manage this site");
+        }
+        
+        $site = getSiteById($db, $siteId);
+        if (!$site) {
+            throw new Exception("Site not found");
+        }
+        
+        if (empty($site['github_repo'])) {
+            throw new Exception("No GitHub repository configured for this site");
+        }
+        
+        $containerName = $site['container_name'];
+        $result = checkGitHubUpdates($site, $containerName);
+        
+        if ($result['success']) {
+            echo json_encode([
+                'success' => true,
+                'has_updates' => $result['has_updates'],
+                'local_commit' => $result['local_commit'],
+                'remote_commit' => $result['remote_commit']
+            ]);
+        } else {
+            throw new Exception($result['message']);
+        }
+        
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    }
+}
+
+/**
+ * Pull latest changes from GitHub
+ */
+function pullFromGitHubHandler($db, $siteId) {
+    try {
+        // Check permissions
+        if (!canManageSite($_SESSION['user_id'], $siteId)) {
+            http_response_code(403);
+            throw new Exception("You don't have permission to manage this site");
+        }
+        
+        $site = getSiteById($db, $siteId);
+        if (!$site) {
+            throw new Exception("Site not found");
+        }
+        
+        if (empty($site['github_repo'])) {
+            throw new Exception("No GitHub repository configured for this site");
+        }
+        
+        $containerName = $site['container_name'];
+        $result = deployFromGitHub($site, $containerName);
+        
+        if ($result['success']) {
+            // Update database with new commit hash and timestamp
+            if (!empty($result['commit_hash'])) {
+                $stmt = $db->prepare("UPDATE sites SET github_last_commit = ?, github_last_pull = CURRENT_TIMESTAMP WHERE id = ?");
+                $stmt->execute([$result['commit_hash'], $siteId]);
+            }
+            
+            // Run composer install if needed
+            runComposerInstall($containerName);
+            
+            echo json_encode([
+                'success' => true,
+                'message' => $result['message'],
+                'commit_hash' => $result['commit_hash'] ?? null,
+                'pull_time' => date('Y-m-d H:i:s')
+            ]);
+        } else {
+            throw new Exception($result['message']);
         }
         
     } catch (Exception $e) {
