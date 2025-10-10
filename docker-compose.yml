@@ -76,7 +76,7 @@ services:
       - MYSQL_ROOT_PASSWORD=webbadeploy_root_pass
       - MYSQL_DATABASE=webbadeploy
       - MYSQL_USER=webbadeploy
-      - MYSQL_PASSWORD=webbadeploy_pass!
+      - MYSQL_PASSWORD=webbadeploy_pass
     volumes:
       - db_data:/var/lib/mysql
       - ./db/init:/docker-entrypoint-initdb.d
