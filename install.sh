@@ -97,7 +97,7 @@ if [ "$UPDATE_MODE" = true ]; then
     # Run database migrations
     echo "Running database migrations..."
     sleep 2
-    docker exec webbadeploy_gui php /app/migrate-rbac-2fa.php 2>/dev/null || echo "Migration completed or already applied"
+    docker exec webbadeploy_gui php /var/www/html/migrate-rbac-2fa.php 2>/dev/null || echo "Migration completed or already applied"
     
     echo ""
     echo "==============================="
@@ -185,7 +185,7 @@ docker exec webbadeploy_gui apache2ctl restart 2>/dev/null || true
 
 echo "Running database migrations..."
 sleep 2
-docker exec webbadeploy_gui php /app/migrate-rbac-2fa.php 2>/dev/null || echo "Migration will run on first access"
+docker exec webbadeploy_gui php /var/www/html/migrate-rbac-2fa.php 2>/dev/null || echo "Migration will run on first access"
 
 echo ""
 echo "==============================="
