@@ -1,7 +1,36 @@
 let createModal, editModal, passwordModal, updateModal, twoFactorModal;
 
 // Version check - if you see this in console, the new JS is loaded
-console.log("Webbadeploy JS v5.0 loaded - Async stats loading for performance!");
+console.log("Webbadeploy JS v5.2 loaded - All API calls use session detection!");
+
+// Helper function for API calls with proper error handling
+async function apiCall(url, options = {}) {
+    try {
+        const response = await fetch(url, options);
+        
+        // Check if response is HTML (likely login page redirect)
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("text/html")) {
+            throw new Error("SESSION_EXPIRED");
+        }
+        
+        // Check for authentication error
+        if (response.status === 401) {
+            throw new Error("SESSION_EXPIRED");
+        }
+        
+        // Try to parse JSON
+        const result = await response.json();
+        return result;
+    } catch (error) {
+        if (error.message === "SESSION_EXPIRED") {
+            showAlert("danger", "Session expired. Redirecting to login...");
+            setTimeout(() => window.location.href = "/login.php", 1500);
+            throw error;
+        }
+        throw error;
+    }
+}
 
 document.addEventListener("DOMContentLoaded", function() {
     createModal = new bootstrap.Modal(document.getElementById("createModal"));
@@ -168,15 +197,13 @@ async function createSite(event) {
     submitBtn.disabled = true;
 
     try {
-        const response = await fetch("api.php?action=create_site", {
+        const result = await apiCall("api.php?action=create_site", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
             },
             body: JSON.stringify(data)
         });
-
-        const result = await response.json();
 
         if (result.success) {
             if (result.warning) {
@@ -192,7 +219,10 @@ async function createSite(event) {
             showAlert("danger", result.error || "Failed to create application");
         }
     } catch (error) {
-        showAlert("danger", "Network error: " + error.message);
+        if (error.message !== "SESSION_EXPIRED") {
+            console.error("API Error:", error);
+            showAlert("danger", "Network error: " + error.message + ". Please check console for details.");
+        }
     } finally {
         submitBtn.innerHTML = originalText;
         submitBtn.disabled = false;
@@ -201,8 +231,7 @@ async function createSite(event) {
 
 async function editSite(id) {
     try {
-        const response = await fetch("api.php?action=get_site&id=" + id);
-        const result = await response.json();
+        const result = await apiCall("api.php?action=get_site&id=" + id);
 
         if (result.success) {
             const site = result.site;
@@ -231,7 +260,9 @@ async function editSite(id) {
             showAlert("danger", result.error || "Failed to load site data");
         }
     } catch (error) {
-        showAlert("danger", "Network error: " + error.message);
+        if (error.message !== "SESSION_EXPIRED") {
+            showAlert("danger", "Network error: " + error.message);
+        }
     }
 }
 
@@ -248,15 +279,13 @@ async function updateSite(event) {
     submitBtn.disabled = true;
 
     try {
-        const response = await fetch("api.php?action=update_site", {
+        const result = await apiCall("api.php?action=update_site", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
             },
             body: JSON.stringify(data)
         });
-
-        const result = await response.json();
 
         if (result.success) {
             if (result.needs_restart || result.domain_changed) {
@@ -270,7 +299,9 @@ async function updateSite(event) {
             showAlert("danger", result.error || "Failed to update application");
         }
     } catch (error) {
-        showAlert("danger", "Network error: " + error.message);
+        if (error.message !== "SESSION_EXPIRED") {
+            showAlert("danger", "Network error: " + error.message);
+        }
     } finally {
         submitBtn.innerHTML = originalText;
         submitBtn.disabled = false;
@@ -302,11 +333,9 @@ async function deleteSite(id) {
     }
 
     try {
-        const response = await fetch("api.php?action=delete_site&id=" + id, {
+        const result = await apiCall("api.php?action=delete_site&id=" + id, {
             method: "GET"
         });
-
-        const result = await response.json();
 
         if (result.success) {
             showAlert("success", "Application deleted successfully");
@@ -315,7 +344,9 @@ async function deleteSite(id) {
             showAlert("danger", result.error || "Failed to delete application");
         }
     } catch (error) {
-        showAlert("danger", "Network error: " + error.message);
+        if (error.message !== "SESSION_EXPIRED") {
+            showAlert("danger", "Network error: " + error.message);
+        }
     }
 }
 
@@ -409,7 +440,7 @@ async function changePassword(event) {
     submitBtn.disabled = true;
 
     try {
-        const response = await fetch("api.php?action=change_password", {
+        const result = await apiCall("api.php?action=change_password", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -420,8 +451,6 @@ async function changePassword(event) {
             })
         });
 
-        const result = await response.json();
-
         if (result.success) {
             showAlert("success", "Password changed successfully!");
             passwordModal.hide();
@@ -430,7 +459,9 @@ async function changePassword(event) {
             showAlert("danger", result.error || "Failed to change password");
         }
     } catch (error) {
-        showAlert("danger", "Network error: " + error.message);
+        if (error.message !== "SESSION_EXPIRED") {
+            showAlert("danger", "Network error: " + error.message);
+        }
     } finally {
         submitBtn.innerHTML = originalText;
         submitBtn.disabled = false;

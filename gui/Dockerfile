@@ -14,6 +14,9 @@ RUN apt-get update && apt-get install -y \
 # Copy application files
 COPY . /var/www/html/
 
+# Copy PHP configuration
+COPY php-session.ini /usr/local/etc/php/conf.d/php-session.ini
+
 # Set permissions
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html
