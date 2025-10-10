@@ -932,11 +932,12 @@ QUEUE_CONNECTION=redis</code></pre>
                                 <div class="col-md-6">
                                     <label class="form-label fw-bold">Host</label>
                                     <div class="input-group">
-                                        <input type="text" class="form-control" id="sftpHost" value="<?= $_SERVER['SERVER_ADDR'] ?? 'localhost' ?>" readonly>
+                                        <input type="text" class="form-control" id="sftpHost" value="<?= preg_replace('/:\d+$/', '', $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? 'your-server-ip') ?>" readonly>
                                         <button class="btn btn-outline-secondary" onclick="copyToClipboard('sftpHost')">
                                             <i class="bi bi-clipboard"></i>
                                         </button>
                                     </div>
+                                    <div class="form-text">Use this IP/hostname to connect via SFTP</div>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label fw-bold">Port</label>

@@ -538,6 +538,13 @@ function canAccessSite($userId, $siteId, $permission = 'view') {
 }
 
 /**
+ * Check if user can manage site (edit settings, change PHP version, etc.)
+ */
+function canManageSite($userId, $siteId) {
+    return canAccessSite($userId, $siteId, 'manage');
+}
+
+/**
  * Get sites accessible by user
  */
 function getUserSites($userId) {
