@@ -13,7 +13,7 @@ services:
       - "--entrypoints.websecure-alt.address=:8443"
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
-      - "--certificatesresolvers.letsencrypt.acme.email=test@example.com"
+      - "--certificatesresolvers.letsencrypt.acme.email=CHANGE_ME@example.com"
       - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
       # Access logs
       - "--accesslog=true"
@@ -64,16 +64,16 @@ services:
     
     labels:
       - traefik.enable=true
-      - traefik.http.routers.webgui.rule=Host(`dashboard.development.giodc.com`)
+      - traefik.http.routers.webgui.rule=Host(`CHANGE_ME.example.com`)
       - traefik.http.routers.webgui.entrypoints=web
       - traefik.http.services.webgui.loadbalancer.server.port=80
       # Standard HTTPS on port 443
-      - traefik.http.routers.webgui-secure.rule=Host(`dashboard.development.giodc.com`)
+      - traefik.http.routers.webgui-secure.rule=Host(`CHANGE_ME.example.com`)
       - traefik.http.routers.webgui-secure.entrypoints=websecure
       - traefik.http.routers.webgui-secure.tls=true
       - traefik.http.routers.webgui-secure.tls.certresolver=letsencrypt
       # Alternative HTTPS on port 8443 (extra security)
-      - traefik.http.routers.webgui-alt.rule=Host(`dashboard.development.giodc.com`)
+      - traefik.http.routers.webgui-alt.rule=Host(`CHANGE_ME.example.com`)
       - traefik.http.routers.webgui-alt.entrypoints=websecure-alt
       - traefik.http.routers.webgui-alt.tls=true
       - traefik.http.routers.webgui-alt.tls.certresolver=letsencrypt

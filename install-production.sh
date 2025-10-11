@@ -155,10 +155,17 @@ chmod 600 ssl/acme.json
 chown root:root ssl/acme.json
 echo -e "${GREEN}✓ ACME file created with secure permissions (600)${NC}"
 
-# Create docker-compose.yml if it doesn't exist
+# Create docker-compose.yml from template if it doesn't exist
 if [ ! -f "docker-compose.yml" ]; then
-    echo -e "${YELLOW}Creating docker-compose.yml...${NC}"
-    cat > docker-compose.yml << 'EOF'
+    if [ -f "docker-compose.yml.template" ]; then
+        echo -e "${YELLOW}Creating docker-compose.yml from template...${NC}"
+        cp docker-compose.yml.template docker-compose.yml
+        echo -e "${YELLOW}⚠️  IMPORTANT: You need to configure docker-compose.yml:${NC}"
+        echo -e "   ${YELLOW}- Email address (search for CHANGE_ME@example.com)${NC}"
+        echo -e "   ${YELLOW}- Dashboard domain (search for CHANGE_ME.example.com)${NC}"
+    else
+        echo -e "${YELLOW}Creating default docker-compose.yml...${NC}"
+        cat > docker-compose.yml << 'EOF'
 version: '3.8'
 
 services:
@@ -219,6 +226,7 @@ networks:
 volumes:
   db_data:
 EOF
+    fi
 else
     echo -e "${GREEN}✓ Using existing docker-compose.yml${NC}"
 fi

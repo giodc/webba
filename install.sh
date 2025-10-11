@@ -174,13 +174,24 @@ ACME_EOF
     
     chown -R webbadeploy:webbadeploy /opt/webbadeploy
     
+    # Create docker-compose.yml from template if it doesn't exist
+    if [ ! -f "/opt/webbadeploy/docker-compose.yml" ]; then
+        if [ -f "/opt/webbadeploy/docker-compose.yml.template" ]; then
+            echo "Creating docker-compose.yml from template..."
+            cp /opt/webbadeploy/docker-compose.yml.template /opt/webbadeploy/docker-compose.yml
+            echo "⚠️  IMPORTANT: Edit docker-compose.yml to configure:"
+            echo "   - Email address (search for CHANGE_ME@example.com)"
+            echo "   - Dashboard domain (search for CHANGE_ME.example.com)"
+        else
+            echo "Warning: docker-compose.yml.template not found"
+        fi
+    fi
+    
     # Set permissions on docker-compose.yml
     if [ -f "/opt/webbadeploy/docker-compose.yml" ]; then
         echo "Setting permissions on docker-compose.yml..."
         chmod 664 /opt/webbadeploy/docker-compose.yml
         chown www-data:www-data /opt/webbadeploy/docker-compose.yml
-    else
-        echo "Warning: docker-compose.yml not found, will be created on first run"
     fi
     
     # Set Docker socket permissions (use docker group instead of world-writable)
