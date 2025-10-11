@@ -136,6 +136,25 @@ fi
 # Create additional directories if they don't exist
 mkdir -p {data,apps/{php/sites,laravel/sites,wordpress/sites},ssl}
 
+# Create ACME file for SSL certificates
+echo -e "${YELLOW}Creating ACME file for SSL certificates...${NC}"
+cat > ssl/acme.json << 'ACME_EOF'
+{
+  "letsencrypt": {
+    "Account": {
+      "Email": "",
+      "Registration": null,
+      "PrivateKey": null,
+      "KeyType": ""
+    },
+    "Certificates": null
+  }
+}
+ACME_EOF
+chmod 600 ssl/acme.json
+chown root:root ssl/acme.json
+echo -e "${GREEN}✓ ACME file created with secure permissions (600)${NC}"
+
 # Create docker-compose.yml if it doesn't exist
 if [ ! -f "docker-compose.yml" ]; then
     echo -e "${YELLOW}Creating docker-compose.yml...${NC}"
@@ -234,6 +253,13 @@ chmod -R 755 "$INSTALL_DIR/data"
 chown -R www-data:www-data "$INSTALL_DIR/apps"
 chown -R www-data:www-data "$INSTALL_DIR/data"
 
+# Ensure ACME file has correct permissions
+if [ -f "$INSTALL_DIR/ssl/acme.json" ]; then
+    chmod 600 "$INSTALL_DIR/ssl/acme.json"
+    chown root:root "$INSTALL_DIR/ssl/acme.json"
+    echo -e "${GREEN}✓ ACME file permissions verified${NC}"
+fi
+
 # Fix Docker socket permissions for container access
 echo -e "${YELLOW}Configuring Docker socket permissions...${NC}"
 # SECURITY: Use 660 with docker group instead of 666 (world-writable)
@@ -251,6 +277,27 @@ echo -e "${GREEN}✓ docker-compose.yml permissions configured${NC}"
 
 # Get server IP
 SERVER_IP=$(curl -s ifconfig.me || hostname -I | awk '{print $1}')
+
+# Verify ACME file exists before starting services
+if [ ! -f "$INSTALL_DIR/ssl/acme.json" ]; then
+    echo -e "${YELLOW}Creating ACME file for SSL certificates...${NC}"
+    cat > "$INSTALL_DIR/ssl/acme.json" << 'ACME_EOF'
+{
+  "letsencrypt": {
+    "Account": {
+      "Email": "",
+      "Registration": null,
+      "PrivateKey": null,
+      "KeyType": ""
+    },
+    "Certificates": null
+  }
+}
+ACME_EOF
+    chmod 600 "$INSTALL_DIR/ssl/acme.json"
+    chown root:root "$INSTALL_DIR/ssl/acme.json"
+    echo -e "${GREEN}✓ ACME file created${NC}"
+fi
 
 # Start services
 echo -e "\n${YELLOW}Starting Webbadeploy services...${NC}"

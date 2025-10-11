@@ -150,6 +150,24 @@ else
     # Create required directories
     mkdir -p /opt/webbadeploy/{data,nginx/sites,ssl,apps,web}
     
+    # Create ACME file for SSL certificates
+    echo "Creating ACME file for SSL certificates..."
+    cat > /opt/webbadeploy/ssl/acme.json << 'ACME_EOF'
+{
+  "letsencrypt": {
+    "Account": {
+      "Email": "",
+      "Registration": null,
+      "PrivateKey": null,
+      "KeyType": ""
+    },
+    "Certificates": null
+  }
+}
+ACME_EOF
+    chmod 600 /opt/webbadeploy/ssl/acme.json
+    chown root:root /opt/webbadeploy/ssl/acme.json
+    
     # Set proper permissions for data directory (needs to be writable by www-data in container)
     chown -R www-data:www-data /opt/webbadeploy/data
     chmod -R 775 /opt/webbadeploy/data
@@ -189,6 +207,26 @@ if command -v ufw &> /dev/null; then
     ufw allow 80/tcp
     ufw allow 443/tcp
     ufw --force enable
+fi
+
+# Verify ACME file exists
+if [ ! -f "/opt/webbadeploy/ssl/acme.json" ]; then
+    echo "Creating ACME file for SSL certificates..."
+    cat > /opt/webbadeploy/ssl/acme.json << 'ACME_EOF'
+{
+  "letsencrypt": {
+    "Account": {
+      "Email": "",
+      "Registration": null,
+      "PrivateKey": null,
+      "KeyType": ""
+    },
+    "Certificates": null
+  }
+}
+ACME_EOF
+    chmod 600 /opt/webbadeploy/ssl/acme.json
+    chown root:root /opt/webbadeploy/ssl/acme.json
 fi
 
 echo "Starting services..."

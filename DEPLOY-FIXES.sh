@@ -13,6 +13,7 @@ echo ""
 echo "  1. ✅ Password Reset Tool (command-line)"
 echo "  2. ✅ Session Timeout Fix (24 hours instead of 24 minutes)"
 echo "  3. ✅ Better Error Handling (no more cryptic JSON errors)"
+echo "  4. ✅ ACME SSL Certificate File Fix"
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
@@ -67,6 +68,14 @@ else
     exit 1
 fi
 
+echo -n "  Checking ACME fix script... "
+if [ -f "fix-acme.sh" ]; then
+    echo "✅"
+else
+    echo "❌ Missing"
+    exit 1
+fi
+
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
@@ -85,32 +94,42 @@ echo ""
 echo "🚀 Starting deployment..."
 echo ""
 
-# Step 1: Stop containers
-echo "1️⃣  Stopping containers..."
+# Step 1: Fix ACME file
+echo "1️⃣  Fixing ACME SSL certificate file..."
+if [ ! -f "ssl/acme.json" ] || [ ! -s "ssl/acme.json" ]; then
+    sudo bash fix-acme.sh
+    echo "   ✅ ACME file fixed"
+else
+    echo "   ✅ ACME file already exists"
+fi
+echo ""
+
+# Step 2: Stop containers
+echo "2️⃣  Stopping containers..."
 docker-compose down
 echo "   ✅ Containers stopped"
 echo ""
 
-# Step 2: Rebuild
-echo "2️⃣  Rebuilding web-gui with new configuration..."
+# Step 3: Rebuild
+echo "3️⃣  Rebuilding web-gui with new configuration..."
 docker-compose build --no-cache web-gui
 echo "   ✅ Build complete"
 echo ""
 
-# Step 3: Start
-echo "3️⃣  Starting containers..."
+# Step 4: Start
+echo "4️⃣  Starting containers..."
 docker-compose up -d
 echo "   ✅ Containers started"
 echo ""
 
-# Step 4: Wait for startup
-echo "4️⃣  Waiting for services to initialize..."
+# Step 5: Wait for startup
+echo "5️⃣  Waiting for services to initialize..."
 sleep 8
 echo "   ✅ Services ready"
 echo ""
 
-# Step 5: Verify
-echo "5️⃣  Verifying deployment..."
+# Step 6: Verify
+echo "6️⃣  Verifying deployment..."
 echo ""
 
 # Check container running
@@ -142,6 +161,19 @@ if docker exec webbadeploy_gui test -f /var/www/html/reset-password.php; then
     echo "   ✅ Password reset script available"
 else
     echo "   ⚠️  Password reset script missing"
+fi
+
+# Check ACME file
+if [ -f "ssl/acme.json" ]; then
+    ACME_SIZE=$(stat -c%s "ssl/acme.json")
+    ACME_PERMS=$(stat -c "%a" "ssl/acme.json")
+    if [ "$ACME_PERMS" = "600" ]; then
+        echo "   ✅ ACME file present ($ACME_SIZE bytes, permissions: 600)"
+    else
+        echo "   ⚠️  ACME file has incorrect permissions: $ACME_PERMS (should be 600)"
+    fi
+else
+    echo "   ❌ ACME file missing!"
 fi
 
 echo ""
