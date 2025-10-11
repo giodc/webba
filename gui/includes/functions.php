@@ -25,7 +25,11 @@ function initDatabase() {
         db_type TEXT DEFAULT 'shared',
         owner_id INTEGER DEFAULT 1,
         redis_enabled INTEGER DEFAULT 0,
+        redis_host TEXT,
+        redis_port INTEGER,
+        redis_password TEXT,
         redis_container TEXT,
+        php_version TEXT DEFAULT '8.3',
         github_repo TEXT,
         github_branch TEXT DEFAULT 'main',
         github_token TEXT,
@@ -102,8 +106,38 @@ function initDatabase() {
         if (!in_array('redis_enabled', $columnNames)) {
             $pdo->exec("ALTER TABLE sites ADD COLUMN redis_enabled INTEGER DEFAULT 0");
         }
+        if (!in_array('redis_host', $columnNames)) {
+            $pdo->exec("ALTER TABLE sites ADD COLUMN redis_host TEXT");
+        }
+        if (!in_array('redis_port', $columnNames)) {
+            $pdo->exec("ALTER TABLE sites ADD COLUMN redis_port INTEGER");
+        }
+        if (!in_array('redis_password', $columnNames)) {
+            $pdo->exec("ALTER TABLE sites ADD COLUMN redis_password TEXT");
+        }
         if (!in_array('redis_container', $columnNames)) {
             $pdo->exec("ALTER TABLE sites ADD COLUMN redis_container TEXT");
+        }
+        if (!in_array('php_version', $columnNames)) {
+            $pdo->exec("ALTER TABLE sites ADD COLUMN php_version TEXT DEFAULT '8.3'");
+        }
+        if (!in_array('github_repo', $columnNames)) {
+            $pdo->exec("ALTER TABLE sites ADD COLUMN github_repo TEXT");
+        }
+        if (!in_array('github_branch', $columnNames)) {
+            $pdo->exec("ALTER TABLE sites ADD COLUMN github_branch TEXT DEFAULT 'main'");
+        }
+        if (!in_array('github_token', $columnNames)) {
+            $pdo->exec("ALTER TABLE sites ADD COLUMN github_token TEXT");
+        }
+        if (!in_array('github_last_commit', $columnNames)) {
+            $pdo->exec("ALTER TABLE sites ADD COLUMN github_last_commit TEXT");
+        }
+        if (!in_array('github_last_pull', $columnNames)) {
+            $pdo->exec("ALTER TABLE sites ADD COLUMN github_last_pull DATETIME");
+        }
+        if (!in_array('deployment_method', $columnNames)) {
+            $pdo->exec("ALTER TABLE sites ADD COLUMN deployment_method TEXT DEFAULT 'manual'");
         }
     } catch (Exception $e) {
         // Columns might already exist or other error, continue

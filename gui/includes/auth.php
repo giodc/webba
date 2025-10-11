@@ -74,6 +74,12 @@ function initAuthDatabase() {
         // Column already exists, ignore
     }
     
+    try {
+        $db->exec("ALTER TABLE users ADD COLUMN totp_backup_codes TEXT");
+    } catch (PDOException $e) {
+        // Column already exists, ignore
+    }
+    
     // Create sessions table for tracking
     $db->exec("CREATE TABLE IF NOT EXISTS login_attempts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -81,6 +87,18 @@ function initAuthDatabase() {
         ip_address TEXT NOT NULL,
         success INTEGER DEFAULT 0,
         attempted_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )");
+    
+    // Create audit_log table
+    $db->exec("CREATE TABLE IF NOT EXISTS audit_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        action TEXT NOT NULL,
+        resource_type TEXT,
+        resource_id INTEGER,
+        details TEXT,
+        ip_address TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )");
     
     return $db;
