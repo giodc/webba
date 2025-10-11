@@ -82,10 +82,17 @@ sudo chown root:root ssl/acme.json
 echo "✅ Fresh acme.json created"
 echo ""
 
+# Stop and remove Traefik container completely
+echo "5. Stopping and removing old Traefik container..."
+docker-compose stop traefik
+docker-compose rm -f traefik
+echo "✅ Old container removed"
+echo ""
+
 # Recreate Traefik container with new configuration
-echo "5. Recreating Traefik container with new email..."
-docker-compose up -d --force-recreate traefik
-echo "✅ Traefik recreated"
+echo "6. Creating new Traefik container with updated email..."
+docker-compose up -d traefik
+echo "✅ New Traefik container created"
 echo ""
 
 # Wait for Traefik to start

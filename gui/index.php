@@ -124,12 +124,22 @@ $customWildcardDomain = getSetting($db, 'custom_wildcard_domain', '');
                                     <small class="text-muted">Domain:</small><br>
                                     <a href="<?= ($site['ssl'] ? 'https://' : 'http://') . $site['domain'] ?>" target="_blank" class="text-decoration-none" title="Open site in new tab">
                                         <?= $site['domain'] ?>
-                                        <?php if ($site['ssl']): ?><i class="bi bi-shield-check text-success ms-1"></i><?php endif; ?>
+                                        <?php 
+                                        $hasCert = $site['ssl'] ? hasCertificate($site['domain']) : false;
+                                        if ($site['ssl'] && $hasCert): ?>
+                                            <i class="bi bi-shield-check text-success ms-1" title="Certificate issued"></i>
+                                        <?php elseif ($site['ssl'] && !$hasCert): ?>
+                                            <i class="bi bi-shield-exclamation text-warning ms-1" title="Certificate pending"></i>
+                                        <?php endif; ?>
                                     </a>
                                     <br>
-                                    <?php if ($site['ssl'] && $sslConfigured): ?>
-                                        <small class="badge bg-success mt-1" title="SSL is enabled and configured in container">
+                                    <?php if ($site['ssl'] && $sslConfigured && $hasCert): ?>
+                                        <small class="badge bg-success mt-1" title="SSL certificate issued and active">
                                             <i class="bi bi-shield-lock-fill"></i> SSL: Active
+                                        </small>
+                                    <?php elseif ($site['ssl'] && $sslConfigured && !$hasCert): ?>
+                                        <small class="badge bg-warning mt-1" title="SSL enabled but certificate not yet issued - check Traefik logs">
+                                            <i class="bi bi-hourglass-split"></i> SSL: Pending
                                         </small>
                                     <?php elseif ($site['ssl'] && !$sslConfigured): ?>
                                         <small class="badge bg-warning mt-1" title="SSL enabled in database but not configured in container - recreate site">

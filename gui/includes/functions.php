@@ -700,3 +700,41 @@ function deleteComposeConfig($pdo, $siteId) {
     $stmt = $pdo->prepare("DELETE FROM compose_configs WHERE config_type = 'site' AND site_id = ?");
     return $stmt->execute([$siteId]);
 }
+
+/**
+ * Check if a certificate exists for a domain in acme.json
+ */
+function hasCertificate($domain) {
+    $acmeFile = '/app/ssl/acme.json';
+    
+    if (!file_exists($acmeFile)) {
+        return false;
+    }
+    
+    $acmeContent = @file_get_contents($acmeFile);
+    if (!$acmeContent) {
+        return false;
+    }
+    
+    $acmeData = json_decode($acmeContent, true);
+    if (!$acmeData || !isset($acmeData['letsencrypt']['Certificates'])) {
+        return false;
+    }
+    
+    $certificates = $acmeData['letsencrypt']['Certificates'];
+    if (empty($certificates)) {
+        return false;
+    }
+    
+    // Check if domain exists in any certificate
+    foreach ($certificates as $cert) {
+        if (isset($cert['domain']['main']) && $cert['domain']['main'] === $domain) {
+            return true;
+        }
+        if (isset($cert['domain']['sans']) && in_array($domain, $cert['domain']['sans'])) {
+            return true;
+        }
+    }
+    
+    return false;
+}
