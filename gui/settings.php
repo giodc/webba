@@ -45,13 +45,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         if (filter_var($newEmail, FILTER_VALIDATE_EMAIL)) {
             try {
-                // Update email in compose config (database)
+                // Check for forbidden domains before attempting update
+                if (preg_match('/@(example\.(com|net|org)|test\.com)$/i', $newEmail)) {
+                    throw new Exception("Email domain is forbidden by Let's Encrypt (example.com, example.net, example.org, test.com). Please use a real email address.");
+                }
+                
+                // Update email in compose config (database and file)
                 updateComposeParameter($db, 'letsencrypt_email', $newEmail, $currentUser['id'], null);
                 
                 // Also save to settings table for easy access
                 setSetting($db, 'letsencrypt_email', $newEmail);
                 
-                $successMessage = 'Let\'s Encrypt email updated successfully! Please restart Traefik for changes to take effect.';
+                $successMessage = 'Let\'s Encrypt email updated successfully! The acme.json file has been reset. <strong>You must restart Traefik now.</strong>';
                 $currentEmail = $newEmail;
                 
                 // Reload config

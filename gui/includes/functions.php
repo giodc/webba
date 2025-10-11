@@ -648,7 +648,36 @@ function updateComposeParameter($pdo, $paramKey, $paramValue, $userId, $siteId =
     // Update specific parameters based on key
     switch ($paramKey) {
         case 'letsencrypt_email':
+            // Validate email doesn't contain forbidden domains
+            if (preg_match('/@(example\.(com|net|org)|test\.com)$/i', $paramValue)) {
+                throw new Exception("Email domain is forbidden by Let's Encrypt. Please use a real email address.");
+            }
+            
             $yaml = preg_replace('/acme\.email=[^\s"]+/', 'acme.email=' . $paramValue, $yaml);
+            
+            // Clear acme.json when email changes (it caches the old email)
+            $acmeFile = '/app/ssl/acme.json';
+            if (file_exists($acmeFile)) {
+                // Backup old acme.json
+                $backupFile = $acmeFile . '.backup.' . date('YmdHis');
+                @copy($acmeFile, $backupFile);
+                
+                // Create fresh acme.json with empty template
+                $freshAcme = json_encode([
+                    'letsencrypt' => [
+                        'Account' => [
+                            'Email' => '',
+                            'Registration' => null,
+                            'PrivateKey' => null,
+                            'KeyType' => ''
+                        ],
+                        'Certificates' => null
+                    ]
+                ], JSON_PRETTY_PRINT);
+                
+                file_put_contents($acmeFile, $freshAcme);
+                chmod($acmeFile, 0600);
+            }
             break;
         case 'dashboard_domain':
             // This would be handled by updateDashboardTraefikConfig
