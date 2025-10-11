@@ -143,7 +143,7 @@ function createSite($pdo, $data) {
     $dbPassword = $data['db_password'] ?? null;
     $dbType = $data['db_type'] ?? 'shared';
     $ownerId = $data['owner_id'] ?? $_SESSION['user_id'] ?? 1;
-    $phpVersion = $data['php_version'] ?? '8.3';
+    $phpVersion = $data['php_version'] ?? '8.4';
     
     // GitHub deployment fields
     $githubRepo = $data['github_repo'] ?? null;
