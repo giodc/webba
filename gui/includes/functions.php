@@ -705,9 +705,21 @@ function deleteComposeConfig($pdo, $siteId) {
  * Check if a certificate exists for a domain in acme.json
  */
 function hasCertificate($domain) {
-    $acmeFile = '/app/ssl/acme.json';
+    // Try both paths - container path and host path
+    $acmePaths = [
+        '/opt/webbadeploy/ssl/acme.json',  // Host path
+        '/app/ssl/acme.json'                // Container path (if running in container)
+    ];
     
-    if (!file_exists($acmeFile)) {
+    $acmeFile = null;
+    foreach ($acmePaths as $path) {
+        if (file_exists($path)) {
+            $acmeFile = $path;
+            break;
+        }
+    }
+    
+    if (!$acmeFile) {
         return false;
     }
     
