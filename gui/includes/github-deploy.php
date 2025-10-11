@@ -52,11 +52,12 @@ function deployFromGitHub($site, $containerName) {
             $message = 'Successfully pulled latest changes from GitHub';
         } else {
             // Clone repository
-            // First, clear the directory (but keep it)
-            exec("docker exec {$containerName} sh -c 'rm -rf /var/www/html/* /var/www/html/.*  2>/dev/null || true'");
+            // Clear the html directory completely and clone fresh
+            exec("docker exec {$containerName} sh -c 'rm -rf /var/www/html'");
+            exec("docker exec {$containerName} sh -c 'mkdir -p /var/www/html'");
             
-            // Clone into a temp directory then move contents
-            $cloneCmd = "docker exec {$containerName} sh -c 'cd /tmp && rm -rf repo_clone && git clone -b {$githubBranch} {$repoUrl} repo_clone 2>&1 && cp -r /tmp/repo_clone/. /var/www/html/ && rm -rf /tmp/repo_clone'";
+            // Clone directly into /var/www/html
+            $cloneCmd = "docker exec {$containerName} sh -c 'cd /var/www && git clone -b {$githubBranch} {$repoUrl} html 2>&1'";
             exec($cloneCmd, $cloneOutput, $cloneReturn);
             
             if ($cloneReturn !== 0) {
@@ -148,11 +149,18 @@ function checkGitHubUpdates($site, $containerName) {
     }
     
     try {
+        // First check if .git directory exists
+        exec("docker exec {$containerName} test -d /var/www/html/.git", $testOutput, $testReturn);
+        
+        if ($testReturn !== 0) {
+            return ['success' => false, 'message' => 'Not a git repository. The site may have been deployed manually or the .git folder is missing. Try pulling from GitHub first.'];
+        }
+        
         // Get current local commit
         exec("docker exec {$containerName} sh -c 'cd /var/www/html && git rev-parse HEAD 2>/dev/null'", $localOutput, $localReturn);
         
         if ($localReturn !== 0) {
-            return ['success' => false, 'message' => 'Not a git repository'];
+            return ['success' => false, 'message' => 'Cannot read git repository. Try pulling from GitHub to reinitialize.'];
         }
         
         $localCommit = trim($localOutput[0] ?? '');
