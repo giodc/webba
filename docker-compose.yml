@@ -62,9 +62,16 @@ services:
     
     labels:
       - traefik.enable=true
-      - traefik.http.routers.webgui.rule=Host(`demo.test.local`)
+      - traefik.http.routers.webgui.rule=Host(`dashboard.development.giodc.com`)
       - traefik.http.routers.webgui.entrypoints=web
       - traefik.http.services.webgui.loadbalancer.server.port=80
+      - traefik.http.routers.webgui-secure.rule=Host(`dashboard.development.giodc.com`)
+      - traefik.http.routers.webgui-secure.entrypoints=websecure
+      - traefik.http.routers.webgui-secure.tls=true
+      - traefik.http.routers.webgui-secure.tls.certresolver=letsencrypt
+      - traefik.http.middlewares.webgui-redirect.redirectscheme.scheme=https
+      - traefik.http.middlewares.webgui-redirect.redirectscheme.permanent=true
+      - traefik.http.routers.webgui.middlewares=webgui-redirect
     networks:
       - webbadeploy
     restart: unless-stopped
