@@ -160,13 +160,135 @@ sudo ./install.sh
 sudo ./fix-local-docker.sh
 ```
 
-### Scenario 5: Production Server (Already Installed)
+### Scenario 5: Production Server (Already Installed with install.sh)
 ```bash
-# For updates:
+# Option A: Quick update (keeps current permissions)
 sudo ./install.sh
 
-# For security hardening:
+# Option B: Upgrade to production security (hardens permissions)
 sudo ./install-production.sh
+# ⚠️ Will ask to overwrite and create backup
+# ⚠️ Will set stricter permissions (755 instead of 775)
+```
+
+**Important:** install-production.sh CAN upgrade an existing installation:
+- ✅ Creates automatic backup before overwriting
+- ✅ Asks for confirmation
+- ✅ Updates all files from GitHub
+- ✅ Applies production security settings
+- ✅ Runs all migrations
+- ⚠️ Changes permissions from 775 → 755 (more restrictive)
+
+---
+
+## 🔄 Upgrading from install.sh to install-production.sh
+
+### Yes, You Can Upgrade! ✅
+
+If your remote server was installed with `install.sh`, you **can** run `install-production.sh` to upgrade to production security.
+
+### What Happens:
+
+1. **Backup Created Automatically**
+   ```bash
+   /opt/webbadeploy → /opt/webbadeploy_backup_20251011_010000
+   ```
+
+2. **Confirmation Prompt**
+   ```
+   Warning: /opt/webbadeploy already exists
+   Do you want to overwrite? (y/N):
+   ```
+
+3. **Fresh Clone from GitHub**
+   - Downloads latest code
+   - Preserves your data/apps directories
+   - Updates all system files
+
+4. **Security Hardening Applied**
+   - Permissions: 775 → 755
+   - Docker socket: stays 660 (already secure)
+   - SSL directory: 750 (new protection)
+   - docker-compose.yml: 640 (more restrictive)
+
+5. **Migrations Run**
+   - Database updates
+   - New features enabled
+   - Existing sites preserved
+
+### What Gets Preserved:
+
+✅ **Your Data:**
+- `/opt/webbadeploy/data/database.sqlite` - All sites, users, settings
+- `/opt/webbadeploy/apps/` - All deployed sites and files
+- `/opt/webbadeploy/ssl/` - SSL certificates
+
+✅ **Your Sites:**
+- All WordPress sites keep running
+- All PHP sites keep running
+- All Laravel sites keep running
+- Database connections maintained
+
+### What Changes:
+
+⚠️ **File Permissions:**
+```bash
+Before (install.sh):        After (install-production.sh):
+data: 775                   data: 755
+apps: 775                   apps: 755
+docker-compose: 664         docker-compose: 640
+```
+
+⚠️ **Code Files:**
+- GUI updated to latest version
+- New features added
+- Bug fixes applied
+
+### Safe to Run? YES! ✅
+
+**Reasons:**
+1. Automatic backup created
+2. Data directories preserved
+3. Running containers not affected during upgrade
+4. Can rollback if needed
+
+### How to Upgrade:
+
+```bash
+# On your remote server
+cd /opt/webbadeploy
+sudo ./install-production.sh
+
+# When prompted:
+# "Do you want to overwrite? (y/N):" → Type: y
+
+# Wait for completion (~5-10 minutes)
+# Done! Your server is now production-hardened
+```
+
+### Rollback if Needed:
+
+```bash
+# If something goes wrong:
+sudo rm -rf /opt/webbadeploy
+sudo mv /opt/webbadeploy_backup_* /opt/webbadeploy
+docker-compose restart
+```
+
+### Recommended Upgrade Path:
+
+```bash
+# 1. Test on local/staging first (optional but recommended)
+# 2. Backup manually (extra safety)
+sudo tar -czf ~/webbadeploy-manual-backup.tar.gz /opt/webbadeploy
+
+# 3. Run production installer
+cd /opt/webbadeploy
+sudo ./install-production.sh
+
+# 4. Verify everything works
+# 5. Delete old backup after confirming
+sudo rm -rf /opt/webbadeploy_backup_*
 ```
 
 ---
