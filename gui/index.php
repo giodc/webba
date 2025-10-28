@@ -83,6 +83,8 @@ $customWildcardDomain = getSetting($db, 'custom_wildcard_domain', '');
                     <?php foreach ($sites as $site): 
                         $containerStatus = getDockerContainerStatus($site['container_name']);
                         $sslConfigured = checkContainerSSLLabels($site['container_name']);
+                        $certIssued = isset($site['ssl_cert_issued']) && $site['ssl_cert_issued'] == 1;
+
                     ?>
                     <div class="col-md-4 mb-4" data-site-id="<?= $site['id'] ?>">
                         <div class="card app-card h-100">
@@ -150,6 +152,22 @@ $customWildcardDomain = getSetting($db, 'custom_wildcard_domain', '');
                                             <i class="bi bi-shield-slash"></i> SSL: Disabled
                                         </small>
                                     <?php endif; ?>
+
+
+
+                                     <?php if ($certIssued): ?>
+                                                    <span class="badge bg-success">
+                                                        <i class="bi bi-shield-check"></i> Issued
+                                                    </span>
+                                                    <?php if (isset($site['ssl_cert_issued_at'])): ?>
+                                                        <br><small class="text-muted"><?= date('M d, Y', strtotime($site['ssl_cert_issued_at'])) ?></small>
+                                                    <?php endif; ?>
+                                                <?php else: ?>
+                                                    <span class="badge bg-warning">
+                                                        <i class="bi bi-hourglass-split"></i> Pending
+                                                    </span>
+                                                <?php endif; ?>
+                                                
                                 </div>
                                 
                                 <div class="btn-group w-100" role="group">
