@@ -8,13 +8,32 @@ requireAuth();
 $db = initDatabase();
 $currentUser = getCurrentUser();
 
+// Handle certificate status updates
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && isset($_POST['site_id'])) {
+    $siteId = intval($_POST['site_id']);
+    
+    if ($_POST['action'] === 'mark_issued') {
+        if (markCertificateIssued($db, $siteId)) {
+            $successMessage = 'Certificate marked as issued successfully!';
+        } else {
+            $errorMessage = 'Failed to mark certificate as issued.';
+        }
+    } elseif ($_POST['action'] === 'mark_removed') {
+        if (markCertificateRemoved($db, $siteId)) {
+            $successMessage = 'Certificate marked as removed successfully!';
+        } else {
+            $errorMessage = 'Failed to mark certificate as removed.';
+        }
+    }
+}
+
 // Get all sites with SSL enabled
 $sites = getAllSites($db);
 $sslSites = array_filter($sites, function($site) {
     return $site['ssl'] == 1;
 });
 
-// Get Let's Encrypt email from docker-compose.yml
+// Get Let's Encrypt email from docker-compose.yml or Traefik container
 $dockerComposePath = '/opt/webbadeploy/docker-compose.yml';
 clearstatcache(true, $dockerComposePath);
 $dockerComposeContent = @file_get_contents($dockerComposePath);
@@ -22,8 +41,13 @@ if ($dockerComposeContent !== false) {
     preg_match('/acme\.email=([^\s"]+)/', $dockerComposeContent, $matches);
     $letsEncryptEmail = $matches[1] ?? 'Not configured';
 } else {
-    $letsEncryptEmail = 'Cannot read docker-compose.yml';
+    // Try to get from running container
+    exec("docker inspect webbadeploy_traefik --format '{{range .Config.Cmd}}{{println .}}{{end}}' 2>&1 | grep 'acme.email' | cut -d'=' -f2", $emailOutput);
+    $letsEncryptEmail = !empty($emailOutput[0]) ? trim($emailOutput[0]) : 'Cannot read configuration';
 }
+
+// Check if email is invalid
+$emailIsInvalid = preg_match('/@(example\.(com|net|org)|test\.)/', $letsEncryptEmail);
 
 // Check if ports are open
 $port80Open = @fsockopen('127.0.0.1', 80, $errno, $errstr, 1);
@@ -39,6 +63,15 @@ $sslErrors = array_filter($traefikLogs, function($line) {
 $acmeJsonPath = '/opt/webbadeploy/ssl/acme.json';
 $acmeJsonExists = file_exists($acmeJsonPath);
 $acmeJsonSize = $acmeJsonExists ? filesize($acmeJsonPath) : 0;
+$acmeJsonEmpty = false;
+
+// Check if acme.json is empty (only has template structure)
+if ($acmeJsonExists && $acmeJsonSize > 0) {
+    $acmeContent = @file_get_contents($acmeJsonPath);
+    if ($acmeContent !== false) {
+        $acmeJsonEmpty = (strpos($acmeContent, '"Certificates": null') !== false);
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -56,6 +89,37 @@ $acmeJsonSize = $acmeJsonExists ? filesize($acmeJsonPath) : 0;
     <div class="container mt-5">
         <div class="row">
             <div class="col-md-12">
+                <?php if ($emailIsInvalid): ?>
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <h5 class="alert-heading"><i class="bi bi-exclamation-triangle-fill me-2"></i>CRITICAL: Invalid Let's Encrypt Email!</h5>
+                        <p class="mb-2">Your Let's Encrypt email is set to <strong><?= htmlspecialchars($letsEncryptEmail) ?></strong></p>
+                        <p class="mb-2">Let's Encrypt will <strong>reject all certificate requests</strong> with example.com or test domains.</p>
+                        <hr>
+                        <p class="mb-0">
+                            <strong>To fix:</strong>
+                            <ol class="mb-0 mt-2">
+                                <li>Go to <a href="/settings.php" class="alert-link">Settings → SSL Configuration</a></li>
+                                <li>Update the email to a real address (e.g., admin@yourdomain.com)</li>
+                                <li>Restart Traefik: <code>cd /opt/webbadeploy && docker-compose restart traefik</code></li>
+                            </ol>
+                        </p>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                <?php endif; ?>
+                
+                <?php if (isset($successMessage)): ?>
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <i class="bi bi-check-circle me-2"></i><?= $successMessage ?>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                <?php endif; ?>
+                <?php if (isset($errorMessage)): ?>
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="bi bi-exclamation-triangle me-2"></i><?= $errorMessage ?>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                <?php endif; ?>
+                
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h2><i class="bi bi-shield-lock me-2"></i>SSL Debug Information</h2>
                     <a href="/" class="btn btn-outline-secondary">
@@ -73,12 +137,13 @@ $acmeJsonSize = $acmeJsonExists ? filesize($acmeJsonPath) : 0;
                             <div class="col-md-4"><strong>Let's Encrypt Email:</strong></div>
                             <div class="col-md-8">
                                 <code><?= htmlspecialchars($letsEncryptEmail) ?></code>
-                                <?php if (strpos($letsEncryptEmail, 'example.com') !== false): ?>
-                                    <span class="badge bg-danger ms-2">INVALID - Change this!</span>
+                                <?php if ($emailIsInvalid): ?>
+                                    <span class="badge bg-danger ms-2">INVALID - Certificates will FAIL!</span>
+                                    <br><small class="text-danger">Let's Encrypt rejects example.com and test domains</small>
                                 <?php elseif ($letsEncryptEmail === 'Not configured'): ?>
                                     <span class="badge bg-warning ms-2">Not configured</span>
                                 <?php else: ?>
-                                    <span class="badge bg-success ms-2">OK</span>
+                                    <span class="badge bg-success ms-2">Valid</span>
                                 <?php endif; ?>
                             </div>
                         </div>
@@ -106,10 +171,17 @@ $acmeJsonSize = $acmeJsonExists ? filesize($acmeJsonPath) : 0;
                             <div class="col-md-4"><strong>ACME Storage:</strong></div>
                             <div class="col-md-8">
                                 <?php if ($acmeJsonExists): ?>
-                                    <span class="badge bg-success">Exists</span>
-                                    <small class="text-muted">(<?= number_format($acmeJsonSize) ?> bytes)</small>
+                                    <?php if ($acmeJsonEmpty): ?>
+                                        <span class="badge bg-warning">Empty (No certificates yet)</span>
+                                        <small class="text-muted">(<?= number_format($acmeJsonSize) ?> bytes)</small>
+                                        <br><small class="text-muted">Certificates will be requested automatically when sites are deployed</small>
+                                    <?php else: ?>
+                                        <span class="badge bg-success">Contains certificates</span>
+                                        <small class="text-muted">(<?= number_format($acmeJsonSize) ?> bytes)</small>
+                                    <?php endif; ?>
                                 <?php else: ?>
                                     <span class="badge bg-warning">Not created yet</span>
+                                    <br><small class="text-muted">Will be created automatically by Traefik</small>
                                 <?php endif; ?>
                             </div>
                         </div>
@@ -132,7 +204,8 @@ $acmeJsonSize = $acmeJsonExists ? filesize($acmeJsonPath) : 0;
                                             <th>Site Name</th>
                                             <th>Domain</th>
                                             <th>Container</th>
-                                            <th>Status</th>
+                                            <th>SSL Status</th>
+                                            <th>Certificate</th>
                                             <th>Actions</th>
                                         </tr>
                                     </thead>
@@ -140,6 +213,7 @@ $acmeJsonSize = $acmeJsonExists ? filesize($acmeJsonPath) : 0;
                                         <?php foreach ($sslSites as $site): 
                                             $containerStatus = getDockerContainerStatus($site['container_name']);
                                             $sslConfigured = checkContainerSSLLabels($site['container_name']);
+                                            $certIssued = isset($site['ssl_cert_issued']) && $site['ssl_cert_issued'] == 1;
                                         ?>
                                         <tr>
                                             <td><?= htmlspecialchars($site['name']) ?></td>
@@ -157,9 +231,40 @@ $acmeJsonSize = $acmeJsonExists ? filesize($acmeJsonPath) : 0;
                                                 <?php endif; ?>
                                             </td>
                                             <td>
+                                                <?php if ($certIssued): ?>
+                                                    <span class="badge bg-success">
+                                                        <i class="bi bi-shield-check"></i> Issued
+                                                    </span>
+                                                    <?php if (isset($site['ssl_cert_issued_at'])): ?>
+                                                        <br><small class="text-muted"><?= date('M d, Y', strtotime($site['ssl_cert_issued_at'])) ?></small>
+                                                    <?php endif; ?>
+                                                <?php else: ?>
+                                                    <span class="badge bg-warning">
+                                                        <i class="bi bi-hourglass-split"></i> Pending
+                                                    </span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td>
                                                 <button class="btn btn-sm btn-primary" onclick="testDomain('<?= htmlspecialchars($site['domain']) ?>')">
                                                     <i class="bi bi-search"></i> Test
                                                 </button>
+                                                <?php if (!$certIssued): ?>
+                                                    <form method="POST" style="display: inline;">
+                                                        <input type="hidden" name="site_id" value="<?= $site['id'] ?>">
+                                                        <input type="hidden" name="action" value="mark_issued">
+                                                        <button type="submit" class="btn btn-sm btn-success" title="Mark certificate as issued">
+                                                            <i class="bi bi-check-circle"></i> Mark Issued
+                                                        </button>
+                                                    </form>
+                                                <?php else: ?>
+                                                    <form method="POST" style="display: inline;">
+                                                        <input type="hidden" name="site_id" value="<?= $site['id'] ?>">
+                                                        <input type="hidden" name="action" value="mark_removed">
+                                                        <button type="submit" class="btn btn-sm btn-danger" title="Mark certificate as removed">
+                                                            <i class="bi bi-x-circle"></i> Mark Removed
+                                                        </button>
+                                                    </form>
+                                                <?php endif; ?>
                                             </td>
                                         </tr>
                                         <?php endforeach; ?>

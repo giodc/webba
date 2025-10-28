@@ -139,6 +139,12 @@ function initDatabase() {
         if (!in_array('deployment_method', $columnNames)) {
             $pdo->exec("ALTER TABLE sites ADD COLUMN deployment_method TEXT DEFAULT 'manual'");
         }
+        if (!in_array('ssl_cert_issued', $columnNames)) {
+            $pdo->exec("ALTER TABLE sites ADD COLUMN ssl_cert_issued INTEGER DEFAULT 0");
+        }
+        if (!in_array('ssl_cert_issued_at', $columnNames)) {
+            $pdo->exec("ALTER TABLE sites ADD COLUMN ssl_cert_issued_at DATETIME");
+        }
     } catch (Exception $e) {
         // Columns might already exist or other error, continue
     }
@@ -702,51 +708,48 @@ function deleteComposeConfig($pdo, $siteId) {
 }
 
 /**
- * Check if a certificate exists for a domain in acme.json
+ * Check if a certificate has been issued for a domain (from database)
  */
 function hasCertificate($domain) {
-    // Try both paths - container path and host path
-    $acmePaths = [
-        '/opt/webbadeploy/ssl/acme.json',  // Host path
-        '/app/ssl/acme.json'                // Container path (if running in container)
-    ];
+    global $db;
     
-    $acmeFile = null;
-    foreach ($acmePaths as $path) {
-        if (file_exists($path)) {
-            $acmeFile = $path;
-            break;
-        }
-    }
-    
-    if (!$acmeFile) {
+    if (!$db) {
         return false;
     }
     
-    $acmeContent = @file_get_contents($acmeFile);
-    if (!$acmeContent) {
+    try {
+        $stmt = $db->prepare("SELECT ssl_cert_issued FROM sites WHERE domain = ?");
+        $stmt->execute([$domain]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        return $result && $result['ssl_cert_issued'] == 1;
+    } catch (Exception $e) {
         return false;
     }
-    
-    $acmeData = json_decode($acmeContent, true);
-    if (!$acmeData || !isset($acmeData['letsencrypt']['Certificates'])) {
+}
+
+/**
+ * Mark certificate as issued for a site
+ */
+function markCertificateIssued($db, $siteId) {
+    try {
+        $stmt = $db->prepare("UPDATE sites SET ssl_cert_issued = 1, ssl_cert_issued_at = CURRENT_TIMESTAMP WHERE id = ?");
+        return $stmt->execute([$siteId]);
+    } catch (Exception $e) {
+        error_log("Failed to mark certificate as issued: " . $e->getMessage());
         return false;
     }
-    
-    $certificates = $acmeData['letsencrypt']['Certificates'];
-    if (empty($certificates)) {
+}
+
+/**
+ * Mark certificate as removed for a site
+ */
+function markCertificateRemoved($db, $siteId) {
+    try {
+        $stmt = $db->prepare("UPDATE sites SET ssl_cert_issued = 0, ssl_cert_issued_at = NULL WHERE id = ?");
+        return $stmt->execute([$siteId]);
+    } catch (Exception $e) {
+        error_log("Failed to mark certificate as removed: " . $e->getMessage());
         return false;
     }
-    
-    // Check if domain exists in any certificate
-    foreach ($certificates as $cert) {
-        if (isset($cert['domain']['main']) && $cert['domain']['main'] === $domain) {
-            return true;
-        }
-        if (isset($cert['domain']['sans']) && in_array($domain, $cert['domain']['sans'])) {
-            return true;
-        }
-    }
-    
-    return false;
 }
