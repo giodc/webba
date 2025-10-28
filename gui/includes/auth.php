@@ -546,9 +546,8 @@ function canAccessSite($userId, $siteId, $permission = 'view') {
         return true;
     }
     
-    // Check site permissions
-    $authDb = initAuthDatabase();
-    $stmt = $authDb->prepare("SELECT permission FROM site_permissions WHERE user_id = ? AND site_id = ?");
+    // Check site permissions - use mainDb, not authDb
+    $stmt = $mainDb->prepare("SELECT permission_level FROM site_permissions WHERE user_id = ? AND site_id = ?");
     $stmt->execute([$userId, $siteId]);
     $perm = $stmt->fetch(PDO::FETCH_ASSOC);
     
@@ -559,7 +558,7 @@ function canAccessSite($userId, $siteId, $permission = 'view') {
     // Permission hierarchy: manage > edit > view
     $permLevels = ['view' => 1, 'edit' => 2, 'manage' => 3];
     $requiredLevel = $permLevels[$permission] ?? 1;
-    $userLevel = $permLevels[$perm['permission']] ?? 0;
+    $userLevel = $permLevels[$perm['permission_level']] ?? 0;
     
     return $userLevel >= $requiredLevel;
 }
@@ -599,11 +598,12 @@ function getUserSites($userId) {
  * Grant site permission to user
  */
 function grantSitePermission($userId, $siteId, $permission = 'view') {
-    $db = initAuthDatabase();
+    $db = initDatabase(); // Use main database, not auth database
     
     try {
-        $stmt = $db->prepare("INSERT OR REPLACE INTO site_permissions (user_id, site_id, permission) VALUES (?, ?, ?)");
-        $stmt->execute([$userId, $siteId, $permission]);
+        $stmt = $db->prepare("INSERT OR REPLACE INTO site_permissions (user_id, site_id, permission_level, granted_by) VALUES (?, ?, ?, ?)");
+        $grantedBy = $_SESSION['user_id'] ?? null;
+        $stmt->execute([$userId, $siteId, $permission, $grantedBy]);
         return ['success' => true];
     } catch (PDOException $e) {
         return ['success' => false, 'error' => $e->getMessage()];
@@ -614,7 +614,7 @@ function grantSitePermission($userId, $siteId, $permission = 'view') {
  * Revoke site permission from user
  */
 function revokeSitePermission($userId, $siteId) {
-    $db = initAuthDatabase();
+    $db = initDatabase(); // Use main database, not auth database
     
     try {
         $stmt = $db->prepare("DELETE FROM site_permissions WHERE user_id = ? AND site_id = ?");
@@ -629,17 +629,26 @@ function revokeSitePermission($userId, $siteId) {
  * Get site permissions for a user
  */
 function getSitePermissions($siteId) {
-    $db = initAuthDatabase();
+    $mainDb = initDatabase(); // Use main database for site_permissions
+    $authDb = initAuthDatabase(); // Use auth database for users
     
-    $stmt = $db->prepare("
-        SELECT u.id, u.username, u.email, sp.permission, sp.created_at
+    $stmt = $mainDb->prepare("
+        SELECT u.id, u.username, u.email, sp.permission_level, sp.created_at
         FROM site_permissions sp
         JOIN users u ON sp.user_id = u.id
         WHERE sp.site_id = ?
         ORDER BY u.username
     ");
     $stmt->execute([$siteId]);
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $permissions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Rename permission_level to permission for backward compatibility
+    foreach ($permissions as &$perm) {
+        $perm['permission'] = $perm['permission_level'];
+        unset($perm['permission_level']);
+    }
+    
+    return $permissions;
 }
 
 /**

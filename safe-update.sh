@@ -144,6 +144,7 @@ sleep 3
 docker exec webbadeploy_gui php /var/www/html/migrate-rbac-2fa.php 2>/dev/null || echo "  ℹ RBAC migration already applied"
 docker exec webbadeploy_gui php /var/www/html/migrate-php-version.php 2>/dev/null || echo "  ℹ PHP version migration already applied"
 docker exec webbadeploy_gui php /var/www/html/migrations/add_github_fields.php 2>/dev/null || echo "  ℹ GitHub fields migration already applied"
+docker exec webbadeploy_gui php /var/www/html/migrations/fix-site-permissions-database.php 2>/dev/null || echo "  ℹ Site permissions migration already applied"
 
 # Import compose configs to database (only if not already there)
 docker exec webbadeploy_gui php /var/www/html/migrate-compose-to-db.php 2>/dev/null || echo "  ℹ Compose configs already in database"
