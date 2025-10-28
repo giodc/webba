@@ -57,12 +57,49 @@ if [ "$UPDATE_MODE" = true ]; then
     echo "Updating existing installation..."
     cd /opt/webbadeploy
     
+    # Backup critical files before update
+    echo "Backing up configurations..."
+    BACKUP_DIR="/opt/webbadeploy/data/backups/update-$(date +%Y%m%d-%H%M%S)"
+    mkdir -p "$BACKUP_DIR"
+    
+    # Backup docker-compose.yml (contains Let's Encrypt email)
+    if [ -f "docker-compose.yml" ]; then
+        cp docker-compose.yml "$BACKUP_DIR/docker-compose.yml"
+        echo "  ✓ Backed up docker-compose.yml"
+    fi
+    
+    # Backup database
+    if [ -f "data/database.sqlite" ]; then
+        cp data/database.sqlite "$BACKUP_DIR/database.sqlite"
+        echo "  ✓ Backed up database"
+    fi
+    
+    # Backup acme.json (SSL certificates)
+    if [ -f "ssl/acme.json" ]; then
+        cp ssl/acme.json "$BACKUP_DIR/acme.json"
+        echo "  ✓ Backed up acme.json"
+    fi
+    
     # Stash any local changes
     git stash
     
     # Pull latest version
     echo "Pulling latest version from GitHub..."
     git pull origin master
+    
+    # Restore docker-compose.yml from backup (preserve user settings)
+    if [ -f "$BACKUP_DIR/docker-compose.yml" ]; then
+        echo "Restoring docker-compose.yml to preserve your settings..."
+        cp "$BACKUP_DIR/docker-compose.yml" docker-compose.yml
+    fi
+    
+    # Restore acme.json from backup (preserve SSL certificates)
+    if [ -f "$BACKUP_DIR/acme.json" ]; then
+        echo "Restoring acme.json to preserve SSL certificates..."
+        cp "$BACKUP_DIR/acme.json" ssl/acme.json
+        chmod 600 ssl/acme.json
+        chown root:root ssl/acme.json
+    fi
     
     # Set permissions on docker-compose.yml
     echo "Setting permissions on docker-compose.yml..."

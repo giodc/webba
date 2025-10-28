@@ -135,39 +135,11 @@ $customWildcardDomain = getSetting($db, 'custom_wildcard_domain', '');
                                         <?php endif; ?>
                                     </a>
                                     <br>
-                                    <?php if ($site['ssl'] && $sslConfigured && $hasCert): ?>
-                                        <small class="badge bg-success mt-1" title="SSL certificate issued and active">
-                                            <i class="bi bi-shield-lock-fill"></i> SSL: Active
-                                        </small>
-                                    <?php elseif ($site['ssl'] && $sslConfigured && !$hasCert): ?>
-                                        <small class="badge bg-warning mt-1" title="SSL enabled but certificate not yet issued - check Traefik logs">
-                                            <i class="bi bi-hourglass-split"></i> SSL: Pending
-                                        </small>
-                                    <?php elseif ($site['ssl'] && !$sslConfigured): ?>
-                                        <small class="badge bg-warning mt-1" title="SSL enabled in database but not configured in container - recreate site">
-                                            <i class="bi bi-exclamation-triangle"></i> SSL: Not Configured
-                                        </small>
-                                    <?php else: ?>
-                                        <small class="badge bg-secondary mt-1" title="SSL is disabled">
-                                            <i class="bi bi-shield-slash"></i> SSL: Disabled
-                                        </small>
-                                    <?php endif; ?>
-
-
-
-                                     <?php if ($certIssued): ?>
-                                                    <span class="badge bg-success">
-                                                        <i class="bi bi-shield-check"></i> Issued
-                                                    </span>
-                                                    <?php if (isset($site['ssl_cert_issued_at'])): ?>
-                                                        <br><small class="text-muted"><?= date('M d, Y', strtotime($site['ssl_cert_issued_at'])) ?></small>
-                                                    <?php endif; ?>
+                                    <?php if ($sslConfigured): ?>
+                                                    <span class="badge bg-success">SSL Configured</span>
                                                 <?php else: ?>
-                                                    <span class="badge bg-warning">
-                                                        <i class="bi bi-hourglass-split"></i> Pending
-                                                    </span>
+                                                    <span class="badge bg-warning">SSL Not Configured</span>
                                                 <?php endif; ?>
-                                                
                                 </div>
                                 
                                 <div class="btn-group w-100" role="group">
