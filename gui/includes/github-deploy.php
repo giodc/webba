@@ -257,7 +257,25 @@ function runLaravelBuild($containerName, $siteType = 'laravel') {
         return ['success' => true, 'message' => 'Not a Laravel site, skipping Laravel build steps'];
     }
     
-    // 1. Check if Composer exists, install if needed
+    // 1. Install required PHP extensions for Laravel
+    $results[] = "Checking required PHP extensions...";
+    
+    // Check if zip extension is installed
+    exec("docker exec {$containerName} php -m | grep -i zip", $zipCheckOutput, $zipCheckReturn);
+    if ($zipCheckReturn !== 0) {
+        $results[] = "Installing PHP zip extension...";
+        exec("docker exec -u root {$containerName} sh -c 'apt-get update && apt-get install -y libzip-dev zip unzip && docker-php-ext-install zip 2>&1'", $zipInstallOutput, $zipInstallReturn);
+        
+        if ($zipInstallReturn === 0) {
+            $results[] = "✓ PHP zip extension installed";
+        } else {
+            $results[] = "⚠ Warning: Could not install zip extension";
+        }
+    } else {
+        $results[] = "✓ PHP zip extension already installed";
+    }
+    
+    // 2. Check if Composer exists, install if needed
     exec("docker exec {$containerName} which composer 2>&1", $composerCheckOutput, $composerCheckReturn);
     
     if ($composerCheckReturn !== 0) {
@@ -270,7 +288,7 @@ function runLaravelBuild($containerName, $siteType = 'laravel') {
         $results[] = "✓ Composer installed";
     }
     
-    // 2. Run Composer Install
+    // 3. Run Composer Install
     $results[] = "Running composer install...";
     exec("docker exec {$containerName} sh -c 'cd /var/www/html && composer install --no-dev --optimize-autoloader 2>&1'", $composerOutput, $composerReturn);
     
@@ -279,7 +297,7 @@ function runLaravelBuild($containerName, $siteType = 'laravel') {
     }
     $results[] = "✓ Composer dependencies installed";
     
-    // 2. Check if .env exists, if not copy from .env.example
+    // 4. Check if .env exists, if not copy from .env.example
     exec("docker exec {$containerName} test -f /var/www/html/.env", $envOutput, $envReturn);
     if ($envReturn !== 0) {
         exec("docker exec {$containerName} sh -c 'cd /var/www/html && cp .env.example .env 2>&1'");
@@ -295,7 +313,7 @@ function runLaravelBuild($containerName, $siteType = 'laravel') {
     exec("docker exec {$containerName} sh -c 'grep -q \"^APP_ENV=\" /var/www/html/.env || echo \"APP_ENV=production\" >> /var/www/html/.env'");
     $results[] = "✓ Verified .env configuration";
     
-    // 3. Create required Laravel directories
+    // 5. Create required Laravel directories
     $results[] = "Creating required directories...";
     exec("docker exec {$containerName} sh -c 'mkdir -p /var/www/html/storage/framework/sessions 2>&1'");
     exec("docker exec {$containerName} sh -c 'mkdir -p /var/www/html/storage/framework/views 2>&1'");
@@ -305,7 +323,7 @@ function runLaravelBuild($containerName, $siteType = 'laravel') {
     exec("docker exec {$containerName} sh -c 'mkdir -p /var/www/html/database 2>&1'");
     $results[] = "✓ Required directories created";
     
-    // 4. Set proper permissions (critical for Laravel)
+    // 6. Set proper permissions (critical for Laravel)
     // First set ownership to www-data
     exec("docker exec {$containerName} chown -R www-data:www-data /var/www/html 2>&1", $chownOutput, $chownReturn);
     if ($chownReturn !== 0) {
@@ -329,7 +347,7 @@ function runLaravelBuild($containerName, $siteType = 'laravel') {
     
     $results[] = "✓ Set proper permissions";
     
-    // 5. Setup SQLite database and run migrations
+    // 7. Setup SQLite database and run migrations
     $results[] = "Setting up SQLite database...";
     
     // Check if database file exists in .env
@@ -375,13 +393,13 @@ function runLaravelBuild($containerName, $siteType = 'laravel') {
         }
     }
     
-    // 6. Clear and cache config
+    // 8. Clear and cache config
     exec("docker exec {$containerName} sh -c 'cd /var/www/html && php artisan config:cache 2>&1'");
     exec("docker exec {$containerName} sh -c 'cd /var/www/html && php artisan route:cache 2>&1'");
     exec("docker exec {$containerName} sh -c 'cd /var/www/html && php artisan view:cache 2>&1'");
     $results[] = "✓ Cached configuration, routes, and views";
     
-    // 7. Check if package.json exists for npm
+    // 9. Check if package.json exists for npm
     exec("docker exec {$containerName} test -f /var/www/html/package.json", $npmCheckOutput, $npmCheckReturn);
     if ($npmCheckReturn === 0) {
         // Check if npm is installed
