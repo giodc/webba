@@ -11,7 +11,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
     <div class="container-fluid">
         <a class="navbar-brand fw-bold d-flex align-items-center" href="/">
             <i class="bi bi-cloud-arrow-up me-2"></i>Wharftales
-            <span class="badge bg-secondary ms-2 fw-normal" style="font-size: 0.7rem;">
+            <span class="badge bg-primary ms-2 fw-normal" style="font-size: 0.7rem;">
                 v<?php 
                     $versionFile = '/var/www/html/../VERSION';
                     echo file_exists($versionFile) ? trim(file_get_contents($versionFile)) : '1.0.0';
