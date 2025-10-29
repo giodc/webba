@@ -1,7 +1,7 @@
 <?php
 /**
- * Webbadeploy Authentication System
- * Lightweight, secure authentication for Webbadeploy
+ * WharfTales Authentication System
+ * Lightweight, secure authentication for WharfTales
  */
 
 // Start session if not already started

@@ -201,7 +201,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['telemetry_enabled']))
     if ($enabled) {
         // Send immediate ping
         sendTelemetryPing();
-        $successMessage = 'Telemetry enabled. Thank you for helping improve WebbaDeploy!';
+        $successMessage = 'Telemetry enabled. Thank you for helping improve WharfTales!';
     } else {
         $successMessage = 'Telemetry disabled.';
     }
@@ -215,7 +215,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['telemetry_enabled']))
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Settings - Webbadeploy</title>
+    <title>Settings - WharfTales</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <link href="css/custom.css" rel="stylesheet">
@@ -394,7 +394,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['telemetry_enabled']))
                     <div class="card-body">
                         <div class="alert alert-info">
                             <i class="bi bi-info-circle me-2"></i>
-                            <strong>Help us improve WebbaDeploy!</strong> By enabling anonymous usage statistics, you help us understand how the platform is used and prioritize features. 
+                            <strong>Help us improve WharfTales!</strong> By enabling anonymous usage statistics, you help us understand how the platform is used and prioritize features. 
                             <br><br>
                             <strong>What we collect:</strong>
                             <ul class="mb-0 mt-2">

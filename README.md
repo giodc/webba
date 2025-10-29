@@ -1,8 +1,8 @@
-# Webbadeploy 🚀
+# WharfTales
 
-> **Easy, secure, and optimized web application deployment platform**
+Easy deployment platform for web applications using Docker and Traefik.
 
-Webbadeploy is an open-source platform that makes deploying WordPress, PHP, and Laravel applications as simple as clicking a button. Built with Docker for security and portability, it provides a clean web interface for managing multiple applications on a single Ubuntu server.
+WharfTales is an open-source platform that makes deploying WordPress, PHP, and Laravel applications as simple as clicking a button. Built with Docker for security and portability, it provides a clean web interface for managing multiple applications on a single Ubuntu server.
 
 ## ✨ Features
 
