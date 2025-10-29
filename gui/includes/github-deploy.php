@@ -42,6 +42,9 @@ function deployFromGitHub($site, $containerName) {
         
         if ($returnCode === 0) {
             // Repository exists, pull latest changes
+            // First, mark directory as safe to avoid "dubious ownership" error
+            exec("docker exec {$containerName} sh -c 'git config --global --add safe.directory /var/www/html 2>&1'");
+            
             $pullCmd = "docker exec {$containerName} sh -c 'cd /var/www/html && git pull origin {$githubBranch} 2>&1'";
             exec($pullCmd, $pullOutput, $pullReturn);
             
@@ -63,6 +66,9 @@ function deployFromGitHub($site, $containerName) {
             if ($cloneReturn !== 0) {
                 return ['success' => false, 'message' => 'Failed to clone from GitHub: ' . implode("\n", $cloneOutput)];
             }
+            
+            // Mark directory as safe for future git operations
+            exec("docker exec {$containerName} sh -c 'git config --global --add safe.directory /var/www/html 2>&1'");
             
             $message = 'Successfully cloned repository from GitHub';
         }
@@ -166,6 +172,9 @@ function checkGitHubUpdates($site, $containerName) {
             return ['success' => false, 'message' => 'Not a git repository. The site may have been deployed manually or the .git folder is missing. Try pulling from GitHub first.'];
         }
         
+        // Mark directory as safe to avoid "dubious ownership" error
+        exec("docker exec {$containerName} sh -c 'git config --global --add safe.directory /var/www/html 2>&1'");
+        
         // Get current local commit
         exec("docker exec {$containerName} sh -c 'cd /var/www/html && git rev-parse HEAD 2>/dev/null'", $localOutput, $localReturn);
         
@@ -248,7 +257,20 @@ function runLaravelBuild($containerName, $siteType = 'laravel') {
         return ['success' => true, 'message' => 'Not a Laravel site, skipping Laravel build steps'];
     }
     
-    // 1. Run Composer Install
+    // 1. Check if Composer exists, install if needed
+    exec("docker exec {$containerName} which composer 2>&1", $composerCheckOutput, $composerCheckReturn);
+    
+    if ($composerCheckReturn !== 0) {
+        $results[] = "Installing Composer...";
+        exec("docker exec -u root {$containerName} sh -c 'curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer 2>&1'", $installOutput, $installReturn);
+        
+        if ($installReturn !== 0) {
+            return ['success' => false, 'message' => 'Failed to install Composer: ' . implode("\n", $installOutput)];
+        }
+        $results[] = "✓ Composer installed";
+    }
+    
+    // 2. Run Composer Install
     $results[] = "Running composer install...";
     exec("docker exec {$containerName} sh -c 'cd /var/www/html && composer install --no-dev --optimize-autoloader 2>&1'", $composerOutput, $composerReturn);
     
