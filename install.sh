@@ -178,7 +178,7 @@ else
         # Clone from GitHub if not already present
         if [ ! -d "/opt/wharftales/.git" ]; then
             echo "Cloning WharfTales from GitHub..."
-            git clone https://github.com/giodc/webba.git /opt/wharftales
+            git clone https://github.com/giodc/wharftales.git /opt/wharftales
         fi
     fi
     

@@ -129,7 +129,7 @@ Create `/opt/wharftales/ansible/update-all-servers.yml`:
   tasks:
     - name: Pull latest code
       git:
-        repo: 'https://github.com/giodc/webba.git'
+        repo: 'https://github.com/giodc/wharftales.git'
         dest: /opt/wharftales
         version: master
         force: yes

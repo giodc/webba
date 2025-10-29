@@ -22,7 +22,7 @@ This guide will help you quickly set up and use the new features in WharfTales.
 
 1. **Install WharfTales:**
    ```bash
-   curl -fsSL https://raw.githubusercontent.com/giodc/webba/master/install-production.sh | sudo bash
+   curl -fsSL https://raw.githubusercontent.com/giodc/wharftales/master/install-production.sh | sudo bash
    ```
 
 2. **Access the Dashboard:**

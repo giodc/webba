@@ -17,7 +17,7 @@ All fixes are now included in the repository! Fresh installs will automatically 
 
 ### 1. Clone Repository
 ```bash
-git clone https://github.com/giodc/webba.git wharftales
+git clone https://github.com/giodc/wharftales.git wharftales
 cd wharftales
 ```
 
@@ -204,7 +204,7 @@ docker logs wharftales_gui 2>&1 | grep -i error
 
 ## Repository
 
-**GitHub:** https://github.com/giodc/webba.git  
+**GitHub:** https://github.com/giodc/wharftales.git  
 **Latest Commit:** 5529e71 (Laravel and PHP template heredoc escaping)  
 **Status:** ✅ All fixes included
 

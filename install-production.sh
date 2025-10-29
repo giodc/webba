@@ -125,7 +125,7 @@ echo -e "\n${YELLOW}Downloading WharfTales files...${NC}"
 # Clone from GitHub repository
 if command -v git &> /dev/null; then
     echo -e "${YELLOW}Cloning from GitHub...${NC}"
-    git clone https://github.com/giodc/webba.git "$INSTALL_DIR"
+    git clone https://github.com/giodc/wharftales.git "$INSTALL_DIR"
     cd "$INSTALL_DIR"
     echo -e "${GREEN}✓ Files downloaded from repository${NC}"
 else

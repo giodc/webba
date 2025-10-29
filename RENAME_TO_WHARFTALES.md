@@ -112,7 +112,7 @@ Easy App Deployment Platform
 
 2. **Migration Not Required:** Since you're in development, no migration is needed. Just use the new names for fresh installs.
 
-3. **GitHub Repository:** The GitHub repo URL remains the same (`giodc/webba`) - only the application name changed.
+3. **GitHub Repository:** The GitHub repo has been renamed to `giodc/wharftales` (was `giodc/wharftales`).
 
 4. **Backward Compatibility:** Old documentation and guides may still reference "WharfTales" - these will be updated gradually.
 
@@ -121,7 +121,7 @@ Easy App Deployment Platform
 ## 🔧 Installation Command:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/giodc/webba/master/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/giodc/wharftales/master/install.sh | sudo bash
 ```
 
 The installer will now:

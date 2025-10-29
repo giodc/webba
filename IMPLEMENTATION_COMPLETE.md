@@ -214,7 +214,7 @@ All tables and columns created:
 The installation script now handles everything automatically:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/giodc/webba/master/install-production.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/giodc/wharftales/master/install-production.sh | sudo bash
 ```
 
 Or local install:
