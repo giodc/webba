@@ -2,7 +2,7 @@
 
 ## Overview
 
-Enhanced the Webbadeploy dashboard with better error handling, improved user feedback, and a comprehensive edit site page.
+Enhanced the WharfTales dashboard with better error handling, improved user feedback, and a comprehensive edit site page.
 
 ---
 
@@ -134,17 +134,17 @@ showAlert("warning", result.message + "<br><small>Error: " + details + "</small>
 
 ### **Files Modified**
 
-#### **`/opt/webbadeploy/gui/api.php`**
+#### **`/opt/wharftales/gui/api.php`**
 - Enhanced `createSiteHandler()` with deployment error handling
 - Updated `updateSiteData()` to detect domain changes
 - Added warning messages for partial failures
 
-#### **`/opt/webbadeploy/gui/index.php`**
+#### **`/opt/wharftales/gui/index.php`**
 - Redesigned edit modal with sections
 - Added container information display
 - Improved form layout and helpers
 
-#### **`/opt/webbadeploy/gui/js/app.js`**
+#### **`/opt/wharftales/gui/js/app.js`**
 - Enhanced `createSite()` to handle warnings
 - Updated `editSite()` to populate all fields
 - Improved `updateSite()` with better feedback

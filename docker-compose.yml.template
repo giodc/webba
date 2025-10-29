@@ -2,7 +2,7 @@
 services:
   traefik:
     image: traefik:v3.0
-    container_name: webbadeploy_traefik
+    container_name: wharftales_traefik
     command:
       - "--api.dashboard=false"
       - "--api.insecure=false"
@@ -35,14 +35,14 @@ services:
       - ./logs/traefik:/var/log
     restart: unless-stopped
     networks:
-      - webbadeploy
+      - wharftales
 
   web-gui:
     build:
       context: ./gui
       args:
         DOCKER_GID: 988
-    container_name: webbadeploy_gui
+    container_name: wharftales_gui
     ports:
       - "9000:80"  # Dashboard accessible on port 9000
     volumes:
@@ -52,7 +52,7 @@ services:
       - ./data:/app/data
       - ./ssl:/app/ssl
       - ./apps:/app/apps
-      - ./docker-compose.yml:/opt/webbadeploy/docker-compose.yml
+      - ./docker-compose.yml:/opt/wharftales/docker-compose.yml
       - ./VERSION:/var/www/html/../VERSION:ro
       - ./.git:/var/www/html/../.git:ro
       # Mount GUI files for live updates (development)
@@ -81,29 +81,29 @@ services:
       - traefik.http.middlewares.webgui-redirect.redirectscheme.permanent=true
       - traefik.http.routers.webgui.middlewares=webgui-redirect
     networks:
-      - webbadeploy
+      - wharftales
     restart: unless-stopped
 
   db:
     image: mariadb:latest
-    container_name: webbadeploy_db
+    container_name: wharftales_db
     environment:
-      - MYSQL_ROOT_PASSWORD=webbadeploy_root_pass
-      - MYSQL_DATABASE=webbadeploy
-      - MYSQL_USER=webbadeploy
-      - MYSQL_PASSWORD=webbadeploy_pass
+      - MYSQL_ROOT_PASSWORD=wharftales_root_pass
+      - MYSQL_DATABASE=wharftales
+      - MYSQL_USER=wharftales
+      - MYSQL_PASSWORD=wharftales_pass
     volumes:
       - db_data:/var/lib/mysql
       - ./db/init:/docker-entrypoint-initdb.d
     networks:
-      - webbadeploy
+      - wharftales
     restart: unless-stopped
 
 volumes:
   db_data:
 
 networks:
-  webbadeploy:
+  wharftales:
     driver: bridge
     ipam:
       config:

@@ -1,8 +1,8 @@
-# Webbadeploy Update System
+# WharfTales Update System
 
 ## Overview
 
-Webbadeploy includes a built-in Git-based update system that allows you to easily update your installation from your Git repository.
+WharfTales includes a built-in Git-based update system that allows you to easily update your installation from your Git repository.
 
 ## Features
 
@@ -17,7 +17,7 @@ Webbadeploy includes a built-in Git-based update system that allows you to easil
 
 ## How It Works
 
-1. **Version File**: The system uses `/opt/webbadeploy/VERSION` to track the current version
+1. **Version File**: The system uses `/opt/wharftales/VERSION` to track the current version
 2. **Git Integration**: Checks the remote repository for a newer VERSION file
 3. **Update Process**: Pulls latest changes via `git pull`
 4. **Backup**: Creates a backup before updating
@@ -27,7 +27,7 @@ Webbadeploy includes a built-in Git-based update system that allows you to easil
 
 ### Manual Update via Dashboard
 
-1. Log in to Webbadeploy dashboard
+1. Log in to WharfTales dashboard
 2. If an update is available, you'll see an **"Update Available"** link in the navbar
 3. Click the link to open the update modal
 4. Review the changelog and current/new versions
@@ -42,7 +42,7 @@ Webbadeploy includes a built-in Git-based update system that allows you to easil
 ### Manual Update via Command Line
 
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 git pull origin master
 ```
 
@@ -64,7 +64,7 @@ git pull origin master
 
 ## Configuration
 
-Edit `/opt/webbadeploy/gui/includes/update-config.php`:
+Edit `/opt/wharftales/gui/includes/update-config.php`:
 
 ```php
 // Enable/disable update system
@@ -93,16 +93,16 @@ Update activity is logged to `/app/data/update.log`
 
 View logs via the dashboard or:
 ```bash
-docker exec webbadeploy_gui cat /app/data/update.log
+docker exec wharftales_gui cat /app/data/update.log
 ```
 
 ## Troubleshooting
 
 ### Update fails with "Not a Git repository"
 
-Make sure `/opt/webbadeploy` is a Git repository:
+Make sure `/opt/wharftales` is a Git repository:
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 git status
 ```
 
@@ -110,7 +110,7 @@ git status
 
 The system will automatically stash local changes. To manually handle:
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 git stash
 git pull origin master
 ```
@@ -119,8 +119,8 @@ git pull origin master
 
 Run inside the container:
 ```bash
-docker exec webbadeploy_gui chmod -R 755 /var/www/html/gui/includes /var/www/html/gui/js /var/www/html/gui/css
-docker exec webbadeploy_gui chmod 644 /var/www/html/gui/includes/*.php /var/www/html/gui/*.php
+docker exec wharftales_gui chmod -R 755 /var/www/html/gui/includes /var/www/html/gui/js /var/www/html/gui/css
+docker exec wharftales_gui chmod 644 /var/www/html/gui/includes/*.php /var/www/html/gui/*.php
 ```
 
 ## Security Considerations

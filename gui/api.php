@@ -665,7 +665,7 @@ services:
     
     $compose .= "
     networks:
-      - webbadeploy_webbadeploy
+      - wharftales_wharftales
     restart: unless-stopped
 ";
     
@@ -684,7 +684,7 @@ services:
     volumes:
       - {$containerName}_db_data:/var/lib/mysql
     networks:
-      - webbadeploy_webbadeploy
+      - wharftales_wharftales
     restart: unless-stopped
 ";
         } elseif ($dbType === 'postgresql') {
@@ -699,7 +699,7 @@ services:
     volumes:
       - {$containerName}_db_data:/var/lib/postgresql/data
     networks:
-      - webbadeploy_webbadeploy
+      - wharftales_wharftales
     restart: unless-stopped
 ";
         }
@@ -717,7 +717,7 @@ volumes:
     $compose .= "
 
 networks:
-  webbadeploy_webbadeploy:
+  wharftales_wharftales:
     external: true";
     
     return $compose;
@@ -850,7 +850,7 @@ services:
     
     $compose .= "
     networks:
-      - webbadeploy_webbadeploy
+      - wharftales_wharftales
     restart: unless-stopped
 ";
     
@@ -869,7 +869,7 @@ services:
     volumes:
       - {$containerName}_db_data:/var/lib/mysql
     networks:
-      - webbadeploy_webbadeploy
+      - wharftales_wharftales
     restart: unless-stopped
 ";
         } elseif ($dbType === 'postgresql') {
@@ -884,7 +884,7 @@ services:
     volumes:
       - {$containerName}_db_data:/var/lib/postgresql/data
     networks:
-      - webbadeploy_webbadeploy
+      - wharftales_wharftales
     restart: unless-stopped
 ";
         }
@@ -902,7 +902,7 @@ volumes:
     $compose .= "
 
 networks:
-  webbadeploy_webbadeploy:
+  wharftales_wharftales:
     external: true";
     
     return $compose;
@@ -949,10 +949,10 @@ services:
         // Shared database configuration with unique table prefix
         $tablePrefix = 'wp_' . substr(md5($site['name']), 0, 8) . '_';
         $compose .= "
-      - WORDPRESS_DB_HOST=webbadeploy_db
-      - WORDPRESS_DB_NAME=webbadeploy
-      - WORDPRESS_DB_USER=webbadeploy
-      - WORDPRESS_DB_PASSWORD=webbadeploy_pass
+      - WORDPRESS_DB_HOST=wharftales_db
+      - WORDPRESS_DB_NAME=wharftales
+      - WORDPRESS_DB_USER=wharftales
+      - WORDPRESS_DB_PASSWORD=wharftales_pass
       - WORDPRESS_TABLE_PREFIX={$tablePrefix}";
     }
     
@@ -998,7 +998,7 @@ services:
     
     $compose .= "
     networks:
-      - webbadeploy_webbadeploy
+      - wharftales_wharftales
     restart: unless-stopped
 ";
     
@@ -1017,7 +1017,7 @@ services:
     volumes:
       - {$containerName}_db_data:/var/lib/mysql
     networks:
-      - webbadeploy_webbadeploy
+      - wharftales_wharftales
     restart: unless-stopped
 ";
     }
@@ -1030,7 +1030,7 @@ services:
     container_name: {$containerName}_redis
     command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
     networks:
-      - webbadeploy_webbadeploy
+      - wharftales_wharftales
     restart: unless-stopped
 ";
     }
@@ -1048,7 +1048,7 @@ volumes:
     $compose .= "
 
 networks:
-  webbadeploy_webbadeploy:
+  wharftales_wharftales:
     external: true";
     
     return $compose;
@@ -1067,14 +1067,14 @@ function deployWordPress($db, $site, $config) {
     $dbPass = generateRandomString(16);
     
     // Create database and user in MariaDB
-    // WordPress will use the shared webbadeploy database with a unique table prefix
+    // WordPress will use the shared wharftales database with a unique table prefix
     // This avoids the root password authentication issue
     
-    // We'll use the existing webbadeploy database and user
+    // We'll use the existing wharftales database and user
     // WordPress supports table prefixes, so multiple sites can share one database
-    $dbName = 'webbadeploy';  // Use the existing database
-    $dbUser = 'webbadeploy';  // Use the existing user
-    $dbPass = 'webbadeploy_pass';  // Use the existing password
+    $dbName = 'wharftales';  // Use the existing database
+    $dbUser = 'wharftales';  // Use the existing user
+    $dbPass = 'wharftales_pass';  // Use the existing password
     $tablePrefix = 'wp_' . substr(md5($site['name']), 0, 8) . '_';
     
     // Update the WordPress docker-compose to use these credentials
@@ -2342,7 +2342,7 @@ function getEnvironmentVariables($db, $siteId) {
         // Try both container path and host path
         $possiblePaths = [
             "/app/apps/{$site['type']}/sites/$containerName/docker-compose.yml",
-            "/opt/webbadeploy/apps/{$site['type']}/sites/$containerName/docker-compose.yml"
+            "/opt/wharftales/apps/{$site['type']}/sites/$containerName/docker-compose.yml"
         ];
         
         $composeFile = null;
@@ -2422,7 +2422,7 @@ function saveEnvironmentVariables($db) {
         // Try both container path and host path
         $possiblePaths = [
             "/app/apps/{$site['type']}/sites/$containerName/docker-compose.yml",
-            "/opt/webbadeploy/apps/{$site['type']}/sites/$containerName/docker-compose.yml"
+            "/opt/wharftales/apps/{$site['type']}/sites/$containerName/docker-compose.yml"
         ];
         
         $composeFile = null;
@@ -2641,8 +2641,8 @@ function getDashboardStats($db, $id) {
 
 function restartTraefik() {
     try {
-        // Change directory to webbadeploy
-        chdir('/opt/webbadeploy');
+        // Change directory to wharftales
+        chdir('/opt/wharftales');
         
         // Stop and remove the old container to ensure config changes are picked up
         exec("docker-compose stop traefik 2>&1", $output1, $returnCode1);
@@ -2671,7 +2671,7 @@ function restartTraefik() {
 function restartWebGui() {
     try {
         // Use docker-compose up with --force-recreate to apply new labels
-        exec("cd /opt/webbadeploy && docker-compose up -d --force-recreate web-gui 2>&1", $output, $returnCode);
+        exec("cd /opt/wharftales && docker-compose up -d --force-recreate web-gui 2>&1", $output, $returnCode);
         
         if ($returnCode === 0) {
             echo json_encode([
@@ -3415,7 +3415,7 @@ function disable2FAHandler() {
 function createRedisContainer($site, $db) {
     $containerName = $site['container_name'];
     $redisContainerName = $containerName . '_redis';
-    $networkName = 'webbadeploy_webbadeploy';
+    $networkName = 'wharftales_wharftales';
     
     // Check if Redis container already exists
     exec("docker ps -a --filter name=" . escapeshellarg($redisContainerName) . " --format '{{.Names}}' 2>&1", $checkOutput, $checkCode);
@@ -3478,7 +3478,7 @@ function enableRedisHandler($db) {
         }
         
         // Create Redis container
-        $networkName = 'webbadeploy_webbadeploy';
+        $networkName = 'wharftales_wharftales';
         $createCommand = sprintf(
             "docker run -d --name %s --network %s --restart unless-stopped redis:alpine",
             escapeshellarg($redisContainerName),

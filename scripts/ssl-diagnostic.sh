@@ -1,11 +1,11 @@
 #!/bin/bash
-# SSL Diagnostic and Fix Script for Webbadeploy
+# SSL Diagnostic and Fix Script for WharfTales
 # This script checks all SSL components and provides actionable fixes
 
 set -e
 
 echo "=========================================="
-echo "Webbadeploy SSL Diagnostic Tool"
+echo "WharfTales SSL Diagnostic Tool"
 echo "=========================================="
 echo ""
 
@@ -17,18 +17,18 @@ NC='\033[0m' # No Color
 
 # Check 1: Traefik Container Status
 echo "1. Checking Traefik Container..."
-if docker ps | grep -q webbadeploy_traefik; then
+if docker ps | grep -q wharftales_traefik; then
     echo -e "${GREEN}✓ Traefik container is running${NC}"
 else
     echo -e "${RED}✗ Traefik container is NOT running${NC}"
-    echo "  Fix: cd /opt/webbadeploy && docker-compose up -d traefik"
+    echo "  Fix: cd /opt/wharftales && docker-compose up -d traefik"
     exit 1
 fi
 echo ""
 
 # Check 2: Let's Encrypt Email Configuration
 echo "2. Checking Let's Encrypt Email..."
-EMAIL=$(docker inspect webbadeploy_traefik --format '{{range .Config.Cmd}}{{println .}}{{end}}' | grep "acme.email" | cut -d'=' -f2)
+EMAIL=$(docker inspect wharftales_traefik --format '{{range .Config.Cmd}}{{println .}}{{end}}' | grep "acme.email" | cut -d'=' -f2)
 echo "  Current email: $EMAIL"
 
 if echo "$EMAIL" | grep -qE "@example\.(com|net|org)|@test\."; then
@@ -44,7 +44,7 @@ echo ""
 
 # Check 3: acme.json File
 echo "3. Checking acme.json file..."
-ACME_FILE="/opt/webbadeploy/ssl/acme.json"
+ACME_FILE="/opt/wharftales/ssl/acme.json"
 if [ -f "$ACME_FILE" ]; then
     echo -e "${GREEN}✓ acme.json exists${NC}"
     
@@ -90,7 +90,7 @@ echo ""
 
 # Check 5: Sites with SSL enabled
 echo "5. Checking sites with SSL enabled..."
-SITES=$(docker exec webbadeploy_gui php -r "require '/var/www/html/includes/functions.php'; \$db = initDatabase(); \$sites = getAllSites(\$db); foreach(\$sites as \$site) { if(\$site['ssl'] == 1) { echo \$site['id'] . '|' . \$site['name'] . '|' . \$site['domain'] . '|' . \$site['ssl_cert_issued'] . PHP_EOL; } }")
+SITES=$(docker exec wharftales_gui php -r "require '/var/www/html/includes/functions.php'; \$db = initDatabase(); \$sites = getAllSites(\$db); foreach(\$sites as \$site) { if(\$site['ssl'] == 1) { echo \$site['id'] . '|' . \$site['name'] . '|' . \$site['domain'] . '|' . \$site['ssl_cert_issued'] . PHP_EOL; } }")
 
 if [ -z "$SITES" ]; then
     echo -e "${YELLOW}⚠ No sites with SSL enabled${NC}"
@@ -108,7 +108,7 @@ echo ""
 
 # Check 6: Recent Traefik Logs
 echo "6. Checking recent Traefik logs for errors..."
-ERRORS=$(docker logs webbadeploy_traefik --tail 100 2>&1 | grep -iE "error|fail|unable" | tail -5)
+ERRORS=$(docker logs wharftales_traefik --tail 100 2>&1 | grep -iE "error|fail|unable" | tail -5)
 if [ -z "$ERRORS" ]; then
     echo -e "${GREEN}✓ No recent errors in Traefik logs${NC}"
 else
@@ -126,7 +126,7 @@ if [ "$INVALID_EMAIL" = "1" ]; then
     echo -e "${RED}CRITICAL: Invalid Let's Encrypt email${NC}"
     echo "  1. Go to your dashboard Settings → SSL Configuration"
     echo "  2. Update email to a real address (not @example.com or @test.*)"
-    echo "  3. Run: cd /opt/webbadeploy && docker-compose restart traefik"
+    echo "  3. Run: cd /opt/wharftales && docker-compose restart traefik"
     echo ""
 fi
 
@@ -156,7 +156,7 @@ fi
 echo "To manually trigger certificate issuance:"
 echo "  1. Ensure domain DNS points to this server"
 echo "  2. Restart Traefik: docker-compose restart traefik"
-echo "  3. Check logs: docker logs webbadeploy_traefik -f"
+echo "  3. Check logs: docker logs wharftales_traefik -f"
 echo ""
 
 echo "For more details, visit the SSL Debug page in your dashboard"

@@ -1,6 +1,6 @@
 # SSL Configuration Guide
 
-Webbadeploy supports both **HTTP Challenge** and **DNS Challenge** methods for Let's Encrypt SSL certificates.
+WharfTales supports both **HTTP Challenge** and **DNS Challenge** methods for Let's Encrypt SSL certificates.
 
 ## Overview
 
@@ -26,7 +26,7 @@ Webbadeploy supports both **HTTP Challenge** and **DNS Challenge** methods for L
 3. Traefik must be able to respond to `/.well-known/acme-challenge/` requests
 
 ### Configuration
-1. In the Webbadeploy GUI, select **Custom Domain**
+1. In the WharfTales GUI, select **Custom Domain**
 2. Enable **SSL Certificate**
 3. Choose **HTTP Challenge** (default)
 4. Deploy your application
@@ -56,7 +56,7 @@ Webbadeploy supports both **HTTP Challenge** and **DNS Challenge** methods for L
 1. Log in to [Cloudflare Dashboard](https://dash.cloudflare.com)
 2. Go to **My Profile** → **API Tokens**
 3. Create token with **Zone:DNS:Edit** permissions
-4. In Webbadeploy:
+4. In WharfTales:
    - Choose **DNS Challenge**
    - Select **Cloudflare**
    - Enter your Cloudflare email
@@ -71,7 +71,7 @@ CF_API_KEY=your_global_api_key
 #### AWS Route53
 1. Create IAM user with `AmazonRoute53FullAccess` policy
 2. Generate Access Key ID and Secret Access Key
-3. In Webbadeploy:
+3. In WharfTales:
    - Choose **DNS Challenge**
    - Select **AWS Route53**
    - Enter AWS credentials
@@ -86,7 +86,7 @@ AWS_REGION=us-east-1
 #### DigitalOcean
 1. Go to [API Tokens](https://cloud.digitalocean.com/account/api/tokens)
 2. Generate new token with **Write** scope
-3. In Webbadeploy:
+3. In WharfTales:
    - Choose **DNS Challenge**
    - Select **DigitalOcean**
    - Enter your API token
@@ -102,7 +102,7 @@ DO_AUTH_TOKEN=dop_v1_your_token_here
 
 ### Manual Configuration
 
-To enable DNS challenge globally, update `/opt/webbadeploy/docker-compose.yml`:
+To enable DNS challenge globally, update `/opt/wharftales/docker-compose.yml`:
 
 ```yaml
 services:
@@ -125,7 +125,7 @@ services:
 
 ### Restart Traefik
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 docker-compose restart traefik
 ```
 
@@ -155,7 +155,7 @@ This will issue a certificate valid for:
 **Problem**: Certificate not issued
 - ✅ Check port 80 is accessible: `curl http://yourdomain.com/.well-known/acme-challenge/test`
 - ✅ Verify DNS points to correct IP: `dig yourdomain.com`
-- ✅ Check Traefik logs: `docker logs webbadeploy_traefik`
+- ✅ Check Traefik logs: `docker logs wharftales_traefik`
 
 ### DNS Challenge Issues
 
@@ -262,7 +262,7 @@ This will issue a certificate valid for:
 ## Support
 
 For issues or questions:
-1. Check Traefik logs: `docker logs webbadeploy_traefik`
+1. Check Traefik logs: `docker logs wharftales_traefik`
 2. Verify configuration in Traefik dashboard: `http://your-server:8080`
 3. Review this documentation
 4. Check Let's Encrypt status: https://letsencrypt.status.io/

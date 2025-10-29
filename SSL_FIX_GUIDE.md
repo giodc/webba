@@ -1,4 +1,4 @@
-# SSL Fix Guide - Webbadeploy
+# SSL Fix Guide - WharfTales
 
 ## Problem Summary
 
@@ -32,7 +32,7 @@ This is why your `acme.json` file is empty and certificates show as "Pending".
 Run this command on your server:
 
 ```bash
-cd /opt/webbadeploy && docker-compose restart traefik
+cd /opt/wharftales && docker-compose restart traefik
 ```
 
 Or use the "Restart Traefik" button in the Settings page.
@@ -52,7 +52,7 @@ Or use the "Restart Traefik" button in the Settings page.
 ### Run SSL Diagnostic Script
 
 ```bash
-/opt/webbadeploy/scripts/ssl-diagnostic.sh
+/opt/wharftales/scripts/ssl-diagnostic.sh
 ```
 
 This script will check:
@@ -136,7 +136,7 @@ sudo ufw allow 443/tcp
 ### Watch Traefik logs in real-time:
 
 ```bash
-docker logs webbadeploy_traefik -f
+docker logs wharftales_traefik -f
 ```
 
 Look for messages like:
@@ -146,7 +146,7 @@ Look for messages like:
 ### Check acme.json for certificates:
 
 ```bash
-sudo cat /opt/webbadeploy/ssl/acme.json | grep -i certificates
+sudo cat /opt/wharftales/ssl/acme.json | grep -i certificates
 ```
 
 If you see `"Certificates": null`, no certificates have been issued yet.
@@ -161,7 +161,7 @@ If you see `"Certificates": null`, no certificates have been issued yet.
 
 1. Go to **SSL Debug** page
 2. Click **"Mark Issued"** button next to each site
-3. Or run the sync script: `/opt/webbadeploy/gui/sync-ssl-status.php`
+3. Or run the sync script: `/opt/wharftales/gui/sync-ssl-status.php`
 
 ### Issue: "Domain not accessible via HTTPS"
 
@@ -185,18 +185,18 @@ Let's Encrypt has rate limits:
 
 The following files were enhanced to help diagnose and fix SSL issues:
 
-1. **`/opt/webbadeploy/scripts/ssl-diagnostic.sh`** (NEW)
+1. **`/opt/wharftales/scripts/ssl-diagnostic.sh`** (NEW)
    - Comprehensive SSL diagnostic script
    - Checks all SSL components
    - Provides actionable recommendations
 
-2. **`/opt/webbadeploy/gui/ssl-debug.php`** (ENHANCED)
+2. **`/opt/wharftales/gui/ssl-debug.php`** (ENHANCED)
    - Added prominent warning for invalid email
    - Shows if acme.json is empty
    - Better status indicators
    - Clearer error messages
 
-3. **`/opt/webbadeploy/gui/settings.php`** (EXISTING)
+3. **`/opt/wharftales/gui/settings.php`** (EXISTING)
    - Already has email validation
    - Prevents saving invalid emails
    - Automatically resets acme.json on email change

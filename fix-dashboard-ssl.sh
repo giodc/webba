@@ -3,7 +3,7 @@
 
 set -e
 
-cd /opt/webbadeploy || exit 1
+cd /opt/wharftales || exit 1
 
 echo "Fixing dashboard SSL configuration..."
 echo ""
@@ -35,7 +35,7 @@ echo ""
 echo "✅ Configuration updated!"
 echo ""
 echo "Monitor certificate acquisition:"
-echo "  docker logs webbadeploy_traefik -f"
+echo "  docker logs wharftales_traefik -f"
 echo ""
 echo "Dashboard will be available at:"
 echo "  https://dashboard.development.giodc.com"

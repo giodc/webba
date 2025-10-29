@@ -21,7 +21,7 @@ $db = initDatabase();
 
 // Try to read acme.json
 $acmePaths = [
-    '/opt/webbadeploy/ssl/acme.json',
+    '/opt/wharftales/ssl/acme.json',
     '/app/ssl/acme.json'
 ];
 

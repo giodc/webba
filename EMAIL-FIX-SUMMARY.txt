@@ -50,7 +50,7 @@ HOW IT WORKS NOW:
 FOR EXISTING SERVERS (One-Time Fix):
 
 Option 1: Use GUI (Easiest)
-  1. Login to Webbadeploy
+  1. Login to WharfTales
   2. Settings → SSL Configuration
   3. Enter valid email (NOT example.com)
   4. Click "Save SSL Settings"
@@ -58,7 +58,7 @@ Option 1: Use GUI (Easiest)
   6. ✅ Done!
 
 Option 2: Use Script
-  cd /opt/webbadeploy
+  cd /opt/wharftales
   bash fix-remote-email.sh
 
 ═══════════════════════════════════════════════════════════════════
@@ -75,11 +75,11 @@ FOR NEW INSTALLATIONS:
 VERIFICATION:
 
 Check current configuration:
-  cd /opt/webbadeploy
+  cd /opt/wharftales
   bash check-remote-email.sh
 
 Monitor Traefik logs:
-  docker logs webbadeploy_traefik -f
+  docker logs wharftales_traefik -f
 
 ═══════════════════════════════════════════════════════════════════
 

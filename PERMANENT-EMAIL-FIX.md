@@ -7,7 +7,7 @@ The system now **automatically handles Let's Encrypt email changes** properly, p
 ## Changes Made
 
 ### 1. Enhanced `updateComposeParameter()` Function
-**File:** `/opt/webbadeploy/gui/includes/functions.php`
+**File:** `/opt/wharftales/gui/includes/functions.php`
 
 **What it does now:**
 - ✅ Validates email doesn't contain forbidden domains (example.com, example.net, example.org, test.com)
@@ -39,7 +39,7 @@ if (file_exists($acmeFile)) {
 ```
 
 ### 2. Enhanced Settings Page
-**File:** `/opt/webbadeploy/gui/settings.php`
+**File:** `/opt/wharftales/gui/settings.php`
 
 **What it does now:**
 - ✅ Pre-validates email before attempting update
@@ -142,7 +142,7 @@ When email changes:
 For servers already running with wrong email:
 
 **Option 1: Use GUI (Recommended)**
-1. Log into Webbadeploy GUI
+1. Log into WharfTales GUI
 2. Go to Settings → SSL Configuration
 3. Enter correct email (not example.com)
 4. Click "Save SSL Settings"
@@ -151,7 +151,7 @@ For servers already running with wrong email:
 
 **Option 2: Use Script**
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 bash fix-remote-email.sh
 ```
 
@@ -187,27 +187,27 @@ New installations automatically:
    - acme.json backed up
    - Fresh acme.json created
 4. Click "Restart Traefik"
-5. Monitor logs: `docker logs webbadeploy_traefik -f`
+5. Monitor logs: `docker logs wharftales_traefik -f`
 6. **Expected:** No "forbidden domain" errors
 7. ✅ Certificates requested with correct email
 
 ## File Locations
 
 ### Modified Files
-- `/opt/webbadeploy/gui/includes/functions.php` - Core logic
-- `/opt/webbadeploy/gui/settings.php` - UI and validation
-- `/opt/webbadeploy/install.sh` - Standard installation
-- `/opt/webbadeploy/install-production.sh` - Production installation
+- `/opt/wharftales/gui/includes/functions.php` - Core logic
+- `/opt/wharftales/gui/settings.php` - UI and validation
+- `/opt/wharftales/install.sh` - Standard installation
+- `/opt/wharftales/install-production.sh` - Production installation
 
 ### Created Files
-- `/opt/webbadeploy/check-remote-email.sh` - Diagnostic tool
-- `/opt/webbadeploy/fix-remote-email.sh` - One-time fix script
-- `/opt/webbadeploy/FIX-EMAIL-REMOTE.md` - Remote fix guide
-- `/opt/webbadeploy/PERMANENT-EMAIL-FIX.md` - This document
+- `/opt/wharftales/check-remote-email.sh` - Diagnostic tool
+- `/opt/wharftales/fix-remote-email.sh` - One-time fix script
+- `/opt/wharftales/FIX-EMAIL-REMOTE.md` - Remote fix guide
+- `/opt/wharftales/PERMANENT-EMAIL-FIX.md` - This document
 
 ### Automatic Backups
 When email changes, old acme.json saved to:
-- `/opt/webbadeploy/ssl/acme.json.backup.YYYYMMDDHHMMSS`
+- `/opt/wharftales/ssl/acme.json.backup.YYYYMMDDHHMMSS`
 
 ## Verification
 
@@ -215,7 +215,7 @@ When email changes, old acme.json saved to:
 
 ```bash
 # Check if functions.php has the fix
-grep -A 5 "forbidden by Let's Encrypt" /opt/webbadeploy/gui/includes/functions.php
+grep -A 5 "forbidden by Let's Encrypt" /opt/wharftales/gui/includes/functions.php
 
 # Should show the validation code
 ```
@@ -223,7 +223,7 @@ grep -A 5 "forbidden by Let's Encrypt" /opt/webbadeploy/gui/includes/functions.p
 ### Check Current Email Configuration
 
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 bash check-remote-email.sh
 ```
 
@@ -246,22 +246,22 @@ docker-compose restart traefik
 
 **Check permissions:**
 ```bash
-ls -la /opt/webbadeploy/ssl/acme.json
+ls -la /opt/wharftales/ssl/acme.json
 ```
 
 **Should be:** `-rw------- 1 root root`
 
 **Fix if needed:**
 ```bash
-sudo chmod 600 /opt/webbadeploy/ssl/acme.json
-sudo chown root:root /opt/webbadeploy/ssl/acme.json
+sudo chmod 600 /opt/wharftales/ssl/acme.json
+sudo chown root:root /opt/wharftales/ssl/acme.json
 ```
 
 ### Issue: Still getting "forbidden domain" error
 
 **Check what email Traefik is actually using:**
 ```bash
-docker inspect webbadeploy_traefik | grep "acme.email"
+docker inspect wharftales_traefik | grep "acme.email"
 ```
 
 **If wrong, force recreate:**

@@ -3,7 +3,7 @@
 ## Issue 1: Dashboard Not Loading
 **Problem**: Dashboard was not running due to PHP warning in authentication system.
 
-**Root Cause**: Line 58 in `/opt/webbadeploy/gui/includes/auth.php` was accessing `$_SERVER['REQUEST_URI']` without checking if it exists, causing a PHP warning that prevented headers from being sent.
+**Root Cause**: Line 58 in `/opt/wharftales/gui/includes/auth.php` was accessing `$_SERVER['REQUEST_URI']` without checking if it exists, causing a PHP warning that prevented headers from being sent.
 
 **Fix Applied**:
 - Added null coalescing operator (`??`) to provide fallback value of `'/'`
@@ -15,13 +15,13 @@
 ---
 
 ## Issue 2: Let's Encrypt Email Update Permission Denied
-**Problem**: When trying to save Let's Encrypt email in settings, got error: `sed: couldn't open temporary file /opt/webbadeploy/sed6KJPWD: Permission denied`
+**Problem**: When trying to save Let's Encrypt email in settings, got error: `sed: couldn't open temporary file /opt/wharftales/sed6KJPWD: Permission denied`
 
-**Root Cause**: The `sed -i` command was trying to create temporary files in `/opt/webbadeploy/` directory, which the container didn't have write permissions for. The directory is owned by `giodc:giodc` with `755` permissions.
+**Root Cause**: The `sed -i` command was trying to create temporary files in `/opt/wharftales/` directory, which the container didn't have write permissions for. The directory is owned by `giodc:giodc` with `755` permissions.
 
 **Fixes Applied**:
 
-1. **Primary Fix - Replaced sed with PHP file operations** (`/opt/webbadeploy/gui/settings.php`):
+1. **Primary Fix - Replaced sed with PHP file operations** (`/opt/wharftales/gui/settings.php`):
    - Changed from using `sed -i` command to native PHP `file_get_contents()` and `file_put_contents()`
    - Uses `preg_replace()` to update the email in memory
    - No longer requires write permissions to the directory, only to the file itself
@@ -29,15 +29,15 @@
 
 2. **File Permissions** (for current installation):
    ```bash
-   sudo chown www-data:www-data /opt/webbadeploy/docker-compose.yml
-   sudo chmod 664 /opt/webbadeploy/docker-compose.yml
+   sudo chown www-data:www-data /opt/wharftales/docker-compose.yml
+   sudo chmod 664 /opt/wharftales/docker-compose.yml
    ```
 
-3. **Updated `/opt/webbadeploy/fix-docker-permissions.sh`**:
+3. **Updated `/opt/wharftales/fix-docker-permissions.sh`**:
    - Added docker-compose.yml permission fix to the script
    - Now sets proper ownership and permissions automatically
 
-4. **Updated `/opt/webbadeploy/install-production.sh`**:
+4. **Updated `/opt/wharftales/install-production.sh`**:
    - Added docker-compose.yml permission configuration during installation
    - Ensures new installations have correct permissions from the start
 
@@ -57,11 +57,11 @@
 
 ## Files Modified
 
-1. `/opt/webbadeploy/gui/includes/auth.php` - Fixed REQUEST_URI access
-2. `/opt/webbadeploy/gui/settings.php` - Replaced sed with PHP file operations
-3. `/opt/webbadeploy/fix-docker-permissions.sh` - Added docker-compose.yml permissions
-4. `/opt/webbadeploy/install-production.sh` - Added docker-compose.yml permissions to install process
-5. `/opt/webbadeploy/docker-compose.yml` - Updated ownership and permissions
+1. `/opt/wharftales/gui/includes/auth.php` - Fixed REQUEST_URI access
+2. `/opt/wharftales/gui/settings.php` - Replaced sed with PHP file operations
+3. `/opt/wharftales/fix-docker-permissions.sh` - Added docker-compose.yml permissions
+4. `/opt/wharftales/install-production.sh` - Added docker-compose.yml permissions to install process
+5. `/opt/wharftales/docker-compose.yml` - Updated ownership and permissions
 
 ---
 

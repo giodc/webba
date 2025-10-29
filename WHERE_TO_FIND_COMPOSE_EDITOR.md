@@ -8,7 +8,7 @@ http://your-server-ip:9000/settings.php
 ```
 - Scroll down to **"Advanced Configuration"** section
 - Click **"Edit Main Traefik Config (YAML)"** button
-- This edits the main `/opt/webbadeploy/docker-compose.yml`
+- This edits the main `/opt/wharftales/docker-compose.yml`
 
 ### 2. **Site Edit Page** (Site-Specific Config)
 ```

@@ -2,7 +2,7 @@
 
 ## 📦 What's Included
 
-This production deployment package includes everything you need to securely deploy Webbadeploy to production.
+This production deployment package includes everything you need to securely deploy WharfTales to production.
 
 ### Files Created
 
@@ -30,27 +30,27 @@ This production deployment package includes everything you need to securely depl
 
 ### Step 1: Run Security Check
 ```bash
-sudo bash /opt/webbadeploy/production-readiness-check.sh --dry-run
+sudo bash /opt/wharftales/production-readiness-check.sh --dry-run
 ```
 
 This will scan your installation and report any security issues **without making changes**.
 
 ### Step 2: Apply Fixes
 ```bash
-sudo bash /opt/webbadeploy/production-readiness-check.sh
+sudo bash /opt/wharftales/production-readiness-check.sh
 ```
 
 This will automatically fix most common security issues.
 
 ### Step 3: Verify
 ```bash
-sudo bash /opt/webbadeploy/production-readiness-check.sh --dry-run
+sudo bash /opt/wharftales/production-readiness-check.sh --dry-run
 ```
 
 Run again to verify all issues are resolved. You should see:
 ```
 ✓ PRODUCTION READY!
-Your Webbadeploy installation is secure and ready for production.
+Your WharfTales installation is secure and ready for production.
 ```
 
 ---
@@ -164,7 +164,7 @@ Some things **cannot** be auto-fixed and require manual intervention:
 ### 1. Change Default Database Password
 ```bash
 # Edit docker-compose.yml
-nano /opt/webbadeploy/docker-compose.yml
+nano /opt/wharftales/docker-compose.yml
 
 # Change these lines:
 MYSQL_ROOT_PASSWORD=YOUR_STRONG_PASSWORD_HERE
@@ -195,14 +195,14 @@ ssh -L 9000:localhost:9000 user@your-server
 1. Update domain in docker-compose.yml
 2. Set proper email for Let's Encrypt
 3. Restart Traefik: `docker-compose restart traefik`
-4. Verify: `docker logs webbadeploy_traefik`
+4. Verify: `docker logs wharftales_traefik`
 
 ---
 
 ## 📖 Documentation Structure
 
 ```
-/opt/webbadeploy/
+/opt/wharftales/
 ├── production-readiness-check.sh      # Main security script
 ├── PRODUCTION-README.md               # This file (overview)
 ├── PRODUCTION-DEPLOYMENT-GUIDE.md     # Complete guide
@@ -268,7 +268,7 @@ ssh -L 9000:localhost:9000 user@your-server
 ### Successful Check
 ```
 ╔════════════════════════════════════════════════════╗
-║   Webbadeploy Production Readiness Check          ║
+║   WharfTales Production Readiness Check          ║
 ║   Security Hardening & Verification Script        ║
 ╚════════════════════════════════════════════════════╝
 
@@ -289,7 +289,7 @@ Critical Issues:     0
 Warnings:            0
 
 ✓ PRODUCTION READY!
-Your Webbadeploy installation is secure and ready for production.
+Your WharfTales installation is secure and ready for production.
 ```
 
 ### Issues Found
@@ -411,7 +411,7 @@ Your installation is **production ready** when:
 **Ready to deploy?**
 
 ```bash
-sudo bash /opt/webbadeploy/production-readiness-check.sh
+sudo bash /opt/wharftales/production-readiness-check.sh
 ```
 
 **Last Updated**: 2025-10-11  

@@ -181,14 +181,14 @@ ls -la gui/templates/
 
 ### Check Template Syntax
 ```bash
-docker exec webbadeploy_gui php -l /var/www/html/templates/php-welcome.php
-docker exec webbadeploy_gui php -l /var/www/html/templates/laravel-welcome.php
+docker exec wharftales_gui php -l /var/www/html/templates/php-welcome.php
+docker exec wharftales_gui php -l /var/www/html/templates/laravel-welcome.php
 # Expected: No syntax errors detected ✅
 ```
 
 ### Check API Syntax
 ```bash
-docker exec webbadeploy_gui php -l /var/www/html/api.php
+docker exec wharftales_gui php -l /var/www/html/api.php
 # Expected: No syntax errors detected ✅
 ```
 
@@ -280,13 +280,13 @@ Error: file_get_contents(): failed to open stream
 ```
 **Solution:** Ensure templates directory exists in container:
 ```bash
-docker exec webbadeploy_gui ls -la /var/www/html/templates/
+docker exec wharftales_gui ls -la /var/www/html/templates/
 ```
 
 ### Parse Error in Template
 ```bash
 # Test template syntax
-docker exec webbadeploy_gui php -l /var/www/html/templates/php-welcome.php
+docker exec wharftales_gui php -l /var/www/html/templates/php-welcome.php
 ```
 
 ### Placeholder Not Replaced

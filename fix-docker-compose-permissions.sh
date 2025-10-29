@@ -5,19 +5,19 @@
 
 echo "Fixing docker-compose.yml permissions..."
 
-if [ ! -f "/opt/webbadeploy/docker-compose.yml" ]; then
+if [ ! -f "/opt/wharftales/docker-compose.yml" ]; then
     echo "Error: docker-compose.yml not found"
     exit 1
 fi
 
 # Set ownership to www-data (GUI runs as www-data in Apache)
-chown www-data:www-data /opt/webbadeploy/docker-compose.yml
+chown www-data:www-data /opt/wharftales/docker-compose.yml
 
 # Set permissions to 664 (owner and group can write, others can read)
-chmod 664 /opt/webbadeploy/docker-compose.yml
+chmod 664 /opt/wharftales/docker-compose.yml
 
 echo "✓ Permissions fixed:"
-ls -la /opt/webbadeploy/docker-compose.yml
+ls -la /opt/wharftales/docker-compose.yml
 
 echo ""
 echo "The GUI should now be able to update dashboard configuration."

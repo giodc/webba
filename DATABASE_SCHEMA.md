@@ -2,7 +2,7 @@
 
 ## Overview
 
-Webbadeploy uses SQLite for data storage with automatic schema migrations. The database is located at `/app/data/database.sqlite` inside the Docker container.
+WharfTales uses SQLite for data storage with automatic schema migrations. The database is located at `/app/data/database.sqlite` inside the Docker container.
 
 ## Automatic Migrations
 
@@ -221,7 +221,7 @@ If something goes wrong, restore from backup:
 docker-compose down
 
 # Restore database backup
-cp /opt/webbadeploy/backups/database_backup_YYYYMMDD.sqlite /opt/webbadeploy/data/database.sqlite
+cp /opt/wharftales/backups/database_backup_YYYYMMDD.sqlite /opt/wharftales/data/database.sqlite
 
 # Start the application
 docker-compose up -d
@@ -239,10 +239,10 @@ The system automatically backs up the database before major operations.
 
 ```bash
 # Create a backup
-docker exec webbadeploy-gui-1 cp /app/data/database.sqlite /app/data/database_backup_$(date +%Y%m%d_%H%M%S).sqlite
+docker exec wharftales-gui-1 cp /app/data/database.sqlite /app/data/database_backup_$(date +%Y%m%d_%H%M%S).sqlite
 
 # Copy to host
-docker cp webbadeploy-gui-1:/app/data/database_backup_*.sqlite ./backups/
+docker cp wharftales-gui-1:/app/data/database_backup_*.sqlite ./backups/
 ```
 
 ### Scheduled Backups
@@ -251,7 +251,7 @@ Add to crontab:
 
 ```bash
 # Daily backup at 2 AM
-0 2 * * * docker exec webbadeploy-gui-1 cp /app/data/database.sqlite /app/data/database_backup_$(date +\%Y\%m\%d).sqlite
+0 2 * * * docker exec wharftales-gui-1 cp /app/data/database.sqlite /app/data/database_backup_$(date +\%Y\%m\%d).sqlite
 ```
 
 ---
@@ -280,7 +280,7 @@ docker-compose restart gui
 
 ```bash
 docker-compose down
-cp /opt/webbadeploy/backups/database_backup_latest.sqlite /opt/webbadeploy/data/database.sqlite
+cp /opt/wharftales/backups/database_backup_latest.sqlite /opt/wharftales/data/database.sqlite
 docker-compose up -d
 ```
 

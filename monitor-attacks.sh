@@ -6,7 +6,7 @@ echo "Press Ctrl+C to stop"
 echo ""
 
 # Watch for suspicious requests
-docker logs webbadeploy_traefik -f 2>&1 | grep --line-buffered -E '\.env|\.git|config\.json|telescope|info\.php|wp-admin|phpmyadmin|_all_dbs' | while read line; do
+docker logs wharftales_traefik -f 2>&1 | grep --line-buffered -E '\.env|\.git|config\.json|telescope|info\.php|wp-admin|phpmyadmin|_all_dbs' | while read line; do
     # Extract IP and path
     IP=$(echo "$line" | grep -oP '"ClientAddr":"\K[^:]+')
     PATH=$(echo "$line" | grep -oP '"RequestPath":"\K[^"]+')

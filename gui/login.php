@@ -143,7 +143,7 @@ $csrfToken = generateCSRFToken();
                 <div class="logo-icon">
                     <i class="bi bi-cloud-arrow-up"></i>
                 </div>
-                <h1>Webbadeploy</h1>
+                <h1>WharfTales</h1>
                 <p>Sign in to your account</p>
             </div>
 

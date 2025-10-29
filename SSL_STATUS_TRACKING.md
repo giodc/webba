@@ -2,7 +2,7 @@
 
 ## Problem
 The dashboard was showing "SSL: Pending" for all sites even when SSL certificates were working. This was because:
-1. The `hasCertificate()` function tried to read `/opt/webbadeploy/ssl/acme.json`
+1. The `hasCertificate()` function tried to read `/opt/wharftales/ssl/acme.json`
 2. The file had permission issues or showed `"Certificates": null`
 3. The function couldn't reliably determine if certificates were actually issued
 
@@ -16,7 +16,7 @@ Added two new columns to the `sites` table:
 - `ssl_cert_issued` (INTEGER): 0 = pending, 1 = issued
 - `ssl_cert_issued_at` (DATETIME): Timestamp when certificate was marked as issued
 
-### 2. Functions Added (`/opt/webbadeploy/gui/includes/functions.php`)
+### 2. Functions Added (`/opt/wharftales/gui/includes/functions.php`)
 
 **`hasCertificate($domain)`**
 - Now checks the database instead of reading acme.json
@@ -30,14 +30,14 @@ Added two new columns to the `sites` table:
 - Marks a certificate as removed/revoked for a site
 - Sets `ssl_cert_issued = 0` and `ssl_cert_issued_at = NULL`
 
-### 3. SSL Debug Page (`/opt/webbadeploy/gui/ssl-debug.php`)
+### 3. SSL Debug Page (`/opt/wharftales/gui/ssl-debug.php`)
 Enhanced with certificate management:
 - Added "Certificate" column showing Issued/Pending status
 - Added "Mark Issued" button for pending certificates
 - Added "Mark Removed" button for issued certificates
 - Shows certificate issue date when available
 
-### 4. Sync Script (`/opt/webbadeploy/gui/sync-ssl-status.php`)
+### 4. Sync Script (`/opt/wharftales/gui/sync-ssl-status.php`)
 A utility script to sync certificate status from acme.json to database:
 - Reads acme.json and extracts all certificate domains
 - Compares with database and updates status accordingly
@@ -55,7 +55,7 @@ A utility script to sync certificate status from acme.json to database:
 ### Automatic Sync (Optional)
 Run the sync script from command line:
 ```bash
-docker exec webbadeploy_gui php /app/sync-ssl-status.php
+docker exec wharftales_gui php /app/sync-ssl-status.php
 ```
 
 Or access it via browser (requires admin permissions):

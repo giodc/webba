@@ -8,7 +8,7 @@ header('Content-Type: text/plain');
 
 echo "=== Docker Compose File Access Test ===\n\n";
 
-$dockerComposePath = '/opt/webbadeploy/docker-compose.yml';
+$dockerComposePath = '/opt/wharftales/docker-compose.yml';
 
 echo "Testing file: $dockerComposePath\n\n";
 

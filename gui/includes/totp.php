@@ -61,7 +61,7 @@ class TOTP {
     /**
      * Generate QR code URL for authenticator apps
      */
-    public function getQRCodeUrl($username, $secret, $issuer = 'Webbadeploy') {
+    public function getQRCodeUrl($username, $secret, $issuer = 'WharfTales') {
         $label = urlencode($issuer) . ':' . urlencode($username);
         $params = http_build_query([
             'secret' => $secret,
@@ -80,7 +80,7 @@ class TOTP {
     /**
      * Get provisioning URI for manual entry
      */
-    public function getProvisioningUri($username, $secret, $issuer = 'Webbadeploy') {
+    public function getProvisioningUri($username, $secret, $issuer = 'WharfTales') {
         $label = urlencode($issuer) . ':' . urlencode($username);
         $params = http_build_query([
             'secret' => $secret,

@@ -32,7 +32,7 @@ try {
     // ========================================================================
     echo "Step 1: Migrating main Traefik configuration...\n";
     
-    $mainComposePath = '/opt/webbadeploy/docker-compose.yml';
+    $mainComposePath = '/opt/wharftales/docker-compose.yml';
     
     if (file_exists($mainComposePath)) {
         $yaml = file_get_contents($mainComposePath);
@@ -78,7 +78,7 @@ try {
             // Try both container path and host path
             $possiblePaths = [
                 "/app/apps/{$siteType}/sites/{$containerName}/docker-compose.yml",
-                "/opt/webbadeploy/apps/{$siteType}/sites/{$containerName}/docker-compose.yml"
+                "/opt/wharftales/apps/{$siteType}/sites/{$containerName}/docker-compose.yml"
             ];
             
             $composePath = null;

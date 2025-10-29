@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Webbadeploy Security Fix Script
+# WharfTales Security Fix Script
 # This script fixes the critical permission issues
 
 set -e
@@ -10,7 +10,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-echo -e "${GREEN}Webbadeploy Security Fix Script${NC}"
+echo -e "${GREEN}WharfTales Security Fix Script${NC}"
 echo "================================"
 echo ""
 
@@ -22,31 +22,31 @@ fi
 
 # Backup current permissions
 echo -e "${YELLOW}Creating backup of current state...${NC}"
-BACKUP_DIR="/opt/webbadeploy_backup_$(date +%Y%m%d_%H%M%S)"
+BACKUP_DIR="/opt/wharftales_backup_$(date +%Y%m%d_%H%M%S)"
 mkdir -p "$BACKUP_DIR"
-getfacl -R /opt/webbadeploy > "$BACKUP_DIR/permissions_backup.txt" 2>/dev/null || true
+getfacl -R /opt/wharftales > "$BACKUP_DIR/permissions_backup.txt" 2>/dev/null || true
 echo -e "${GREEN}✓ Backup created at $BACKUP_DIR${NC}"
 
 # Fix directory permissions (remove world-writable)
 echo -e "\n${YELLOW}Fixing directory permissions...${NC}"
-cd /opt/webbadeploy
+cd /opt/wharftales
 
 # Main directory
-chmod 755 /opt/webbadeploy
+chmod 755 /opt/wharftales
 
 # Apps directory - 755 instead of 777
-chmod 755 /opt/webbadeploy/apps
-find /opt/webbadeploy/apps -type d -exec chmod 755 {} \;
-find /opt/webbadeploy/apps -type f -exec chmod 644 {} \;
+chmod 755 /opt/wharftales/apps
+find /opt/wharftales/apps -type d -exec chmod 755 {} \;
+find /opt/wharftales/apps -type f -exec chmod 644 {} \;
 
 # Data directory - 755 instead of 777
-chmod 755 /opt/webbadeploy/data
-find /opt/webbadeploy/data -type d -exec chmod 755 {} \;
-find /opt/webbadeploy/data -type f -exec chmod 644 {} \;
+chmod 755 /opt/wharftales/data
+find /opt/wharftales/data -type d -exec chmod 755 {} \;
+find /opt/wharftales/data -type f -exec chmod 644 {} \;
 
 # Make sure www-data owns the files
-chown -R www-data:www-data /opt/webbadeploy/apps
-chown -R www-data:www-data /opt/webbadeploy/data
+chown -R www-data:www-data /opt/wharftales/apps
+chown -R www-data:www-data /opt/wharftales/data
 
 echo -e "${GREEN}✓ Directory permissions fixed${NC}"
 
@@ -69,23 +69,23 @@ else
 fi
 
 # Fix docker-compose.yml permissions
-if [ -f /opt/webbadeploy/docker-compose.yml ]; then
-    chmod 640 /opt/webbadeploy/docker-compose.yml
-    chown root:www-data /opt/webbadeploy/docker-compose.yml
+if [ -f /opt/wharftales/docker-compose.yml ]; then
+    chmod 640 /opt/wharftales/docker-compose.yml
+    chown root:www-data /opt/wharftales/docker-compose.yml
     echo -e "${GREEN}✓ docker-compose.yml permissions fixed${NC}"
 fi
 
 # Fix SSL directory permissions
-if [ -d /opt/webbadeploy/ssl ]; then
-    chmod 750 /opt/webbadeploy/ssl
-    chown -R root:www-data /opt/webbadeploy/ssl
-    find /opt/webbadeploy/ssl -type f -exec chmod 640 {} \;
+if [ -d /opt/wharftales/ssl ]; then
+    chmod 750 /opt/wharftales/ssl
+    chown -R root:www-data /opt/wharftales/ssl
+    find /opt/wharftales/ssl -type f -exec chmod 640 {} \;
     echo -e "${GREEN}✓ SSL directory secured${NC}"
 fi
 
 # Restart GUI container to apply new permissions
 echo -e "\n${YELLOW}Restarting GUI container...${NC}"
-docker restart webbadeploy_gui
+docker restart wharftales_gui
 sleep 5
 echo -e "${GREEN}✓ GUI container restarted${NC}"
 
@@ -95,13 +95,13 @@ echo -e "${GREEN}Security fixes applied!${NC}"
 echo -e "${GREEN}================================${NC}"
 echo ""
 echo "Changes made:"
-echo "  • /opt/webbadeploy/apps: 777 → 755"
-echo "  • /opt/webbadeploy/data: 777 → 755"
+echo "  • /opt/wharftales/apps: 777 → 755"
+echo "  • /opt/wharftales/data: 777 → 755"
 echo "  • /var/run/docker.sock: 666 → 660 (with docker group)"
 echo "  • Ownership: www-data:www-data"
 echo ""
 echo -e "${YELLOW}Next steps:${NC}"
-echo "  1. Review /opt/webbadeploy/SECURITY_FIXES.md for additional fixes"
+echo "  1. Review /opt/wharftales/SECURITY_FIXES.md for additional fixes"
 echo "  2. Secure SFTP access with firewall rules"
 echo "  3. Change database passwords"
 echo "  4. Scan WordPress for malware"

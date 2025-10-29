@@ -55,7 +55,7 @@ Deploy PHP and Laravel applications directly from GitHub repositories - public o
    - Set permissions: `Contents: Read-only`
    - Copy token
 
-2. **Enter in Webbadeploy**:
+2. **Enter in WharfTales**:
    - Paste token in "Personal Access Token" field
    - Token will be **encrypted automatically**
    - Never stored in plain text

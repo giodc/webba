@@ -190,7 +190,7 @@ function createWordPressDatabase($siteId, $dbConfig) {
             GRANT ALL PRIVILEGES ON wp_{$siteId}.* TO '{$dbConfig['user']}'@'%';
             FLUSH PRIVILEGES;";
 
-    $result = executeDockerCommand("exec webbadeploy_db mysql -u root -pwebbadeploy_root_pass -e \"$sql\"");
+    $result = executeDockerCommand("exec wharftales_db mysql -u root -pwharftales_root_pass -e \"$sql\"");
     if (!$result['success']) {
         throw new Exception('Failed to create database: ' . $result['output']);
     }
@@ -279,7 +279,7 @@ function deleteSiteById($db, $id) {
 
         // Remove SSL certificates if they exist
         if ($site['ssl']) {
-            executeDockerCommand("exec webbadeploy_nginx certbot delete --cert-name {$site['domain']} --non-interactive");
+            executeDockerCommand("exec wharftales_nginx certbot delete --cert-name {$site['domain']} --non-interactive");
         }
 
         // Delete database record
@@ -311,14 +311,14 @@ services:
     volumes:
       - php_{$site['container_name']}_data:/var/www/html
     networks:
-      - webbadeploy
+      - wharftales
     restart: unless-stopped
 
 volumes:
   php_{$site['container_name']}_data:
 
 networks:
-  webbadeploy:
+  wharftales:
     external: true";
 }
 
@@ -331,19 +331,19 @@ services:
     volumes:
       - laravel_{$site['container_name']}_data:/var/www/html
     environment:
-      - DB_HOST=webbadeploy_db
+      - DB_HOST=wharftales_db
       - DB_DATABASE=laravel_{$site['container_name']}
       - DB_USERNAME=laravel_user
       - DB_PASSWORD=laravel_pass
     networks:
-      - webbadeploy
+      - wharftales
     restart: unless-stopped
 
 volumes:
   laravel_{$site['container_name']}_data:
 
 networks:
-  webbadeploy:
+  wharftales:
     external: true";
 }
 ?>

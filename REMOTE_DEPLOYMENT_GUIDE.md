@@ -2,7 +2,7 @@
 
 ## Overview
 
-This guide explains how to deploy fixes and updates to WebbaDeploy installations on multiple remote servers automatically.
+This guide explains how to deploy fixes and updates to WharfTales installations on multiple remote servers automatically.
 
 ---
 
@@ -30,7 +30,7 @@ This guide explains how to deploy fixes and updates to WebbaDeploy installations
 - Update scripts preserve user configurations (email, domains, etc.)
 
 ### 2. **Database Migrations** (Automatic)
-- Migration scripts are stored in `/opt/webbadeploy/gui/migrations/`
+- Migration scripts are stored in `/opt/wharftales/gui/migrations/`
 - Migrations run automatically during updates
 - Each migration is idempotent (safe to run multiple times)
 - Migrations check if changes are already applied
@@ -64,7 +64,7 @@ All migrations are automatically applied during updates:
 **On each remote server:**
 
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 sudo ./safe-update.sh
 ```
 
@@ -80,7 +80,7 @@ sudo ./safe-update.sh
 ### Method 2: Using install.sh
 
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 sudo ./install.sh
 ```
 
@@ -89,7 +89,7 @@ Detects existing installation and runs in UPDATE_MODE.
 ### Method 3: Using update.sh
 
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 sudo ./update.sh
 ```
 
@@ -106,12 +106,12 @@ For 2-5 servers, SSH into each and run the update:
 ```bash
 # Server 1
 ssh user@server1.example.com
-cd /opt/webbadeploy && sudo ./safe-update.sh
+cd /opt/wharftales && sudo ./safe-update.sh
 exit
 
 # Server 2
 ssh user@server2.example.com
-cd /opt/webbadeploy && sudo ./safe-update.sh
+cd /opt/wharftales && sudo ./safe-update.sh
 exit
 
 # etc...
@@ -119,25 +119,25 @@ exit
 
 ### Option B: Ansible Playbook (Recommended for 5+ servers)
 
-Create `/opt/webbadeploy/ansible/update-all-servers.yml`:
+Create `/opt/wharftales/ansible/update-all-servers.yml`:
 
 ```yaml
 ---
-- name: Update WebbaDeploy on all servers
-  hosts: webbadeploy_servers
+- name: Update WharfTales on all servers
+  hosts: wharftales_servers
   become: yes
   tasks:
     - name: Pull latest code
       git:
         repo: 'https://github.com/giodc/webba.git'
-        dest: /opt/webbadeploy
+        dest: /opt/wharftales
         version: master
         force: yes
       
     - name: Run safe update script
-      command: /opt/webbadeploy/safe-update.sh
+      command: /opt/wharftales/safe-update.sh
       args:
-        chdir: /opt/webbadeploy
+        chdir: /opt/wharftales
       register: update_result
       
     - name: Show update results
@@ -145,10 +145,10 @@ Create `/opt/webbadeploy/ansible/update-all-servers.yml`:
         var: update_result.stdout_lines
 ```
 
-**Inventory file** (`/opt/webbadeploy/ansible/hosts.ini`):
+**Inventory file** (`/opt/wharftales/ansible/hosts.ini`):
 
 ```ini
-[webbadeploy_servers]
+[wharftales_servers]
 server1.example.com ansible_user=root
 server2.example.com ansible_user=root
 server3.example.com ansible_user=root
@@ -162,7 +162,7 @@ ansible-playbook -i ansible/hosts.ini ansible/update-all-servers.yml
 
 ### Option C: Bash Script for Multiple Servers
 
-Create `/opt/webbadeploy/scripts/update-all-remote.sh`:
+Create `/opt/wharftales/scripts/update-all-remote.sh`:
 
 ```bash
 #!/bin/bash
@@ -174,7 +174,7 @@ SERVERS=(
     "user@server3.example.com"
 )
 
-echo "Updating WebbaDeploy on ${#SERVERS[@]} servers..."
+echo "Updating WharfTales on ${#SERVERS[@]} servers..."
 
 for server in "${SERVERS[@]}"; do
     echo ""
@@ -183,7 +183,7 @@ for server in "${SERVERS[@]}"; do
     echo "=========================================="
     
     ssh "$server" << 'ENDSSH'
-        cd /opt/webbadeploy
+        cd /opt/wharftales
         sudo ./safe-update.sh
 ENDSSH
     
@@ -201,7 +201,7 @@ echo "Update complete for all servers!"
 **Usage:**
 
 ```bash
-chmod +x /opt/webbadeploy/scripts/update-all-remote.sh
+chmod +x /opt/wharftales/scripts/update-all-remote.sh
 ./scripts/update-all-remote.sh
 ```
 
@@ -213,7 +213,7 @@ When you need to deploy a new fix to all servers:
 
 ### 1. Create Migration Script
 
-Create `/opt/webbadeploy/gui/migrations/your-fix-name.php`:
+Create `/opt/wharftales/gui/migrations/your-fix-name.php`:
 
 ```php
 #!/usr/bin/env php
@@ -252,16 +252,16 @@ try {
 ### 2. Make it Executable
 
 ```bash
-chmod +x /opt/webbadeploy/gui/migrations/your-fix-name.php
+chmod +x /opt/wharftales/gui/migrations/your-fix-name.php
 ```
 
 ### 3. Add to Update Scripts
 
-Edit `/opt/webbadeploy/install.sh` and `/opt/webbadeploy/safe-update.sh`:
+Edit `/opt/wharftales/install.sh` and `/opt/wharftales/safe-update.sh`:
 
 ```bash
 # Add this line with other migrations:
-docker exec webbadeploy_gui php /var/www/html/migrations/your-fix-name.php 2>/dev/null || echo "Migration already applied"
+docker exec wharftales_gui php /var/www/html/migrations/your-fix-name.php 2>/dev/null || echo "Migration already applied"
 ```
 
 ### 4. Commit and Push
@@ -285,10 +285,10 @@ Use one of the methods above to update all servers.
 
 ```bash
 # Test the migration directly
-docker exec webbadeploy_gui php /var/www/html/migrations/your-fix-name.php
+docker exec wharftales_gui php /var/www/html/migrations/your-fix-name.php
 
 # Test full update process
-cd /opt/webbadeploy
+cd /opt/wharftales
 sudo ./safe-update.sh
 ```
 
@@ -309,15 +309,15 @@ If an update fails:
 
 ### 1. Restore from Backup
 
-Each update creates a backup in `/opt/webbadeploy/data/backups/update-YYYYMMDD-HHMMSS/`
+Each update creates a backup in `/opt/wharftales/data/backups/update-YYYYMMDD-HHMMSS/`
 
 ```bash
 # Find latest backup
-ls -lt /opt/webbadeploy/data/backups/
+ls -lt /opt/wharftales/data/backups/
 
 # Restore files
-BACKUP_DIR="/opt/webbadeploy/data/backups/update-20241028-233045"
-cd /opt/webbadeploy
+BACKUP_DIR="/opt/wharftales/data/backups/update-20241028-233045"
+cd /opt/wharftales
 
 sudo cp $BACKUP_DIR/docker-compose.yml .
 sudo cp $BACKUP_DIR/database.sqlite data/
@@ -331,7 +331,7 @@ sudo docker-compose restart
 ### 2. Revert Git Changes
 
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 git log --oneline -5  # Find commit to revert to
 git reset --hard <commit-hash>
 sudo docker-compose restart
@@ -345,24 +345,24 @@ sudo docker-compose restart
 
 ```bash
 # Check if services are running
-docker ps | grep webbadeploy
+docker ps | grep wharftales
 
 # Check recent logs
-docker logs webbadeploy_gui --tail 50
-docker logs webbadeploy_traefik --tail 50
+docker logs wharftales_gui --tail 50
+docker logs wharftales_traefik --tail 50
 
 # Check database migrations
-docker exec webbadeploy_gui ls -la /var/www/html/migrations/
+docker exec wharftales_gui ls -la /var/www/html/migrations/
 ```
 
 ### Verify Migrations Applied
 
 ```bash
 # Check database structure
-docker exec webbadeploy_gui sqlite3 /app/data/database.sqlite ".schema sites"
+docker exec wharftales_gui sqlite3 /app/data/database.sqlite ".schema sites"
 
 # Check specific table
-docker exec webbadeploy_gui sqlite3 /app/data/database.sqlite "SELECT * FROM site_permissions LIMIT 5"
+docker exec wharftales_gui sqlite3 /app/data/database.sqlite "SELECT * FROM site_permissions LIMIT 5"
 ```
 
 ---
@@ -405,10 +405,10 @@ docker exec webbadeploy_gui sqlite3 /app/data/database.sqlite "SELECT * FROM sit
 - Database mismatch bug in permission system
 
 **Files changed:**
-- `/opt/webbadeploy/gui/includes/auth.php` (code fix)
-- `/opt/webbadeploy/gui/migrations/fix-site-permissions-database.php` (migration)
-- `/opt/webbadeploy/install.sh` (runs migration)
-- `/opt/webbadeploy/safe-update.sh` (runs migration)
+- `/opt/wharftales/gui/includes/auth.php` (code fix)
+- `/opt/wharftales/gui/migrations/fix-site-permissions-database.php` (migration)
+- `/opt/wharftales/install.sh` (runs migration)
+- `/opt/wharftales/safe-update.sh` (runs migration)
 
 **To deploy to remote servers:**
 
@@ -419,7 +419,7 @@ git commit -m "Fix site permissions database mismatch bug"
 git push origin master
 
 # On each remote server (or use automation)
-cd /opt/webbadeploy
+cd /opt/wharftales
 sudo ./safe-update.sh
 ```
 
@@ -439,36 +439,36 @@ sudo ./safe-update.sh
 
 ```bash
 # Check error details
-docker exec webbadeploy_gui php /var/www/html/migrations/fix-site-permissions-database.php
+docker exec wharftales_gui php /var/www/html/migrations/fix-site-permissions-database.php
 
 # Check database
-docker exec webbadeploy_gui sqlite3 /app/data/database.sqlite ".tables"
+docker exec wharftales_gui sqlite3 /app/data/database.sqlite ".tables"
 ```
 
 ### Permissions Still Not Working
 
 ```bash
 # Verify migration ran
-docker logs webbadeploy_gui | grep "Site Permissions"
+docker logs wharftales_gui | grep "Site Permissions"
 
 # Check database structure
-docker exec webbadeploy_gui sqlite3 /app/data/database.sqlite "PRAGMA table_info(site_permissions)"
+docker exec wharftales_gui sqlite3 /app/data/database.sqlite "PRAGMA table_info(site_permissions)"
 
 # Manually run migration
-docker exec webbadeploy_gui php /var/www/html/migrations/fix-site-permissions-database.php
+docker exec wharftales_gui php /var/www/html/migrations/fix-site-permissions-database.php
 ```
 
 ### Update Script Hangs
 
 ```bash
 # Check container status
-docker ps -a | grep webbadeploy
+docker ps -a | grep wharftales
 
 # Check logs
-docker logs webbadeploy_gui --tail 100
+docker logs wharftales_gui --tail 100
 
 # Restart containers
-cd /opt/webbadeploy
+cd /opt/wharftales
 sudo docker-compose restart
 ```
 

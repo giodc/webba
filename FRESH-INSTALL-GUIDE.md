@@ -17,8 +17,8 @@ All fixes are now included in the repository! Fresh installs will automatically 
 
 ### 1. Clone Repository
 ```bash
-git clone https://github.com/giodc/webba.git webbadeploy
-cd webbadeploy
+git clone https://github.com/giodc/webba.git wharftales
+cd wharftales
 ```
 
 ### 2. Configure Environment
@@ -69,21 +69,21 @@ Open browser: `http://your-server-ip:9000`
 
 ### 1. Check Session Configuration
 ```bash
-docker exec webbadeploy_gui php -r "require_once '/var/www/html/includes/auth.php'; echo 'Session: ' . ini_get('session.gc_maxlifetime') . ' seconds';"
+docker exec wharftales_gui php -r "require_once '/var/www/html/includes/auth.php'; echo 'Session: ' . ini_get('session.gc_maxlifetime') . ' seconds';"
 ```
 **Expected:** `Session: 86400 seconds` ✅
 
 ### 2. Check API Syntax
 ```bash
-docker exec webbadeploy_gui php -l /var/www/html/api.php
+docker exec wharftales_gui php -l /var/www/html/api.php
 ```
 **Expected:** `No syntax errors detected` ✅
 
 ### 3. Check JavaScript Version
 ```bash
-docker exec webbadeploy_gui grep "console.log" /var/www/html/js/app.js | head -1
+docker exec wharftales_gui grep "console.log" /var/www/html/js/app.js | head -1
 ```
-**Expected:** `Webbadeploy JS v5.2 loaded` ✅
+**Expected:** `WharfTales JS v5.2 loaded` ✅
 
 ### 4. Test API Response
 ```bash
@@ -142,10 +142,10 @@ Fix: Laravel and PHP template heredoc escaping
 
 ## Upgrading Existing Installation
 
-If you already have Webbadeploy installed:
+If you already have WharfTales installed:
 
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 
 # Pull latest changes
 git pull origin master
@@ -187,17 +187,17 @@ docker-compose up -d
 ### Verification Commands
 ```bash
 # Check all fixes are applied
-cd /opt/webbadeploy
+cd /opt/wharftales
 ./DEPLOY-FIXES.sh  # Runs verification checks
 ```
 
 ### Logs
 ```bash
 # View container logs
-docker logs webbadeploy_gui --tail 50 -f
+docker logs wharftales_gui --tail 50 -f
 
 # Check for errors
-docker logs webbadeploy_gui 2>&1 | grep -i error
+docker logs wharftales_gui 2>&1 | grep -i error
 ```
 
 ---
@@ -223,5 +223,5 @@ docker logs webbadeploy_gui 2>&1 | grep -i error
 ---
 
 **Last Updated:** 2025-10-10  
-**Version:** Webbadeploy with all fixes (v5.2)  
+**Version:** WharfTales with all fixes (v5.2)  
 **Ready for Production:** YES ✅

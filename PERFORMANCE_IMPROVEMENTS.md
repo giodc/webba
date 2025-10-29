@@ -36,17 +36,17 @@ The dashboard was very slow to load because it was calling `docker stats` synchr
 ## Technical Details
 
 ### Files Modified
-1. **`/opt/webbadeploy/gui/index.php`**
+1. **`/opt/wharftales/gui/index.php`**
    - Removed `getContainerStats()` function
    - Removed blocking stats calls in foreach loop
    - Added `data-site-id` attributes to cards
    - Changed stats section to show loading spinners initially
 
-2. **`/opt/webbadeploy/gui/api.php`**
+2. **`/opt/wharftales/gui/api.php`**
    - Added `get_dashboard_stats` case to switch statement
    - Implemented `getDashboardStats()` function with caching
 
-3. **`/opt/webbadeploy/gui/js/app.js`**
+3. **`/opt/wharftales/gui/js/app.js`**
    - Added `loadAllDashboardStats()` function
    - Set up auto-refresh interval (10 seconds)
    - Updated version to v5.0
@@ -61,7 +61,7 @@ The dashboard was very slow to load because it was calling `docker stats` synchr
 1. Clear browser cache (Ctrl+Shift+R)
 2. Open dashboard - should load instantly
 3. Stats should appear within 1-2 seconds
-4. Check browser console for: "Webbadeploy JS v5.0 loaded"
+4. Check browser console for: "WharfTales JS v5.0 loaded"
 
 ## Future Optimizations
 - Consider Redis for stats caching instead of file-based

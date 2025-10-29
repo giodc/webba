@@ -1,4 +1,4 @@
-# Security Audit Report - Webbadeploy
+# Security Audit Report - WharfTales
 **Date:** 2025-10-08  
 **Status:** 🔴 CRITICAL VULNERABILITIES FOUND
 
@@ -6,7 +6,7 @@
 
 ## Executive Summary
 
-Your WordPress site was compromised due to **multiple critical security vulnerabilities** in the Webbadeploy platform. The audit identified 7 critical and high-severity issues that must be addressed immediately.
+Your WordPress site was compromised due to **multiple critical security vulnerabilities** in the WharfTales platform. The audit identified 7 critical and high-severity issues that must be addressed immediately.
 
 ### Attack Vector Analysis
 
@@ -24,7 +24,7 @@ Based on the vulnerabilities found, the most likely attack vectors were:
 ### 🔴 CVE-1: World-Writable Directories
 **Severity:** CRITICAL  
 **CVSS Score:** 9.8  
-**Location:** `/opt/webbadeploy/install-production.sh` lines 234-235
+**Location:** `/opt/wharftales/install-production.sh` lines 234-235
 
 **Issue:**
 ```bash
@@ -47,7 +47,7 @@ chmod -R 777 "$INSTALL_DIR/data"    # DANGEROUS
 ### 🔴 CVE-2: Docker Socket World-Writable
 **Severity:** CRITICAL  
 **CVSS Score:** 10.0  
-**Location:** `/opt/webbadeploy/install-production.sh` line 239
+**Location:** `/opt/wharftales/install-production.sh` line 239
 
 **Issue:**
 ```bash
@@ -70,7 +70,7 @@ chmod 666 /var/run/docker.sock    # ROOT EQUIVALENT ACCESS
 ### 🔴 CVE-3: SFTP Publicly Exposed
 **Severity:** CRITICAL  
 **CVSS Score:** 9.1  
-**Location:** `/opt/webbadeploy/gui/includes/functions.php` line 453
+**Location:** `/opt/wharftales/gui/includes/functions.php` line 453
 
 **Issue:**
 ```yaml
@@ -96,7 +96,7 @@ ports:
 ### 🔴 CVE-4: SFTP Directory Permissions
 **Severity:** HIGH  
 **CVSS Score:** 8.1  
-**Location:** `/opt/webbadeploy/gui/includes/functions.php` lines 394-398
+**Location:** `/opt/wharftales/gui/includes/functions.php` lines 394-398
 
 **Issue:**
 ```php
@@ -114,12 +114,12 @@ chmod($bindPath, 0777);          // World-writable
 ### 🟠 CVE-5: Hardcoded Default Credentials
 **Severity:** HIGH  
 **CVSS Score:** 7.5  
-**Location:** `/opt/webbadeploy/docker-compose.yml`
+**Location:** `/opt/wharftales/docker-compose.yml`
 
 **Issue:**
 ```yaml
-MYSQL_ROOT_PASSWORD=webbadeploy_root_pass    # Default password
-MYSQL_PASSWORD=webbadeploy_pass              # Default password
+MYSQL_ROOT_PASSWORD=wharftales_root_pass    # Default password
+MYSQL_PASSWORD=wharftales_pass              # Default password
 ```
 
 **Fix Required:** ⚠️ MANUAL ACTION NEEDED
@@ -130,7 +130,7 @@ MYSQL_PASSWORD=webbadeploy_pass              # Default password
 ### 🟠 CVE-6: Dashboard Publicly Exposed
 **Severity:** MEDIUM  
 **CVSS Score:** 6.5  
-**Location:** `/opt/webbadeploy/docker-compose.yml`
+**Location:** `/opt/wharftales/docker-compose.yml`
 
 **Issue:**
 ```yaml
@@ -157,8 +157,8 @@ ports:
 - No security plugins installed
 
 **Fix Provided:** ✅
-- Created `/opt/webbadeploy/apps/wordpress/wp-security-hardening.php`
-- Created `/opt/webbadeploy/apps/wordpress/.htaccess-uploads-security`
+- Created `/opt/wharftales/apps/wordpress/wp-security-hardening.php`
+- Created `/opt/wharftales/apps/wordpress/.htaccess-uploads-security`
 - See SECURITY_FIXES.md for implementation
 
 ---
@@ -166,16 +166,16 @@ ports:
 ## Files Created/Modified
 
 ### New Security Files
-1. ✅ `/opt/webbadeploy/SECURITY_FIXES.md` - Complete fix instructions
-2. ✅ `/opt/webbadeploy/fix-permissions-secure.sh` - Automated permission fix
-3. ✅ `/opt/webbadeploy/security-audit.sh` - Security audit tool
-4. ✅ `/opt/webbadeploy/apps/wordpress/wp-security-hardening.php` - WordPress hardening
-5. ✅ `/opt/webbadeploy/apps/wordpress/.htaccess-uploads-security` - Upload protection
-6. ✅ `/opt/webbadeploy/SECURITY_AUDIT_REPORT.md` - This report
+1. ✅ `/opt/wharftales/SECURITY_FIXES.md` - Complete fix instructions
+2. ✅ `/opt/wharftales/fix-permissions-secure.sh` - Automated permission fix
+3. ✅ `/opt/wharftales/security-audit.sh` - Security audit tool
+4. ✅ `/opt/wharftales/apps/wordpress/wp-security-hardening.php` - WordPress hardening
+5. ✅ `/opt/wharftales/apps/wordpress/.htaccess-uploads-security` - Upload protection
+6. ✅ `/opt/wharftales/SECURITY_AUDIT_REPORT.md` - This report
 
 ### Modified Files
-1. ✅ `/opt/webbadeploy/install-production.sh` - Fixed permissions (755 instead of 777)
-2. ✅ `/opt/webbadeploy/gui/includes/functions.php` - Fixed SFTP security
+1. ✅ `/opt/wharftales/install-production.sh` - Fixed permissions (755 instead of 777)
+2. ✅ `/opt/wharftales/gui/includes/functions.php` - Fixed SFTP security
 
 ---
 
@@ -183,13 +183,13 @@ ports:
 
 ### Step 1: Run Permission Fix (5 minutes)
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 sudo bash fix-permissions-secure.sh
 ```
 
 ### Step 2: Run Security Audit (2 minutes)
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 sudo bash security-audit.sh
 ```
 
@@ -212,15 +212,15 @@ docker restart $(docker ps --filter "name=_sftp" --format "{{.Names}}")
 NEW_ROOT_PASS=$(openssl rand -base64 32)
 NEW_USER_PASS=$(openssl rand -base64 32)
 
-docker exec webbadeploy_db mariadb -uroot -pwebbadeploy_root_pass \
+docker exec wharftales_db mariadb -uroot -pwharftales_root_pass \
   -e "ALTER USER 'root'@'%' IDENTIFIED BY '$NEW_ROOT_PASS'; 
-      ALTER USER 'webbadeploy'@'%' IDENTIFIED BY '$NEW_USER_PASS'; 
+      ALTER USER 'wharftales'@'%' IDENTIFIED BY '$NEW_USER_PASS'; 
       FLUSH PRIVILEGES;"
 
 # Save passwords securely
-echo "Root: $NEW_ROOT_PASS" > /opt/webbadeploy/.db_credentials
-echo "User: $NEW_USER_PASS" >> /opt/webbadeploy/.db_credentials
-chmod 600 /opt/webbadeploy/.db_credentials
+echo "Root: $NEW_ROOT_PASS" > /opt/wharftales/.db_credentials
+echo "User: $NEW_USER_PASS" >> /opt/wharftales/.db_credentials
+chmod 600 /opt/wharftales/.db_credentials
 ```
 
 ### Step 5: Clean WordPress Site (30 minutes)
@@ -299,13 +299,13 @@ sudo ufw reload
 ```bash
 # Monitor file changes
 sudo apt install inotify-tools
-inotifywait -m -r /opt/webbadeploy/apps -e modify,create,delete
+inotifywait -m -r /opt/wharftales/apps -e modify,create,delete
 
 # Monitor Docker events
 docker events --filter 'type=container' --format '{{.Time}} {{.Action}} {{.Actor.Attributes.name}}'
 
 # Monitor failed login attempts
-docker logs -f webbadeploy_gui | grep "login_failed"
+docker logs -f wharftales_gui | grep "login_failed"
 ```
 
 ### Alert on Suspicious Activity
@@ -319,10 +319,10 @@ docker logs -f webbadeploy_gui | grep "login_failed"
 
 ## Support & Resources
 
-- **Security Fixes Guide:** `/opt/webbadeploy/SECURITY_FIXES.md`
-- **Permission Fix Script:** `/opt/webbadeploy/fix-permissions-secure.sh`
-- **Security Audit Script:** `/opt/webbadeploy/security-audit.sh`
-- **WordPress Hardening:** `/opt/webbadeploy/apps/wordpress/wp-security-hardening.php`
+- **Security Fixes Guide:** `/opt/wharftales/SECURITY_FIXES.md`
+- **Permission Fix Script:** `/opt/wharftales/fix-permissions-secure.sh`
+- **Security Audit Script:** `/opt/wharftales/security-audit.sh`
+- **WordPress Hardening:** `/opt/wharftales/apps/wordpress/wp-security-hardening.php`
 
 ---
 

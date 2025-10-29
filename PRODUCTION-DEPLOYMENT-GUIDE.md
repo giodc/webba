@@ -2,7 +2,7 @@
 
 ## Overview
 
-This guide helps you prepare your Webbadeploy installation for production deployment with proper security hardening.
+This guide helps you prepare your WharfTales installation for production deployment with proper security hardening.
 
 ---
 
@@ -12,10 +12,10 @@ This guide helps you prepare your Webbadeploy installation for production deploy
 
 ```bash
 # Dry-run mode (check only, no changes)
-sudo bash /opt/webbadeploy/production-readiness-check.sh --dry-run
+sudo bash /opt/wharftales/production-readiness-check.sh --dry-run
 
 # Apply fixes automatically
-sudo bash /opt/webbadeploy/production-readiness-check.sh
+sudo bash /opt/wharftales/production-readiness-check.sh
 ```
 
 ### Step 2: Review Results
@@ -90,7 +90,7 @@ The script will:
 - [ ] **Configure automatic backups**
   ```bash
   # Add to crontab
-  0 2 * * * /opt/webbadeploy/scripts/backup.sh
+  0 2 * * * /opt/wharftales/scripts/backup.sh
   ```
 
 - [ ] **Set up monitoring**
@@ -143,25 +143,25 @@ sudo sed -i "s/DOCKER_GID: .*/DOCKER_GID: $DOCKER_GID/" docker-compose.yml
 
 ```bash
 # Set production permissions
-sudo chown -R www-data:www-data /opt/webbadeploy/data
-sudo chown -R www-data:www-data /opt/webbadeploy/apps
-sudo chown -R root:www-data /opt/webbadeploy/ssl
+sudo chown -R www-data:www-data /opt/wharftales/data
+sudo chown -R www-data:www-data /opt/wharftales/apps
+sudo chown -R root:www-data /opt/wharftales/ssl
 
-sudo chmod 755 /opt/webbadeploy/data
-sudo chmod 755 /opt/webbadeploy/apps
-sudo chmod 750 /opt/webbadeploy/ssl
-sudo chmod 640 /opt/webbadeploy/docker-compose.yml
+sudo chmod 755 /opt/wharftales/data
+sudo chmod 755 /opt/wharftales/apps
+sudo chmod 750 /opt/wharftales/ssl
+sudo chmod 640 /opt/wharftales/docker-compose.yml
 
 # Database file
-sudo chmod 664 /opt/webbadeploy/data/database.sqlite
-sudo chown www-data:www-data /opt/webbadeploy/data/database.sqlite
+sudo chmod 664 /opt/wharftales/data/database.sqlite
+sudo chown www-data:www-data /opt/wharftales/data/database.sqlite
 ```
 
 ### 4. SSL/TLS Configuration
 
 ```bash
 # Ensure acme.json has correct permissions
-sudo chmod 600 /opt/webbadeploy/ssl/acme.json
+sudo chmod 600 /opt/wharftales/ssl/acme.json
 
 # Test SSL configuration
 curl -I https://your-domain.com
@@ -171,7 +171,7 @@ curl -I https://your-domain.com
 
 ```bash
 # Verify encryption key exists
-docker exec webbadeploy_gui php -r "
+docker exec wharftales_gui php -r "
 require_once '/var/www/html/includes/functions.php';
 \$db = initDatabase();
 \$key = getSetting(\$db, 'encryption_key');
@@ -179,7 +179,7 @@ echo 'Encryption key: ' . (!empty(\$key) ? 'EXISTS' : 'MISSING') . PHP_EOL;
 "
 
 # Check session configuration
-docker exec webbadeploy_gui cat /usr/local/etc/php/conf.d/php-session.ini
+docker exec wharftales_gui cat /usr/local/etc/php/conf.d/php-session.ini
 ```
 
 ---
@@ -199,29 +199,29 @@ docker-compose ps
 
 ### Check Container Logs
 ```bash
-docker logs webbadeploy_gui --tail=50
-docker logs webbadeploy_traefik --tail=50
-docker logs webbadeploy_db --tail=50
+docker logs wharftales_gui --tail=50
+docker logs wharftales_traefik --tail=50
+docker logs wharftales_db --tail=50
 ```
 
 ### Check File Permissions
 ```bash
-ls -la /opt/webbadeploy/data
-ls -la /opt/webbadeploy/apps
-ls -la /opt/webbadeploy/ssl
+ls -la /opt/wharftales/data
+ls -la /opt/wharftales/apps
+ls -la /opt/wharftales/ssl
 ls -la /var/run/docker.sock
 ```
 
 ### Check Database
 ```bash
-docker exec webbadeploy_gui sqlite3 /app/data/database.sqlite ".tables"
-docker exec webbadeploy_gui sqlite3 /app/data/database.sqlite "SELECT username, role, two_factor_enabled FROM users;"
+docker exec wharftales_gui sqlite3 /app/data/database.sqlite ".tables"
+docker exec wharftales_gui sqlite3 /app/data/database.sqlite "SELECT username, role, two_factor_enabled FROM users;"
 ```
 
 ### Check SSL Certificates
 ```bash
-ls -la /opt/webbadeploy/ssl/
-docker exec webbadeploy_traefik cat /letsencrypt/acme.json | jq '.Certificates[].domain'
+ls -la /opt/wharftales/ssl/
+docker exec wharftales_traefik cat /letsencrypt/acme.json | jq '.Certificates[].domain'
 ```
 
 ---
@@ -252,7 +252,7 @@ nano docker-compose.yml
 # Change MYSQL_ROOT_PASSWORD and MYSQL_PASSWORD
 
 # 3. Remove old database volume
-docker volume rm webbadeploy_db_data
+docker volume rm wharftales_db_data
 
 # 4. Start containers
 docker-compose up -d
@@ -277,13 +277,13 @@ docker-compose up -d --build web-gui
 **Solution:**
 ```bash
 # Run production permissions script
-sudo bash /opt/webbadeploy/fix-permissions-secure.sh
+sudo bash /opt/wharftales/fix-permissions-secure.sh
 
 # Or manually fix
-sudo chown -R www-data:www-data /opt/webbadeploy/data
-sudo chown -R www-data:www-data /opt/webbadeploy/apps
-sudo chmod 755 /opt/webbadeploy/data
-sudo chmod 755 /opt/webbadeploy/apps
+sudo chown -R www-data:www-data /opt/wharftales/data
+sudo chown -R www-data:www-data /opt/wharftales/apps
+sudo chmod 755 /opt/wharftales/data
+sudo chmod 755 /opt/wharftales/apps
 ```
 
 ---
@@ -357,7 +357,7 @@ sudo chmod 755 /opt/webbadeploy/apps
 ### Container Not Starting
 ```bash
 # Check logs
-docker logs webbadeploy_gui
+docker logs wharftales_gui
 
 # Restart container
 docker-compose restart web-gui
@@ -370,26 +370,26 @@ docker-compose up -d --build web-gui
 ```bash
 # Restore from backup
 docker-compose down
-cp /opt/webbadeploy/backups/database.sqlite.YYYYMMDD /opt/webbadeploy/data/database.sqlite
+cp /opt/wharftales/backups/database.sqlite.YYYYMMDD /opt/wharftales/data/database.sqlite
 docker-compose up -d
 ```
 
 ### Locked Out of Dashboard
 ```bash
 # Reset admin password
-sudo bash /opt/webbadeploy/reset-admin-password.sh
+sudo bash /opt/wharftales/reset-admin-password.sh
 ```
 
 ### SSL Certificate Issues
 ```bash
 # Remove old certificates
-sudo rm /opt/webbadeploy/ssl/acme.json
+sudo rm /opt/wharftales/ssl/acme.json
 
 # Restart Traefik to get new certificates
 docker-compose restart traefik
 
 # Check logs
-docker logs webbadeploy_traefik
+docker logs wharftales_traefik
 ```
 
 ---

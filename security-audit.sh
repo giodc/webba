@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Webbadeploy Security Audit Script
+# WharfTales Security Audit Script
 # Checks for common security issues and compromises
 
 RED='\033[0;31m'
@@ -10,7 +10,7 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 echo -e "${BLUE}╔════════════════════════════════════════╗${NC}"
-echo -e "${BLUE}║  Webbadeploy Security Audit Script   ║${NC}"
+echo -e "${BLUE}║  WharfTales Security Audit Script   ║${NC}"
 echo -e "${BLUE}╚════════════════════════════════════════╝${NC}"
 echo ""
 
@@ -18,23 +18,23 @@ ISSUES_FOUND=0
 
 # Check 1: File Permissions
 echo -e "${YELLOW}[1/10] Checking file permissions...${NC}"
-if [ -d "/opt/webbadeploy/apps" ]; then
-    APPS_PERMS=$(stat -c "%a" /opt/webbadeploy/apps)
+if [ -d "/opt/wharftales/apps" ]; then
+    APPS_PERMS=$(stat -c "%a" /opt/wharftales/apps)
     if [ "$APPS_PERMS" == "777" ]; then
-        echo -e "${RED}  ✗ CRITICAL: /opt/webbadeploy/apps has 777 permissions (world-writable)${NC}"
+        echo -e "${RED}  ✗ CRITICAL: /opt/wharftales/apps has 777 permissions (world-writable)${NC}"
         ISSUES_FOUND=$((ISSUES_FOUND + 1))
     else
-        echo -e "${GREEN}  ✓ /opt/webbadeploy/apps permissions OK ($APPS_PERMS)${NC}"
+        echo -e "${GREEN}  ✓ /opt/wharftales/apps permissions OK ($APPS_PERMS)${NC}"
     fi
 fi
 
-if [ -d "/opt/webbadeploy/data" ]; then
-    DATA_PERMS=$(stat -c "%a" /opt/webbadeploy/data)
+if [ -d "/opt/wharftales/data" ]; then
+    DATA_PERMS=$(stat -c "%a" /opt/wharftales/data)
     if [ "$DATA_PERMS" == "777" ]; then
-        echo -e "${RED}  ✗ CRITICAL: /opt/webbadeploy/data has 777 permissions (world-writable)${NC}"
+        echo -e "${RED}  ✗ CRITICAL: /opt/wharftales/data has 777 permissions (world-writable)${NC}"
         ISSUES_FOUND=$((ISSUES_FOUND + 1))
     else
-        echo -e "${GREEN}  ✓ /opt/webbadeploy/data permissions OK ($DATA_PERMS)${NC}"
+        echo -e "${GREEN}  ✓ /opt/wharftales/data permissions OK ($DATA_PERMS)${NC}"
     fi
 fi
 
@@ -63,7 +63,7 @@ fi
 
 # Check 4: Default Passwords
 echo -e "\n${YELLOW}[4/10] Checking for default passwords...${NC}"
-if docker exec webbadeploy_db mariadb -uroot -pwebbadeploy_root_pass -e "SELECT 1" &>/dev/null; then
+if docker exec wharftales_db mariadb -uroot -pwharftales_root_pass -e "SELECT 1" &>/dev/null; then
     echo -e "${RED}  ✗ CRITICAL: Default database root password still in use${NC}"
     ISSUES_FOUND=$((ISSUES_FOUND + 1))
 else
@@ -140,8 +140,8 @@ fi
 
 # Check 8: SSL Certificates
 echo -e "\n${YELLOW}[8/10] Checking SSL certificates...${NC}"
-if [ -d "/opt/webbadeploy/ssl" ]; then
-    CERT_COUNT=$(find /opt/webbadeploy/ssl -name "*.json" 2>/dev/null | wc -l)
+if [ -d "/opt/wharftales/ssl" ]; then
+    CERT_COUNT=$(find /opt/wharftales/ssl -name "*.json" 2>/dev/null | wc -l)
     if [ "$CERT_COUNT" -gt 0 ]; then
         echo -e "${GREEN}  ✓ Found $CERT_COUNT SSL certificate(s)${NC}"
     else
@@ -185,8 +185,8 @@ else
     echo -e "${RED}✗ Found $ISSUES_FOUND security issue(s)${NC}"
     echo ""
     echo -e "${YELLOW}Recommended actions:${NC}"
-    echo "  1. Run: sudo bash /opt/webbadeploy/fix-permissions-secure.sh"
-    echo "  2. Review: /opt/webbadeploy/SECURITY_FIXES.md"
+    echo "  1. Run: sudo bash /opt/wharftales/fix-permissions-secure.sh"
+    echo "  2. Review: /opt/wharftales/SECURITY_FIXES.md"
     echo "  3. Scan WordPress for malware"
     echo "  4. Change all default passwords"
     echo "  5. Configure firewall rules"

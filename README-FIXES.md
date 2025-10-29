@@ -1,9 +1,9 @@
-# Webbadeploy Fixes - Quick Start
+# WharfTales Fixes - Quick Start
 
 ## 🚀 Quick Deploy (On Remote Server)
 
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 ./DEPLOY-FIXES.sh
 ```
 
@@ -64,15 +64,15 @@ This will apply all fixes automatically.
 ### On Remote Server
 
 ```bash
-# 1. Navigate to webbadeploy directory
-cd /opt/webbadeploy
+# 1. Navigate to wharftales directory
+cd /opt/wharftales
 
 # 2. Deploy all fixes
 ./DEPLOY-FIXES.sh
 
 # 3. Clear browser cache and cookies
 
-# 4. Log in to Webbadeploy
+# 4. Log in to WharfTales
 
 # 5. Test deploying an app
 ```
@@ -80,7 +80,7 @@ cd /opt/webbadeploy
 ### Manual Deployment (Alternative)
 
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 docker-compose down
 docker-compose build --no-cache web-gui
 docker-compose up -d
@@ -92,14 +92,14 @@ docker-compose up -d
 
 ### Check Session Configuration
 ```bash
-docker exec webbadeploy_gui php -i | grep session.gc_maxlifetime
+docker exec wharftales_gui php -i | grep session.gc_maxlifetime
 # Should show: 86400 (24 hours)
 ```
 
 ### Check Container Status
 ```bash
-docker ps | grep webbadeploy_gui
-# Should show: webbadeploy_gui running
+docker ps | grep wharftales_gui
+# Should show: wharftales_gui running
 ```
 
 ### Test Password Reset
@@ -116,17 +116,17 @@ docker ps | grep webbadeploy_gui
 1. Clear browser cache completely
 2. Log out and log in again
 3. Check browser console (F12) for errors
-4. Verify session config: `docker exec webbadeploy_gui php -i | grep session`
+4. Verify session config: `docker exec wharftales_gui php -i | grep session`
 
 ### Password Reset Not Working?
 1. Check container is running: `docker ps`
-2. Check logs: `docker logs webbadeploy_gui`
-3. Try direct command: `docker exec webbadeploy_gui php /var/www/html/reset-password.php admin NewPass`
+2. Check logs: `docker logs wharftales_gui`
+3. Try direct command: `docker exec wharftales_gui php /var/www/html/reset-password.php admin NewPass`
 
 ### Container Won't Start?
 ```bash
 # View logs
-docker logs webbadeploy_gui --tail 50
+docker logs wharftales_gui --tail 50
 
 # Rebuild from scratch
 docker-compose down -v
@@ -160,7 +160,7 @@ docker-compose up -d
 
 If you encounter issues:
 
-1. **Check logs**: `docker logs webbadeploy_gui --tail 50`
+1. **Check logs**: `docker logs wharftales_gui --tail 50`
 2. **Check browser console**: F12 → Console tab
 3. **Verify deployment**: `./DEPLOY-FIXES.sh` (run again)
 4. **Read documentation**: See files listed above
@@ -173,7 +173,7 @@ If you encounter issues:
 
 Run this command on your remote server:
 ```bash
-cd /opt/webbadeploy && ./DEPLOY-FIXES.sh
+cd /opt/wharftales && ./DEPLOY-FIXES.sh
 ```
 
 Then clear your browser cache and log in again. You're done! 🚀

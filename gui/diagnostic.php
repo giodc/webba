@@ -3,7 +3,7 @@
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
 
-echo "<h1>Webbadeploy Diagnostic</h1>";
+echo "<h1>WharfTales Diagnostic</h1>";
 
 // Check PHP version
 echo "<h2>PHP Version</h2>";

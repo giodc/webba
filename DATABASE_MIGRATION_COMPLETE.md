@@ -2,18 +2,18 @@
 
 ## Summary
 
-Successfully migrated Webbadeploy from file-based to database-based docker-compose configuration storage.
+Successfully migrated WharfTales from file-based to database-based docker-compose configuration storage.
 
 ## What Was Done
 
 ### 1. Database Schema ✅
-Created `compose_configs` table in `/opt/webbadeploy/gui/includes/functions.php`:
+Created `compose_configs` table in `/opt/wharftales/gui/includes/functions.php`:
 - Stores all docker-compose YAML configurations
 - Supports both main Traefik config and site-specific configs
 - Tracks who updated and when
 
 ### 2. Helper Functions ✅
-Added to `/opt/webbadeploy/gui/includes/functions.php`:
+Added to `/opt/wharftales/gui/includes/functions.php`:
 - `getComposeConfig()` - Retrieve config from database
 - `saveComposeConfig()` - Save/update config in database
 - `generateComposeFile()` - Generate physical file from database
@@ -21,7 +21,7 @@ Added to `/opt/webbadeploy/gui/includes/functions.php`:
 - `deleteComposeConfig()` - Delete config when site is deleted
 
 ### 3. Migration Script ✅
-Created `/opt/webbadeploy/gui/migrate-compose-to-db.php`:
+Created `/opt/wharftales/gui/migrate-compose-to-db.php`:
 - Migrated main Traefik configuration (2806 bytes)
 - Migrated 2 site configurations
 - All configs now in database
@@ -35,14 +35,14 @@ Site configs in database: 2
 ```
 
 ### 4. Updated Settings Page ✅
-Modified `/opt/webbadeploy/gui/settings.php`:
+Modified `/opt/wharftales/gui/settings.php`:
 - Let's Encrypt email updates now use database
 - Dashboard domain updates use database
 - No more file permission issues!
 - Added link to YAML editor
 
 ### 5. YAML Editor ✅
-Created `/opt/webbadeploy/gui/compose-editor.php`:
+Created `/opt/wharftales/gui/compose-editor.php`:
 - Edit raw docker-compose YAML from web interface
 - Supports both main config and site configs
 - Real-time editing with save functionality
@@ -73,10 +73,10 @@ User Action → Database Update → Generate File → Docker Deploy
 
 ## Files Modified
 
-1. `/opt/webbadeploy/gui/includes/functions.php` - Added table + functions
-2. `/opt/webbadeploy/gui/settings.php` - Updated to use database
-3. `/opt/webbadeploy/gui/migrate-compose-to-db.php` - New migration script
-4. `/opt/webbadeploy/gui/compose-editor.php` - New YAML editor
+1. `/opt/wharftales/gui/includes/functions.php` - Added table + functions
+2. `/opt/wharftales/gui/settings.php` - Updated to use database
+3. `/opt/wharftales/gui/migrate-compose-to-db.php` - New migration script
+4. `/opt/wharftales/gui/compose-editor.php` - New YAML editor
 
 ## Testing
 
@@ -98,7 +98,7 @@ echo \$config['compose_yaml'];
 "
 
 # Check generated file
-cat /opt/webbadeploy/docker-compose.yml | grep acme.email
+cat /opt/wharftales/docker-compose.yml | grep acme.email
 ```
 
 ### Test YAML Editor
@@ -152,7 +152,7 @@ WHERE c.config_type = 'main';
 ## Next Steps (Optional)
 
 ### For Site Creation/Updates
-Update `/opt/webbadeploy/gui/api.php` to save compose configs to database when creating/updating sites. This will be done as sites are created/modified.
+Update `/opt/wharftales/gui/api.php` to save compose configs to database when creating/updating sites. This will be done as sites are created/modified.
 
 ### For Site Deletion
 Already handled! The `FOREIGN KEY ... ON DELETE CASCADE` ensures compose configs are automatically deleted when a site is deleted.
@@ -171,10 +171,10 @@ If something goes wrong, original files are still on disk:
 
 ```bash
 # Main config
-ls -la /opt/webbadeploy/docker-compose.yml
+ls -la /opt/wharftales/docker-compose.yml
 
 # Site configs
-ls -la /opt/webbadeploy/apps/*/sites/*/docker-compose.yml
+ls -la /opt/wharftales/apps/*/sites/*/docker-compose.yml
 ```
 
 To rollback:

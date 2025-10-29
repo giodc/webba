@@ -1,12 +1,12 @@
-                       update-webbadeploy.sh                                                                   
+                       update-wharftales.sh                                                                   
 #!/bin/bash
 
-# WebbaDeploy Update Script
+# WharfTales Update Script
 # This script pulls latest changes from git and rebuilds containers
 
 set -e  # Exit on any error
 
-echo "🔄 Starting WebbaDeploy update process..."
+echo "🔄 Starting WharfTales update process..."
 
 # Check if we're in the right directory
 if [ ! -f "docker-compose.yml" ]; then
@@ -68,7 +68,7 @@ sudo docker-compose up -d
 echo "📊 Container status:"
 sudo docker-compose ps
 
-echo "✅ Update complete! WebbaDeploy has been updated and restarted."
+echo "✅ Update complete! WharfTales has been updated and restarted."
 echo ""
-echo "💡 Tip: You can run this script anytime with: ./update-webbadeploy.sh"
+echo "💡 Tip: You can run this script anytime with: ./update-wharftales.sh"
 

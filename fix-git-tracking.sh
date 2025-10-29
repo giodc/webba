@@ -4,7 +4,7 @@
 
 echo "Fixing Git tracking for ignored files..."
 
-cd /opt/webbadeploy
+cd /opt/wharftales
 
 # Remove tracked files that should be ignored
 git rm -r --cached data/ 2>/dev/null

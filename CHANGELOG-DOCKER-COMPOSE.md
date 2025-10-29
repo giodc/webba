@@ -29,7 +29,7 @@ The install scripts now:
 
 **You must edit after installation:**
 ```bash
-nano /opt/webbadeploy/docker-compose.yml
+nano /opt/wharftales/docker-compose.yml
 # Change CHANGE_ME@example.com to your email
 # Change CHANGE_ME.example.com to your domain
 ```
@@ -48,7 +48,7 @@ When you `git pull`:
 ### If You Want the New Features (Port 8443, etc.)
 
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 
 # Backup your current config
 cp docker-compose.yml docker-compose.yml.backup

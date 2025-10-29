@@ -22,7 +22,7 @@ Email in RUNNING Traefik container: test@example.com
 Run this on your remote server:
 
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 
 # Method 1: Use the fix script (RECOMMENDED)
 bash fix-remote-email.sh
@@ -33,7 +33,7 @@ docker-compose rm -f traefik
 sudo rm ssl/acme.json
 sudo bash fix-acme.sh
 docker-compose up -d traefik
-docker logs webbadeploy_traefik -f
+docker logs wharftales_traefik -f
 ```
 
 ## What The Fix Does
@@ -49,12 +49,12 @@ docker logs webbadeploy_traefik -f
 
 ```bash
 # Check email in running container
-docker inspect webbadeploy_traefik | grep "acme.email"
+docker inspect wharftales_traefik | grep "acme.email"
 
 # Should show your correct email, NOT test@example.com
 
 # Monitor certificate acquisition
-docker logs webbadeploy_traefik -f
+docker logs wharftales_traefik -f
 
 # Should see certificate requests with correct email
 # NO MORE "forbidden domain" errors
@@ -68,7 +68,7 @@ docker logs webbadeploy_traefik -f
 
 **Before:**
 ```php
-exec("docker restart webbadeploy_traefik");
+exec("docker restart wharftales_traefik");
 ```
 
 **After:**
@@ -115,7 +115,7 @@ After fixing Traefik with correct email:
 If they show "SSL: Pending":
 
 1. **Wait 1-2 minutes** - Traefik requests certificates automatically
-2. **Check logs:** `docker logs webbadeploy_traefik -f`
+2. **Check logs:** `docker logs wharftales_traefik -f`
 3. **Look for:** "certificate obtained" messages
 4. **Refresh dashboard** - Should change to "SSL: Active"
 
@@ -131,13 +131,13 @@ When creating new sites with SSL:
 
 ### Check Current Status
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 
 # Check all email configurations
 bash check-remote-email.sh
 
 # Check running container email
-docker inspect webbadeploy_traefik | grep "acme.email"
+docker inspect wharftales_traefik | grep "acme.email"
 
 # Check certificates
 sudo cat ssl/acme.json | jq '.letsencrypt.Certificates'
@@ -159,13 +159,13 @@ docker-compose up -d traefik
 ### Monitor
 ```bash
 # Watch Traefik logs
-docker logs webbadeploy_traefik -f
+docker logs wharftales_traefik -f
 
 # Check for errors
-docker logs webbadeploy_traefik 2>&1 | grep -i "error\|forbidden"
+docker logs wharftales_traefik 2>&1 | grep -i "error\|forbidden"
 
 # Check for success
-docker logs webbadeploy_traefik 2>&1 | grep -i "certificate obtained"
+docker logs wharftales_traefik 2>&1 | grep -i "certificate obtained"
 ```
 
 ## Expected Timeline
@@ -198,7 +198,7 @@ After running the fix:
 ```bash
 docker-compose down
 docker-compose up -d
-docker inspect webbadeploy_traefik | grep "acme.email"
+docker inspect wharftales_traefik | grep "acme.email"
 ```
 
 ### Certificates not being issued
@@ -221,7 +221,7 @@ nslookup your-domain.com
 sudo ufw status
 
 # Check Traefik logs
-docker logs webbadeploy_traefik 2>&1 | tail -100
+docker logs wharftales_traefik 2>&1 | tail -100
 ```
 
 ### Dashboard still shows "SSL: Pending"
@@ -238,7 +238,7 @@ docker logs webbadeploy_traefik 2>&1 | tail -100
 **Immediate Action Required:**
 ```bash
 ssh user@remote-server
-cd /opt/webbadeploy
+cd /opt/wharftales
 bash fix-remote-email.sh
 ```
 

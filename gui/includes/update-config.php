@@ -1,6 +1,6 @@
 <?php
 /**
- * Webbadeploy Update Configuration
+ * WharfTales Update Configuration
  */
 
 define('UPDATE_ENABLED', true);

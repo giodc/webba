@@ -15,7 +15,7 @@ in /var/www/html/includes/auth.php:638
 
 ## Root Cause
 
-The `initAuthDatabase()` function in `/opt/webbadeploy/gui/includes/auth.php` was creating the `users` and `login_attempts` tables but **not** the `audit_log` table.
+The `initAuthDatabase()` function in `/opt/wharftales/gui/includes/auth.php` was creating the `users` and `login_attempts` tables but **not** the `audit_log` table.
 
 The `audit_log` table was only defined in `initDatabase()` from `functions.php`, but the authentication system uses its own separate database initialization function.
 
@@ -49,7 +49,7 @@ try {
 
 ## Files Modified
 
-- `/opt/webbadeploy/gui/includes/auth.php`
+- `/opt/wharftales/gui/includes/auth.php`
   - Added `audit_log` table creation in `initAuthDatabase()`
   - Added `totp_backup_codes` column migration
 
@@ -57,7 +57,7 @@ try {
 
 ```bash
 # Verify audit_log table exists
-docker exec webbadeploy_gui php -r "
+docker exec wharftales_gui php -r "
 require_once '/var/www/html/includes/auth.php';
 \$db = initAuthDatabase();
 \$tables = \$db->query(\"SELECT name FROM sqlite_master WHERE type='table' AND name='audit_log'\")->fetchColumn();
@@ -65,7 +65,7 @@ echo \$tables ? 'audit_log table: EXISTS' : 'audit_log table: MISSING';
 "
 
 # Test audit log insertion
-docker exec webbadeploy_gui php -r "
+docker exec wharftales_gui php -r "
 require_once '/var/www/html/includes/auth.php';
 \$db = initAuthDatabase();
 \$stmt = \$db->prepare('INSERT INTO audit_log (user_id, action, ip_address) VALUES (?, ?, ?)');
@@ -120,7 +120,7 @@ The `php_version` column (and several other columns) were missing from:
 
 ### Fix Applied
 
-Added missing columns to both the CREATE TABLE statement and migration section in `/opt/webbadeploy/gui/includes/functions.php`:
+Added missing columns to both the CREATE TABLE statement and migration section in `/opt/wharftales/gui/includes/functions.php`:
 
 **Columns added to CREATE TABLE:**
 - `php_version TEXT DEFAULT '8.3'`
@@ -142,7 +142,7 @@ Added missing columns to both the CREATE TABLE statement and migration section i
 
 ### Files Modified
 
-- `/opt/webbadeploy/gui/includes/functions.php`
+- `/opt/wharftales/gui/includes/functions.php`
   - Updated `CREATE TABLE sites` statement
   - Added comprehensive column migrations
 
@@ -150,7 +150,7 @@ Added missing columns to both the CREATE TABLE statement and migration section i
 
 ```bash
 # Verify all columns exist
-docker exec webbadeploy_gui php -r "
+docker exec wharftales_gui php -r "
 require_once '/var/www/html/includes/functions.php';
 \$db = initDatabase();
 \$schema = \$db->query('PRAGMA table_info(sites)')->fetchAll(PDO::FETCH_ASSOC);

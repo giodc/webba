@@ -1,7 +1,7 @@
 let createModal, editModal, passwordModal, updateModal, twoFactorModal;
 
 // Version check - if you see this in console, the new JS is loaded
-console.log("Webbadeploy JS v5.2 loaded - All API calls use session detection!");
+console.log("WharfTales JS v5.2 loaded - All API calls use session detection!");
 
 // Helper function for API calls with proper error handling
 async function apiCall(url, options = {}) {
@@ -807,7 +807,7 @@ async function setup2FA() {
                         
                         <div class="alert alert-secondary">
                             <p class="mb-2 small"><strong>Manual Entry:</strong></p>
-                            <p class="mb-1 small">Account: <strong>Webbadeploy</strong></p>
+                            <p class="mb-1 small">Account: <strong>WharfTales</strong></p>
                             <p class="mb-2 small">Secret Key:</p>
                             <div class="input-group input-group-sm">
                                 <input type="text" class="form-control font-monospace" id="secretKey" value="${result.secret}" readonly>

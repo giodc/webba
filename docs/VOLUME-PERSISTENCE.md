@@ -33,7 +33,7 @@ Docker volumes persist **permanently** until you explicitly delete them. This is
 
 ---
 
-## **Webbadeploy Delete Behavior**
+## **WharfTales Delete Behavior**
 
 ### **Current Implementation**
 
@@ -248,12 +248,12 @@ docker volume ls --filter label=environment=production
 **Preparation:**
 ```bash
 # Regular automated backups
-0 2 * * * /opt/webbadeploy/scripts/backup-all-volumes.sh
+0 2 * * * /opt/wharftales/scripts/backup-all-volumes.sh
 ```
 
 **Recovery:**
 ```bash
-# 1. Setup new server with Webbadeploy
+# 1. Setup new server with WharfTales
 # 2. Restore volumes from backups
 for backup in /backups/*.tar.gz; do
   volume=$(basename $backup .tar.gz)
@@ -358,7 +358,7 @@ done
 
 ```bash
 # Check volumes every hour
-0 * * * * /opt/webbadeploy/scripts/monitor-volumes.sh
+0 * * * * /opt/wharftales/scripts/monitor-volumes.sh
 ```
 
 ---
@@ -369,7 +369,7 @@ done
 ✅ **Survive container operations** - Stop, restart, remove, update
 ✅ **Survive system reboots** - Data is safe
 ✅ **Require explicit deletion** - Won't disappear accidentally
-✅ **Webbadeploy has options** - Keep or delete data when removing sites
+✅ **WharfTales has options** - Keep or delete data when removing sites
 ✅ **Easy to backup** - Simple tar commands
 ✅ **Production-ready** - Industry standard approach
 

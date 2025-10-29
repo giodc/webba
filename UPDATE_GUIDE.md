@@ -1,8 +1,8 @@
-# WebbaDeploy Update Guide
+# WharfTales Update Guide
 
 ## Problem: Settings Reset During Updates
 
-**Issue:** When running the install script to update WebbaDeploy, configurations like the Let's Encrypt email are being reset to default values.
+**Issue:** When running the install script to update WharfTales, configurations like the Let's Encrypt email are being reset to default values.
 
 **Root Cause:** 
 - `docker-compose.yml` is in `.gitignore` (correct behavior)
@@ -21,7 +21,7 @@ We've created improved update scripts that **automatically backup and restore** 
 This is the most comprehensive update method with detailed output:
 
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 sudo ./safe-update.sh
 ```
 
@@ -36,7 +36,7 @@ sudo ./safe-update.sh
 8. ✅ Fixes permissions
 9. ✅ Verifies configuration
 
-**Backup location:** `/opt/webbadeploy/data/backups/update-YYYYMMDD-HHMMSS/`
+**Backup location:** `/opt/wharftales/data/backups/update-YYYYMMDD-HHMMSS/`
 
 ---
 
@@ -45,7 +45,7 @@ sudo ./safe-update.sh
 A simpler version with the same backup/restore logic:
 
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 sudo ./update.sh
 ```
 
@@ -62,7 +62,7 @@ sudo ./update.sh
 The original install script has been improved to preserve settings during updates:
 
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 sudo ./install.sh
 ```
 
@@ -90,12 +90,12 @@ Every update now backs up:
 
 Backups are stored in:
 ```
-/opt/webbadeploy/data/backups/update-YYYYMMDD-HHMMSS/
+/opt/wharftales/data/backups/update-YYYYMMDD-HHMMSS/
 ```
 
 Example:
 ```
-/opt/webbadeploy/data/backups/update-20241028-233045/
+/opt/wharftales/data/backups/update-20241028-233045/
 ├── docker-compose.yml
 ├── database.sqlite
 └── acme.json
@@ -109,10 +109,10 @@ If something goes wrong, you can manually restore from the latest backup:
 
 ```bash
 # Find latest backup
-ls -lt /opt/webbadeploy/data/backups/
+ls -lt /opt/wharftales/data/backups/
 
 # Restore docker-compose.yml
-cd /opt/webbadeploy
+cd /opt/wharftales
 sudo cp data/backups/update-YYYYMMDD-HHMMSS/docker-compose.yml .
 
 # Restore database
@@ -136,7 +136,7 @@ After updating, verify your settings are preserved:
 ### 1. Check Let's Encrypt Email
 
 ```bash
-grep "acme.email" /opt/webbadeploy/docker-compose.yml
+grep "acme.email" /opt/wharftales/docker-compose.yml
 ```
 
 Should show your real email, not `test@example.com` or `admin@example.com`.
@@ -159,7 +159,7 @@ Visit: `http://your-server-ip:9000/settings.php`
 
 ## Database-Based Configuration
 
-WebbaDeploy now uses **database-based configuration storage** for better reliability:
+WharfTales now uses **database-based configuration storage** for better reliability:
 
 ### How It Works
 
@@ -187,7 +187,7 @@ WebbaDeploy now uses **database-based configuration storage** for better reliabi
 
 1. Check if you have a backup:
    ```bash
-   ls -lt /opt/webbadeploy/data/backups/
+   ls -lt /opt/wharftales/data/backups/
    ```
 
 2. If yes, restore from backup (see "Manual Restore" above)
@@ -195,7 +195,7 @@ WebbaDeploy now uses **database-based configuration storage** for better reliabi
 3. If no backup exists, you'll need to reconfigure:
    - Go to Settings → SSL Configuration
    - Update Let's Encrypt email
-   - Restart Traefik: `cd /opt/webbadeploy && sudo docker-compose restart traefik`
+   - Restart Traefik: `cd /opt/wharftales && sudo docker-compose restart traefik`
 
 ### Database Migration
 
@@ -212,7 +212,7 @@ The `migrate-compose-to-db.php` script runs automatically during updates:
 
 1. **Check current email:**
    ```bash
-   grep "acme.email" /opt/webbadeploy/docker-compose.yml
+   grep "acme.email" /opt/wharftales/docker-compose.yml
    ```
 
 2. **Note your settings:**
@@ -235,7 +235,7 @@ The `migrate-compose-to-db.php` script runs automatically during updates:
 
 1. **Verify email is preserved:**
    ```bash
-   grep "acme.email" /opt/webbadeploy/docker-compose.yml
+   grep "acme.email" /opt/wharftales/docker-compose.yml
    ```
 
 2. **Check SSL Debug page** for any issues
@@ -255,13 +255,13 @@ The `migrate-compose-to-db.php` script runs automatically during updates:
 **Solution:**
 1. Check if backup exists:
    ```bash
-   ls -lt /opt/webbadeploy/data/backups/
+   ls -lt /opt/wharftales/data/backups/
    ```
 
 2. Restore from backup:
    ```bash
-   LATEST_BACKUP=$(ls -t /opt/webbadeploy/data/backups/ | head -1)
-   sudo cp /opt/webbadeploy/data/backups/$LATEST_BACKUP/docker-compose.yml /opt/webbadeploy/
+   LATEST_BACKUP=$(ls -t /opt/wharftales/data/backups/ | head -1)
+   sudo cp /opt/wharftales/data/backups/$LATEST_BACKUP/docker-compose.yml /opt/wharftales/
    sudo docker-compose restart traefik
    ```
 
@@ -274,10 +274,10 @@ The `migrate-compose-to-db.php` script runs automatically during updates:
 **Solution:**
 1. Restore acme.json from backup:
    ```bash
-   LATEST_BACKUP=$(ls -t /opt/webbadeploy/data/backups/ | head -1)
-   sudo cp /opt/webbadeploy/data/backups/$LATEST_BACKUP/acme.json /opt/webbadeploy/ssl/
-   sudo chmod 600 /opt/webbadeploy/ssl/acme.json
-   sudo chown root:root /opt/webbadeploy/ssl/acme.json
+   LATEST_BACKUP=$(ls -t /opt/wharftales/data/backups/ | head -1)
+   sudo cp /opt/wharftales/data/backups/$LATEST_BACKUP/acme.json /opt/wharftales/ssl/
+   sudo chmod 600 /opt/wharftales/ssl/acme.json
+   sudo chown root:root /opt/wharftales/ssl/acme.json
    sudo docker-compose restart traefik
    ```
 
@@ -288,16 +288,16 @@ The `migrate-compose-to-db.php` script runs automatically during updates:
 **Solution:**
 1. Restore database from backup:
    ```bash
-   LATEST_BACKUP=$(ls -t /opt/webbadeploy/data/backups/ | head -1)
-   sudo cp /opt/webbadeploy/data/backups/$LATEST_BACKUP/database.sqlite /opt/webbadeploy/data/
-   sudo docker exec -u root webbadeploy_gui chown www-data:www-data /app/data/database.sqlite
+   LATEST_BACKUP=$(ls -t /opt/wharftales/data/backups/ | head -1)
+   sudo cp /opt/wharftales/data/backups/$LATEST_BACKUP/database.sqlite /opt/wharftales/data/
+   sudo docker exec -u root wharftales_gui chown www-data:www-data /app/data/database.sqlite
    sudo docker-compose restart web-gui
    ```
 
 2. Run migrations manually:
    ```bash
-   sudo docker exec webbadeploy_gui php /var/www/html/migrate-rbac-2fa.php
-   sudo docker exec webbadeploy_gui php /var/www/html/migrate-compose-to-db.php
+   sudo docker exec wharftales_gui php /var/www/html/migrate-rbac-2fa.php
+   sudo docker exec wharftales_gui php /var/www/html/migrate-compose-to-db.php
    ```
 
 ---
@@ -306,18 +306,18 @@ The `migrate-compose-to-db.php` script runs automatically during updates:
 
 The following update scripts have been improved:
 
-1. **`/opt/webbadeploy/safe-update.sh`** (NEW)
+1. **`/opt/wharftales/safe-update.sh`** (NEW)
    - Comprehensive update with detailed output
    - Automatic backup and restore
    - Configuration verification
    - Recommended for production use
 
-2. **`/opt/webbadeploy/update.sh`** (IMPROVED)
+2. **`/opt/wharftales/update.sh`** (IMPROVED)
    - Simple update script
    - Now includes backup/restore logic
    - Good for quick updates
 
-3. **`/opt/webbadeploy/install.sh`** (IMPROVED)
+3. **`/opt/wharftales/install.sh`** (IMPROVED)
    - Now preserves settings during updates
    - Automatic backup when UPDATE_MODE detected
    - Restores configurations after git pull

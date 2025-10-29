@@ -39,7 +39,7 @@ This fix ensures the `acme.json` file is properly created and configured for bot
 SSH into your remote server and run:
 
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 sudo mkdir -p ssl
 sudo tee ssl/acme.json > /dev/null << 'EOF'
 {
@@ -65,11 +65,11 @@ From your local machine:
 
 ```bash
 # Copy the fix script
-scp /opt/webbadeploy/fix-acme.sh user@remote-server:/opt/webbadeploy/
+scp /opt/wharftales/fix-acme.sh user@remote-server:/opt/wharftales/
 
 # SSH and run
 ssh user@remote-server
-cd /opt/webbadeploy
+cd /opt/wharftales
 sudo bash fix-acme.sh
 docker-compose restart traefik
 ```
@@ -89,7 +89,7 @@ sudo bash install-production.sh
 ```
 
 Both scripts will:
-1. Create `/opt/webbadeploy/ssl/acme.json`
+1. Create `/opt/wharftales/ssl/acme.json`
 2. Set permissions to 600 (rw-------)
 3. Set ownership to root:root
 4. Verify file exists before starting Traefik
@@ -120,17 +120,17 @@ After applying the fix (existing or new installation):
 
 ```bash
 # 1. Check file exists
-ls -la /opt/webbadeploy/ssl/acme.json
+ls -la /opt/wharftales/ssl/acme.json
 # Expected: -rw------- 1 root root 169 Oct 11 14:43 acme.json
 
 # 2. Verify content
-sudo cat /opt/webbadeploy/ssl/acme.json | jq
+sudo cat /opt/wharftales/ssl/acme.json | jq
 
 # 3. Check Traefik is running
 docker ps | grep traefik
 
 # 4. Monitor certificate acquisition
-docker logs webbadeploy_traefik -f
+docker logs wharftales_traefik -f
 ```
 
 ## How It Works
@@ -176,8 +176,8 @@ docker logs webbadeploy_traefik -f
 ### Issue: "Permission denied" on acme.json
 **Solution:** 
 ```bash
-sudo chmod 600 /opt/webbadeploy/ssl/acme.json
-sudo chown root:root /opt/webbadeploy/ssl/acme.json
+sudo chmod 600 /opt/wharftales/ssl/acme.json
+sudo chown root:root /opt/wharftales/ssl/acme.json
 ```
 
 ### Issue: Certificates not being issued
@@ -190,7 +190,7 @@ sudo chown root:root /opt/webbadeploy/ssl/acme.json
 **Debug:**
 ```bash
 # Check Traefik logs
-docker logs webbadeploy_traefik 2>&1 | grep -i "certificate\|error"
+docker logs wharftales_traefik 2>&1 | grep -i "certificate\|error"
 
 # Test domain accessibility
 curl -I http://your-domain.com
@@ -202,10 +202,10 @@ nslookup your-domain.com
 ### Issue: File exists but still getting errors
 **Solution:** Restart all services
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 docker-compose down
 docker-compose up -d
-docker logs webbadeploy_traefik -f
+docker logs wharftales_traefik -f
 ```
 
 ## Testing the Fix
@@ -213,8 +213,8 @@ docker logs webbadeploy_traefik -f
 ### Local Testing (Already Done)
 ```bash
 # Verify local fix
-ls -la /opt/webbadeploy/ssl/acme.json
-sudo cat /opt/webbadeploy/ssl/acme.json
+ls -la /opt/wharftales/ssl/acme.json
+sudo cat /opt/wharftales/ssl/acme.json
 
 # Expected output:
 # -rw------- 1 root root 169 Oct 11 14:43 acme.json
@@ -227,14 +227,14 @@ sudo cat /opt/webbadeploy/ssl/acme.json
 ssh user@remote-server
 
 # Check file
-ls -la /opt/webbadeploy/ssl/acme.json
+ls -la /opt/wharftales/ssl/acme.json
 
 # Restart Traefik
-cd /opt/webbadeploy
+cd /opt/wharftales
 docker-compose restart traefik
 
 # Monitor logs
-docker logs webbadeploy_traefik -f
+docker logs wharftales_traefik -f
 ```
 
 ## Production Checklist
@@ -270,19 +270,19 @@ Before deploying to production:
 
 ```bash
 # View ACME file
-sudo cat /opt/webbadeploy/ssl/acme.json | jq
+sudo cat /opt/wharftales/ssl/acme.json | jq
 
 # Check certificates
-sudo cat /opt/webbadeploy/ssl/acme.json | jq '.letsencrypt.Certificates'
+sudo cat /opt/wharftales/ssl/acme.json | jq '.letsencrypt.Certificates'
 
 # Restart Traefik
 docker-compose restart traefik
 
 # View logs
-docker logs webbadeploy_traefik -f
+docker logs wharftales_traefik -f
 
 # Force new certificates
-sudo rm /opt/webbadeploy/ssl/acme.json
+sudo rm /opt/wharftales/ssl/acme.json
 sudo bash fix-acme.sh
 docker-compose restart traefik
 

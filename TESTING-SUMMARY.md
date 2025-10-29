@@ -7,7 +7,7 @@
 **Status**: ✅ FIXED
 **Verification**:
 ```bash
-docker exec webbadeploy_gui php -l /var/www/html/api.php
+docker exec wharftales_gui php -l /var/www/html/api.php
 # Output: No syntax errors detected
 ```
 
@@ -85,12 +85,12 @@ curl -s http://localhost:9000/api.php?action=create_site -X POST \
 # Expected: {"success":false,"error":"Unauthorized"}
 
 # 2. Check session lifetime
-docker exec webbadeploy_gui php -r "require_once '/var/www/html/includes/auth.php'; echo ini_get('session.gc_maxlifetime');"
+docker exec wharftales_gui php -r "require_once '/var/www/html/includes/auth.php'; echo ini_get('session.gc_maxlifetime');"
 
 # Expected: 86400
 
 # 3. Check for parse errors
-docker exec webbadeploy_gui php -l /var/www/html/api.php
+docker exec wharftales_gui php -l /var/www/html/api.php
 
 # Expected: No syntax errors detected
 ```
@@ -106,7 +106,7 @@ docker exec webbadeploy_gui php -l /var/www/html/api.php
 
 1. **Clear browser cache completely**
 2. **Check browser console** (F12 → Console tab)
-3. **Check Docker logs**: `docker logs webbadeploy_gui --tail 50`
+3. **Check Docker logs**: `docker logs wharftales_gui --tail 50`
 4. **Verify you're logged in**: Visit `/login.php`
 
 ---

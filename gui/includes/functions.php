@@ -375,7 +375,7 @@ function checkContainerSSLLabels($containerName) {
 }
 
 function reloadNginx() {
-    return executeDockerCommand("exec webbadeploy_nginx nginx -s reload");
+    return executeDockerCommand("exec wharftales_nginx nginx -s reload");
 }
 
 function generateSFTPCredentials($siteName) {
@@ -547,7 +547,7 @@ function createSFTPDockerCompose($site, $containerName, $volumeName, $useBindMou
       - LOG_STDOUT=true
     restart: unless-stopped
     networks:
-      - webbadeploy_webbadeploy
+      - wharftales_wharftales
     security_opt:
       - no-new-privileges:true
     read_only: false
@@ -555,7 +555,7 @@ function createSFTPDockerCompose($site, $containerName, $volumeName, $useBindMou
       - /tmp
 {$volumeSection}
 networks:
-  webbadeploy_webbadeploy:
+  wharftales_wharftales:
     external: true";
 }
 
@@ -613,7 +613,7 @@ function generateComposeFile($pdo, $siteId = null) {
     
     if ($siteId === null) {
         // Main Traefik config
-        $outputPath = '/opt/webbadeploy/docker-compose.yml';
+        $outputPath = '/opt/wharftales/docker-compose.yml';
     } else {
         // Site-specific config
         $site = getSiteById($pdo, $siteId);

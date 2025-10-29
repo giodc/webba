@@ -1,7 +1,7 @@
 # All Fixes Complete ✅
 
 ## Summary
-Fixed multiple critical issues in Webbadeploy that were causing deployment failures and session errors.
+Fixed multiple critical issues in WharfTales that were causing deployment failures and session errors.
 
 ---
 
@@ -114,19 +114,19 @@ $_SERVER["SERVER_SOFTWARE"]  // ✅ Valid PHP!
 
 ### 1. Check API Syntax
 ```bash
-docker exec webbadeploy_gui php -l /var/www/html/api.php
+docker exec wharftales_gui php -l /var/www/html/api.php
 # Expected: No syntax errors detected ✅
 ```
 
 ### 2. Check Session Lifetime
 ```bash
-docker exec webbadeploy_gui php -r "require_once '/var/www/html/includes/auth.php'; echo ini_get('session.gc_maxlifetime');"
+docker exec wharftales_gui php -r "require_once '/var/www/html/includes/auth.php'; echo ini_get('session.gc_maxlifetime');"
 # Expected: 86400 ✅
 ```
 
 ### 3. Check JavaScript Version
 ```bash
-grep "console.log" /opt/webbadeploy/gui/js/app.js | head -1
+grep "console.log" /opt/wharftales/gui/js/app.js | head -1
 # Expected: v5.2 ✅
 ```
 
@@ -148,8 +148,8 @@ curl -s http://localhost:9000/api.php?action=create_site -X POST -H "Content-Typ
 ### Session Handling
 - [ ] Clear browser cache (Ctrl+Shift+Delete)
 - [ ] Hard refresh (Ctrl+F5)
-- [ ] Check console shows "Webbadeploy JS v5.2 loaded"
-- [ ] Log in to Webbadeploy
+- [ ] Check console shows "WharfTales JS v5.2 loaded"
+- [ ] Log in to WharfTales
 - [ ] Try creating a PHP site
 - [ ] Try creating a Laravel site
 - [ ] Try changing password
@@ -207,7 +207,7 @@ curl -s http://localhost:9000/api.php?action=create_site -X POST -H "Content-Typ
 
 ### On Remote Server
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 
 # Option 1: Deploy all fixes
 ./DEPLOY-FIXES.sh
@@ -220,7 +220,7 @@ docker-compose up -d
 
 ### After Deployment
 1. Clear browser cache completely
-2. Log in to Webbadeploy
+2. Log in to WharfTales
 3. Test creating sites (PHP and Laravel)
 4. Test changing password
 5. Verify session persists
@@ -241,14 +241,14 @@ docker-compose up -d
 3. **Or delete and recreate** the site
 
 ### Session Still Expiring?
-1. Verify session config: `docker exec webbadeploy_gui php -i | grep session.gc_maxlifetime`
+1. Verify session config: `docker exec wharftales_gui php -i | grep session.gc_maxlifetime`
 2. Should show: `86400`
 3. Check browser cookies: Look for `PHPSESSID` with `Max-Age=86400`
 
 ### Password Reset Not Working?
-1. Check container is running: `docker ps | grep webbadeploy_gui`
-2. Check logs: `docker logs webbadeploy_gui`
-3. Try direct command: `docker exec webbadeploy_gui php /var/www/html/reset-password.php admin NewPass`
+1. Check container is running: `docker ps | grep wharftales_gui`
+2. Check logs: `docker logs wharftales_gui`
+3. Try direct command: `docker exec wharftales_gui php /var/www/html/reset-password.php admin NewPass`
 
 ---
 
@@ -275,7 +275,7 @@ With quoted heredoc delimiter (`"PHPEOF"`):
 ✅ **Ready for production use**
 
 **Date**: 2025-10-10  
-**Version**: Webbadeploy JS v5.2  
+**Version**: WharfTales JS v5.2  
 **Status**: COMPLETE
 
 ---
@@ -290,13 +290,13 @@ With quoted heredoc delimiter (`"PHPEOF"`):
 ./DEPLOY-FIXES.sh
 
 # Check API syntax
-docker exec webbadeploy_gui php -l /var/www/html/api.php
+docker exec wharftales_gui php -l /var/www/html/api.php
 
 # Check session config
-docker exec webbadeploy_gui php -i | grep session.gc_maxlifetime
+docker exec wharftales_gui php -i | grep session.gc_maxlifetime
 
 # View logs
-docker logs webbadeploy_gui --tail 50
+docker logs wharftales_gui --tail 50
 
 # Fix existing Laravel container
 ./fix-laravel-index.sh laravel_sitename_123456
@@ -304,4 +304,4 @@ docker logs webbadeploy_gui --tail 50
 
 ---
 
-**🎉 All fixes complete! Your Webbadeploy is now fully functional!**
+**🎉 All fixes complete! Your WharfTales is now fully functional!**

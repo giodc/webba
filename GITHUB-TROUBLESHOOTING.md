@@ -55,13 +55,13 @@ GitHub Deployment
 
 ### Check if files are in container:
 ```bash
-docker exec webbadeploy_gui ls -la /var/www/html/includes/ | grep github
-docker exec webbadeploy_gui ls -la /var/www/html/includes/ | grep encryption
+docker exec wharftales_gui ls -la /var/www/html/includes/ | grep github
+docker exec wharftales_gui ls -la /var/www/html/includes/ | grep encryption
 ```
 
 ### Check if database has GitHub fields:
 ```bash
-docker exec webbadeploy_gui php -r "
+docker exec wharftales_gui php -r "
 require_once '/var/www/html/includes/functions.php';
 \$db = initDatabase();
 \$cols = \$db->query('PRAGMA table_info(sites)')->fetchAll(PDO::FETCH_ASSOC);
@@ -83,14 +83,14 @@ github_last_pull
 
 ### Check if HTML is in index.php:
 ```bash
-docker exec webbadeploy_gui grep "editGithubSection" /var/www/html/index.php
+docker exec wharftales_gui grep "editGithubSection" /var/www/html/index.php
 ```
 
 **Expected:** Should find the div with id="editGithubSection"
 
 ### Check if JavaScript is loaded:
 ```bash
-docker exec webbadeploy_gui grep "editGithubSection" /var/www/html/js/app.js
+docker exec wharftales_gui grep "editGithubSection" /var/www/html/js/app.js
 ```
 
 **Expected:** Should find the JavaScript code
@@ -101,12 +101,12 @@ docker exec webbadeploy_gui grep "editGithubSection" /var/www/html/js/app.js
 
 ### Option 1: Restart Docker Container
 ```bash
-docker restart webbadeploy_gui
+docker restart wharftales_gui
 ```
 
 ### Option 2: Force Rebuild
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 docker-compose down
 docker-compose up -d --build
 ```
@@ -115,7 +115,7 @@ docker-compose up -d --build
 1. Open browser DevTools (F12)
 2. Go to Console tab
 3. Look for errors
-4. Should see: "Webbadeploy JS v5.2 loaded"
+4. Should see: "WharfTales JS v5.2 loaded"
 
 ### Option 4: Test with Different Browser
 Try opening in:

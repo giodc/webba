@@ -1,4 +1,4 @@
-# Security Fixes Applied to Webbadeploy
+# Security Fixes Applied to WharfTales
 
 **Date:** 2025-10-08  
 **Status:** ✅ Code fixes completed
@@ -13,7 +13,7 @@ All critical security vulnerabilities in the codebase have been fixed. The follo
 
 ## Files Modified
 
-### 1. ✅ `/opt/webbadeploy/install-production.sh`
+### 1. ✅ `/opt/wharftales/install-production.sh`
 **Changes:**
 - Line 234-235: Changed `chmod -R 777` → `chmod -R 755` for apps and data directories
 - Line 238-239: Added proper ownership with `chown -R www-data:www-data`
@@ -42,7 +42,7 @@ chown root:docker /var/run/docker.sock
 
 ---
 
-### 2. ✅ `/opt/webbadeploy/install.sh`
+### 2. ✅ `/opt/wharftales/install.sh`
 **Changes:**
 - Line 65-73: Changed `chmod 666` → `chmod 664` for docker-compose.yml
 - Line 68-73: Changed Docker socket from `chmod 666` → `chmod 660` with docker group
@@ -67,7 +67,7 @@ chown root:docker /var/run/docker.sock
 
 ---
 
-### 3. ✅ `/opt/webbadeploy/gui/includes/functions.php`
+### 3. ✅ `/opt/wharftales/gui/includes/functions.php`
 **Changes:**
 - Line 394-401: Changed SFTP directory permissions from `0777` → `0755`
 - Line 453: Changed SFTP to bind to `127.0.0.1` instead of `0.0.0.0`
@@ -101,20 +101,20 @@ security_opt:
 
 ## New Security Files Created
 
-### 4. ✅ `/opt/webbadeploy/SECURITY_FIXES.md`
+### 4. ✅ `/opt/wharftales/SECURITY_FIXES.md`
 Complete step-by-step manual fix instructions for:
 - Changing database passwords
 - Securing SFTP with firewall rules
 - Cleaning WordPress malware
 - Restricting dashboard access
 
-### 5. ✅ `/opt/webbadeploy/fix-permissions-secure.sh`
+### 5. ✅ `/opt/wharftales/fix-permissions-secure.sh`
 Automated script to fix file permissions on existing installations.
 
-### 6. ✅ `/opt/webbadeploy/security-audit.sh`
+### 6. ✅ `/opt/wharftales/security-audit.sh`
 Security scanning tool to detect vulnerabilities and compromises.
 
-### 7. ✅ `/opt/webbadeploy/apps/wordpress/wp-security-hardening.php`
+### 7. ✅ `/opt/wharftales/apps/wordpress/wp-security-hardening.php`
 WordPress security configuration including:
 - Disable file editing
 - Disable file modifications
@@ -122,13 +122,13 @@ WordPress security configuration including:
 - Rate limiting for login attempts
 - Security headers
 
-### 8. ✅ `/opt/webbadeploy/apps/wordpress/.htaccess-uploads-security`
+### 8. ✅ `/opt/wharftales/apps/wordpress/.htaccess-uploads-security`
 Upload directory protection:
 - Disable PHP execution
 - Block script injection
 - Whitelist allowed file types
 
-### 9. ✅ `/opt/webbadeploy/SECURITY_AUDIT_REPORT.md`
+### 9. ✅ `/opt/wharftales/SECURITY_AUDIT_REPORT.md`
 Complete audit report with findings and recommendations.
 
 ---
@@ -174,7 +174,7 @@ Complete audit report with findings and recommendations.
 ## What Requires Manual Action
 
 ⚠️ **Existing Installations**
-1. Run `/opt/webbadeploy/fix-permissions-secure.sh` to fix permissions
+1. Run `/opt/wharftales/fix-permissions-secure.sh` to fix permissions
 2. Change database passwords (see SECURITY_FIXES.md)
 3. Configure firewall rules for SFTP and dashboard
 4. Scan and clean WordPress sites for malware
@@ -193,7 +193,7 @@ Complete audit report with findings and recommendations.
 
 Run the security audit to verify fixes:
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 sudo bash security-audit.sh
 ```
 
@@ -228,9 +228,9 @@ These fixes address:
 ## Support
 
 For questions or issues:
-1. Review `/opt/webbadeploy/SECURITY_FIXES.md` for detailed instructions
-2. Review `/opt/webbadeploy/SECURITY_AUDIT_REPORT.md` for complete findings
-3. Run `/opt/webbadeploy/security-audit.sh` to check current status
+1. Review `/opt/wharftales/SECURITY_FIXES.md` for detailed instructions
+2. Review `/opt/wharftales/SECURITY_AUDIT_REPORT.md` for complete findings
+3. Run `/opt/wharftales/security-audit.sh` to check current status
 
 ---
 

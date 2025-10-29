@@ -9,7 +9,7 @@ echo "║        Fix ACME Email from Database to Docker Compose     ║"
 echo "╚═══════════════════════════════════════════════════════════╝"
 echo ""
 
-cd /opt/webbadeploy || exit 1
+cd /opt/wharftales || exit 1
 
 # Get email from database (GUI settings)
 echo "1. Reading email from database (GUI settings)..."
@@ -108,10 +108,10 @@ echo ""
 echo "Email synchronized: $EMAIL_DB"
 echo ""
 echo "Next steps:"
-echo "  1. Monitor Traefik logs: docker logs webbadeploy_traefik -f"
+echo "  1. Monitor Traefik logs: docker logs wharftales_traefik -f"
 echo "  2. Traefik will now request certificates with the correct email"
 echo "  3. Check for 'certificate obtained' messages in logs"
 echo ""
 echo "Verify with:"
-echo "  docker inspect webbadeploy_traefik | grep acme.email"
+echo "  docker inspect wharftales_traefik | grep acme.email"
 echo ""

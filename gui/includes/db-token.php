@@ -1,7 +1,7 @@
 <?php
 // Database access token management
 
-define('DB_TOKEN_SECRET', 'webbadeploy_db_token_secret_' . md5(__DIR__));
+define('DB_TOKEN_SECRET', 'wharftales_db_token_secret_' . md5(__DIR__));
 define('DB_TOKEN_EXPIRY', 300); // 5 minutes
 
 function generateDatabaseToken($db, $siteId, $userId) {

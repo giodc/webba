@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# Webbadeploy Production Installation Script
+# WharfTales Production Installation Script
 # For Ubuntu 20.04+ / Debian 11+ / Fresh Servers
-# Run: curl -fsSL https://raw.githubusercontent.com/yourrepo/webbadeploy/main/install-production.sh | sudo bash
+# Run: curl -fsSL https://raw.githubusercontent.com/yourrepo/wharftales/main/install-production.sh | sudo bash
 
 set -e
 
@@ -14,7 +14,7 @@ NC='\033[0m' # No Color
 
 echo -e "${GREEN}"
 echo "╔═══════════════════════════════════════╗"
-echo "║   Webbadeploy Production Installer   ║"
+echo "║   WharfTales Production Installer   ║"
 echo "║   Easy App Deployment Platform       ║"
 echo "╚═══════════════════════════════════════╝"
 echo -e "${NC}"
@@ -99,8 +99,8 @@ else
 fi
 
 # Create installation directory
-echo -e "\n${YELLOW}Setting up Webbadeploy...${NC}"
-INSTALL_DIR="/opt/webbadeploy"
+echo -e "\n${YELLOW}Setting up WharfTales...${NC}"
+INSTALL_DIR="/opt/wharftales"
 
 if [ -d "$INSTALL_DIR" ]; then
     echo -e "${YELLOW}Warning: $INSTALL_DIR already exists${NC}"
@@ -119,8 +119,8 @@ fi
 mkdir -p "$INSTALL_DIR"
 cd "$INSTALL_DIR"
 
-# Download Webbadeploy files
-echo -e "\n${YELLOW}Downloading Webbadeploy files...${NC}"
+# Download WharfTales files
+echo -e "\n${YELLOW}Downloading WharfTales files...${NC}"
 
 # Clone from GitHub repository
 if command -v git &> /dev/null; then
@@ -171,7 +171,7 @@ version: '3.8'
 services:
   traefik:
     image: traefik:v2.10
-    container_name: webbadeploy_traefik
+    container_name: wharftales_traefik
     command:
       - "--api.insecure=true"
       - "--providers.docker=true"
@@ -186,24 +186,24 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./ssl:/ssl
     networks:
-      - webbadeploy
+      - wharftales
     restart: unless-stopped
 
   db:
     image: mariadb:10.11
-    container_name: webbadeploy_db
+    container_name: wharftales_db
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: webbadeploy
+      MYSQL_DATABASE: wharftales
     volumes:
       - db_data:/var/lib/mysql
     networks:
-      - webbadeploy
+      - wharftales
     restart: unless-stopped
 
   gui:
     build: ./gui
-    container_name: webbadeploy_gui
+    container_name: wharftales_gui
     ports:
       - "9000:80"  # Dashboard accessible on port 9000
     volumes:
@@ -214,13 +214,13 @@ services:
       - /usr/local/bin/docker-compose:/usr/local/bin/docker-compose:ro
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
-      - webbadeploy
+      - wharftales
     restart: unless-stopped
     depends_on:
       - db
 networks:
-  webbadeploy:
-    name: webbadeploy_webbadeploy
+  wharftales:
+    name: wharftales_wharftales
     driver: bridge
 
 volumes:
@@ -237,7 +237,7 @@ if [ ! -f "gui/index.php" ]; then
     exit 1
 fi
 
-echo -e "${GREEN}✓ Webbadeploy files verified${NC}"
+echo -e "${GREEN}✓ WharfTales files verified${NC}"
 
 # Set up firewall
 echo -e "\n${YELLOW}Configuring firewall...${NC}"
@@ -246,7 +246,7 @@ if command -v ufw &> /dev/null; then
     ufw allow 22/tcp comment 'SSH'
     ufw allow 80/tcp comment 'HTTP'
     ufw allow 443/tcp comment 'HTTPS'
-    ufw allow 3000/tcp comment 'Webbadeploy Dashboard'
+    ufw allow 3000/tcp comment 'WharfTales Dashboard'
     ufw allow 2222:2299/tcp comment 'SFTP Range'
     echo -e "${GREEN}✓ Firewall configured${NC}"
 fi
@@ -308,7 +308,7 @@ ACME_EOF
 fi
 
 # Start services
-echo -e "\n${YELLOW}Starting Webbadeploy services...${NC}"
+echo -e "\n${YELLOW}Starting WharfTales services...${NC}"
 cd "$INSTALL_DIR"
 docker-compose up -d
 
@@ -318,17 +318,17 @@ sleep 15
 
 # Ensure database user has proper permissions
 echo -e "${YELLOW}Configuring database permissions...${NC}"
-docker exec webbadeploy_db mariadb -uroot -pwebbadeploy_root_pass -e "GRANT ALL PRIVILEGES ON *.* TO 'webbadeploy'@'%'; FLUSH PRIVILEGES;" 2>/dev/null || true
+docker exec wharftales_db mariadb -uroot -pwharftales_root_pass -e "GRANT ALL PRIVILEGES ON *.* TO 'wharftales'@'%'; FLUSH PRIVILEGES;" 2>/dev/null || true
 echo -e "${GREEN}✓ Database permissions configured${NC}"
 
 # Run database migrations for new features
 echo -e "${YELLOW}Running database migrations...${NC}"
 sleep 2
-docker exec webbadeploy_gui php /app/migrate-rbac-2fa.php 2>/dev/null || echo -e "${YELLOW}Migration will run on first access${NC}"
+docker exec wharftales_gui php /app/migrate-rbac-2fa.php 2>/dev/null || echo -e "${YELLOW}Migration will run on first access${NC}"
 echo -e "${GREEN}✓ Database migrations completed${NC}"
 
 # Check if services are running
-if docker ps | grep -q webbadeploy_gui; then
+if docker ps | grep -q wharftales_gui; then
     echo -e "${GREEN}✓ Services started successfully${NC}"
 else
     echo -e "${RED}Error: Services failed to start${NC}"
@@ -340,12 +340,12 @@ fi
 echo -e "\n${GREEN}"
 echo "╔═══════════════════════════════════════════════════════════╗"
 echo "║                                                           ║"
-echo "║  ✓ Webbadeploy Installation Complete!                    ║"
+echo "║  ✓ WharfTales Installation Complete!                    ║"
 echo "║                                                           ║"
 echo "╚═══════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
 
-echo -e "${GREEN}Access your Webbadeploy dashboard:${NC}"
+echo -e "${GREEN}Access your WharfTales dashboard:${NC}"
 echo -e "  Main Dashboard:    http://$SERVER_IP:9000"
 echo ""
 echo -e "${YELLOW}Important Notes:${NC}"
@@ -375,5 +375,5 @@ echo "  4. Configure DNS for custom domains"
 echo "  5. Enable SSL for production sites"
 echo "  6. (Optional) Enable 2FA in user settings"
 echo ""
-echo -e "${YELLOW}For support: https://github.com/yourrepo/webbadeploy${NC}"
+echo -e "${YELLOW}For support: https://github.com/yourrepo/wharftales${NC}"
 echo ""

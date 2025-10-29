@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Webbadeploy Production Readiness & Security Hardening Script
+# WharfTales Production Readiness & Security Hardening Script
 # Run: sudo bash production-readiness-check.sh [--dry-run]
 
 set -e
@@ -34,7 +34,7 @@ done
 
 echo -e "${BLUE}${BOLD}"
 echo "╔════════════════════════════════════════════════════╗"
-echo "║   Webbadeploy Production Readiness Check          ║"
+echo "║   WharfTales Production Readiness Check          ║"
 echo "║   Security Hardening & Verification Script        ║"
 echo "╚════════════════════════════════════════════════════╝"
 echo -e "${NC}"
@@ -46,13 +46,13 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
-WEBBADEPLOY_DIR="/opt/webbadeploy"
-if [ ! -d "$WEBBADEPLOY_DIR" ]; then
-    echo -e "${RED}Error: Webbadeploy directory not found at $WEBBADEPLOY_DIR${NC}"
+WHARFTALES_DIR="/opt/wharftales"
+if [ ! -d "$WHARFTALES_DIR" ]; then
+    echo -e "${RED}Error: WharfTales directory not found at $WHARFTALES_DIR${NC}"
     exit 1
 fi
 
-cd "$WEBBADEPLOY_DIR"
+cd "$WHARFTALES_DIR"
 
 # ============================================================================
 # SECTION 1: SYSTEM SECURITY
@@ -147,24 +147,24 @@ check_and_fix_perms() {
 
 echo -e "\n${YELLOW}[2.1] Checking directory permissions...${NC}"
 if id -u www-data &>/dev/null; then
-    check_and_fix_perms "$WEBBADEPLOY_DIR/data" "755" "www-data:www-data" "true"
-    check_and_fix_perms "$WEBBADEPLOY_DIR/apps" "755" "www-data:www-data" "true"
-    check_and_fix_perms "$WEBBADEPLOY_DIR/ssl" "750" "root:www-data" "true"
-    check_and_fix_perms "$WEBBADEPLOY_DIR/docker-compose.yml" "640" "root:www-data" "true"
+    check_and_fix_perms "$WHARFTALES_DIR/data" "755" "www-data:www-data" "true"
+    check_and_fix_perms "$WHARFTALES_DIR/apps" "755" "www-data:www-data" "true"
+    check_and_fix_perms "$WHARFTALES_DIR/ssl" "750" "root:www-data" "true"
+    check_and_fix_perms "$WHARFTALES_DIR/docker-compose.yml" "640" "root:www-data" "true"
     
-    [ -f "$WEBBADEPLOY_DIR/data/database.sqlite" ] && \
-        check_and_fix_perms "$WEBBADEPLOY_DIR/data/database.sqlite" "664" "www-data:www-data" "true"
+    [ -f "$WHARFTALES_DIR/data/database.sqlite" ] && \
+        check_and_fix_perms "$WHARFTALES_DIR/data/database.sqlite" "664" "www-data:www-data" "true"
 else
     echo -e "${RED}  ✗ www-data user does not exist${NC}"
     ISSUES_FOUND=$((ISSUES_FOUND + 1))
 fi
 
 echo -e "\n${YELLOW}[2.2] Scanning for world-writable files...${NC}"
-WORLD_WRITABLE=$(find "$WEBBADEPLOY_DIR" -type f -perm -002 2>/dev/null | wc -l)
+WORLD_WRITABLE=$(find "$WHARFTALES_DIR" -type f -perm -002 2>/dev/null | wc -l)
 if [ "$WORLD_WRITABLE" -gt 0 ]; then
     echo -e "${RED}  ✗ Found $WORLD_WRITABLE world-writable files${NC}"
     ISSUES_FOUND=$((ISSUES_FOUND + 1))
-    [ "$DRY_RUN" = false ] && find "$WEBBADEPLOY_DIR" -type f -perm -002 -exec chmod o-w {} \; && FIXES_APPLIED=$((FIXES_APPLIED + 1))
+    [ "$DRY_RUN" = false ] && find "$WHARFTALES_DIR" -type f -perm -002 -exec chmod o-w {} \; && FIXES_APPLIED=$((FIXES_APPLIED + 1))
 else
     echo -e "${GREEN}  ✓ No world-writable files found${NC}"
 fi
@@ -223,8 +223,8 @@ echo -e "\n${BLUE}${BOLD}[SECTION 4/8] Database Security${NC}"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 echo -e "\n${YELLOW}[4.1] Checking for default database passwords...${NC}"
-if docker ps | grep -q webbadeploy_db; then
-    if docker exec webbadeploy_db mariadb -uroot -pwebbadeploy_root_pass -e "SELECT 1" &>/dev/null; then
+if docker ps | grep -q wharftales_db; then
+    if docker exec wharftales_db mariadb -uroot -pwharftales_root_pass -e "SELECT 1" &>/dev/null; then
         echo -e "${RED}  ✗ CRITICAL: Default database root password still in use!${NC}"
         ISSUES_FOUND=$((ISSUES_FOUND + 1))
     else
@@ -235,21 +235,21 @@ else
 fi
 
 echo -e "\n${YELLOW}[4.2] Checking SQLite database security...${NC}"
-if [ -f "$WEBBADEPLOY_DIR/data/database.sqlite" ]; then
-    DB_PERMS=$(stat -c "%a" "$WEBBADEPLOY_DIR/data/database.sqlite")
+if [ -f "$WHARFTALES_DIR/data/database.sqlite" ]; then
+    DB_PERMS=$(stat -c "%a" "$WHARFTALES_DIR/data/database.sqlite")
     if [ "$DB_PERMS" == "777" ] || [ "$DB_PERMS" == "666" ]; then
         echo -e "${RED}  ✗ CRITICAL: Database file has insecure permissions ($DB_PERMS)${NC}"
         ISSUES_FOUND=$((ISSUES_FOUND + 1))
         if [ "$DRY_RUN" = false ]; then
-            chmod 664 "$WEBBADEPLOY_DIR/data/database.sqlite"
-            chown www-data:www-data "$WEBBADEPLOY_DIR/data/database.sqlite"
+            chmod 664 "$WHARFTALES_DIR/data/database.sqlite"
+            chown www-data:www-data "$WHARFTALES_DIR/data/database.sqlite"
             FIXES_APPLIED=$((FIXES_APPLIED + 1))
         fi
     else
         echo -e "${GREEN}  ✓ Database permissions OK ($DB_PERMS)${NC}"
     fi
     
-    BACKUP_COUNT=$(find "$WEBBADEPLOY_DIR/backups" -name "*.sqlite" 2>/dev/null | wc -l)
+    BACKUP_COUNT=$(find "$WHARFTALES_DIR/backups" -name "*.sqlite" 2>/dev/null | wc -l)
     if [ "$BACKUP_COUNT" -gt 0 ]; then
         echo -e "${GREEN}  ✓ Found $BACKUP_COUNT database backup(s)${NC}"
     else
@@ -265,8 +265,8 @@ echo -e "\n${BLUE}${BOLD}[SECTION 5/8] Application Security${NC}"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 echo -e "\n${YELLOW}[5.1] Checking encryption configuration...${NC}"
-if docker ps | grep -q webbadeploy_gui; then
-    ENCRYPTION_KEY=$(docker exec webbadeploy_gui php -r "
+if docker ps | grep -q wharftales_gui; then
+    ENCRYPTION_KEY=$(docker exec wharftales_gui php -r "
         require_once '/var/www/html/includes/functions.php';
         \$db = initDatabase();
         \$key = getSetting(\$db, 'encryption_key');
@@ -284,8 +284,8 @@ else
 fi
 
 echo -e "\n${YELLOW}[5.2] Checking admin account security...${NC}"
-if docker ps | grep -q webbadeploy_gui; then
-    TWO_FA_ENABLED=$(docker exec webbadeploy_gui php -r "
+if docker ps | grep -q wharftales_gui; then
+    TWO_FA_ENABLED=$(docker exec wharftales_gui php -r "
         require_once '/var/www/html/includes/functions.php';
         \$db = initDatabase();
         \$stmt = \$db->prepare('SELECT COUNT(*) as count FROM users WHERE two_factor_enabled = 1');
@@ -309,19 +309,19 @@ echo -e "\n${BLUE}${BOLD}[SECTION 6/8] SSL/TLS Configuration${NC}"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 echo -e "\n${YELLOW}[6.1] Checking SSL certificates...${NC}"
-if [ -d "$WEBBADEPLOY_DIR/ssl" ]; then
-    CERT_COUNT=$(find "$WEBBADEPLOY_DIR/ssl" -name "*.json" 2>/dev/null | wc -l)
+if [ -d "$WHARFTALES_DIR/ssl" ]; then
+    CERT_COUNT=$(find "$WHARFTALES_DIR/ssl" -name "*.json" 2>/dev/null | wc -l)
     if [ "$CERT_COUNT" -gt 0 ]; then
         echo -e "${GREEN}  ✓ Found $CERT_COUNT SSL certificate(s)${NC}"
         
-        if [ -f "$WEBBADEPLOY_DIR/ssl/acme.json" ]; then
-            ACME_PERMS=$(stat -c "%a" "$WEBBADEPLOY_DIR/ssl/acme.json")
+        if [ -f "$WHARFTALES_DIR/ssl/acme.json" ]; then
+            ACME_PERMS=$(stat -c "%a" "$WHARFTALES_DIR/ssl/acme.json")
             if [ "$ACME_PERMS" == "600" ]; then
                 echo -e "${GREEN}  ✓ acme.json permissions OK (600)${NC}"
             else
                 echo -e "${RED}  ✗ acme.json has insecure permissions ($ACME_PERMS)${NC}"
                 ISSUES_FOUND=$((ISSUES_FOUND + 1))
-                [ "$DRY_RUN" = false ] && chmod 600 "$WEBBADEPLOY_DIR/ssl/acme.json" && FIXES_APPLIED=$((FIXES_APPLIED + 1))
+                [ "$DRY_RUN" = false ] && chmod 600 "$WHARFTALES_DIR/ssl/acme.json" && FIXES_APPLIED=$((FIXES_APPLIED + 1))
             fi
         fi
     else
@@ -331,7 +331,7 @@ if [ -d "$WEBBADEPLOY_DIR/ssl" ]; then
 fi
 
 echo -e "\n${YELLOW}[6.2] Checking Traefik configuration...${NC}"
-if docker ps | grep -q webbadeploy_traefik; then
+if docker ps | grep -q wharftales_traefik; then
     echo -e "${GREEN}  ✓ Traefik is running${NC}"
     if grep -q "api.dashboard=false" docker-compose.yml; then
         echo -e "${GREEN}  ✓ Traefik dashboard is disabled${NC}"
@@ -394,7 +394,7 @@ echo ""
 
 if [ "$ISSUES_FOUND" -eq 0 ] && [ "$WARNINGS_FOUND" -eq 0 ]; then
     echo -e "${GREEN}${BOLD}✓ PRODUCTION READY!${NC}"
-    echo -e "${GREEN}Your Webbadeploy installation is secure and ready for production.${NC}"
+    echo -e "${GREEN}Your WharfTales installation is secure and ready for production.${NC}"
     exit 0
 elif [ "$ISSUES_FOUND" -eq 0 ]; then
     echo -e "${YELLOW}${BOLD}⚠ MOSTLY READY${NC}"

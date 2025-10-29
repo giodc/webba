@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# WebbaDeploy Safe Update Script
-# This script safely updates WebbaDeploy while preserving all configurations
+# WharfTales Safe Update Script
+# This script safely updates WharfTales while preserving all configurations
 
 set -e  # Exit on any error
 
 echo "=========================================="
-echo "WebbaDeploy Safe Update Script"
+echo "WharfTales Safe Update Script"
 echo "=========================================="
 echo ""
 
@@ -25,16 +25,16 @@ fi
 
 # Check if we're in the right directory
 if [ ! -f "docker-compose.yml" ]; then
-    echo -e "${RED}Error: docker-compose.yml not found. Please run from /opt/webbadeploy${NC}"
+    echo -e "${RED}Error: docker-compose.yml not found. Please run from /opt/wharftales${NC}"
     exit 1
 fi
 
-cd /opt/webbadeploy
+cd /opt/wharftales
 
 echo -e "${BLUE}Step 1: Backing up configurations...${NC}"
 
 # Create backup directory with timestamp
-BACKUP_DIR="/opt/webbadeploy/data/backups/update-$(date +%Y%m%d-%H%M%S)"
+BACKUP_DIR="/opt/wharftales/data/backups/update-$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$BACKUP_DIR"
 
 # Backup docker-compose.yml (contains Let's Encrypt email and other settings)
@@ -77,7 +77,7 @@ else
 fi
 
 # Also check database for stored email
-DB_EMAIL=$(docker exec webbadeploy_gui php -r "require '/var/www/html/includes/functions.php'; \$db = initDatabase(); echo getSetting(\$db, 'letsencrypt_email', '');" 2>/dev/null || echo "")
+DB_EMAIL=$(docker exec wharftales_gui php -r "require '/var/www/html/includes/functions.php'; \$db = initDatabase(); echo getSetting(\$db, 'letsencrypt_email', '');" 2>/dev/null || echo "")
 
 if [ -n "$DB_EMAIL" ] && [ "$DB_EMAIL" != "$CURRENT_EMAIL" ]; then
     echo -e "  ${BLUE}ℹ Database has different email: $DB_EMAIL${NC}"
@@ -141,13 +141,13 @@ echo -e "${BLUE}Step 6: Running database migrations...${NC}"
 sleep 3
 
 # Run migrations
-docker exec webbadeploy_gui php /var/www/html/migrate-rbac-2fa.php 2>/dev/null || echo "  ℹ RBAC migration already applied"
-docker exec webbadeploy_gui php /var/www/html/migrate-php-version.php 2>/dev/null || echo "  ℹ PHP version migration already applied"
-docker exec webbadeploy_gui php /var/www/html/migrations/add_github_fields.php 2>/dev/null || echo "  ℹ GitHub fields migration already applied"
-docker exec webbadeploy_gui php /var/www/html/migrations/fix-site-permissions-database.php 2>/dev/null || echo "  ℹ Site permissions migration already applied"
+docker exec wharftales_gui php /var/www/html/migrate-rbac-2fa.php 2>/dev/null || echo "  ℹ RBAC migration already applied"
+docker exec wharftales_gui php /var/www/html/migrate-php-version.php 2>/dev/null || echo "  ℹ PHP version migration already applied"
+docker exec wharftales_gui php /var/www/html/migrations/add_github_fields.php 2>/dev/null || echo "  ℹ GitHub fields migration already applied"
+docker exec wharftales_gui php /var/www/html/migrations/fix-site-permissions-database.php 2>/dev/null || echo "  ℹ Site permissions migration already applied"
 
 # Import compose configs to database (only if not already there)
-docker exec webbadeploy_gui php /var/www/html/migrate-compose-to-db.php 2>/dev/null || echo "  ℹ Compose configs already in database"
+docker exec wharftales_gui php /var/www/html/migrate-compose-to-db.php 2>/dev/null || echo "  ℹ Compose configs already in database"
 
 echo -e "${GREEN}  ✓ Migrations completed${NC}"
 echo ""
@@ -155,15 +155,15 @@ echo ""
 echo -e "${BLUE}Step 7: Fixing permissions...${NC}"
 
 # Fix data directory permissions
-docker exec -u root webbadeploy_gui chown -R www-data:www-data /app/data
-docker exec -u root webbadeploy_gui chmod -R 775 /app/data
+docker exec -u root wharftales_gui chown -R www-data:www-data /app/data
+docker exec -u root wharftales_gui chmod -R 775 /app/data
 
 # Fix apps directory permissions
-docker exec -u root webbadeploy_gui chown -R www-data:www-data /app/apps
-docker exec -u root webbadeploy_gui chmod -R 775 /app/apps
+docker exec -u root wharftales_gui chown -R www-data:www-data /app/apps
+docker exec -u root wharftales_gui chmod -R 775 /app/apps
 
 # Fix database permissions
-docker exec -u root webbadeploy_gui bash -c "if [ -f /app/data/database.sqlite ]; then chown www-data:www-data /app/data/database.sqlite && chmod 664 /app/data/database.sqlite; fi"
+docker exec -u root wharftales_gui bash -c "if [ -f /app/data/database.sqlite ]; then chown www-data:www-data /app/data/database.sqlite && chmod 664 /app/data/database.sqlite; fi"
 
 echo -e "${GREEN}  ✓ Permissions fixed${NC}"
 echo ""
@@ -181,14 +181,14 @@ else
 fi
 
 # Check if Traefik is running
-if docker ps | grep -q webbadeploy_traefik; then
+if docker ps | grep -q wharftales_traefik; then
     echo -e "  ${GREEN}✓ Traefik is running${NC}"
 else
     echo -e "  ${RED}✗ Traefik is not running${NC}"
 fi
 
 # Check if web-gui is running
-if docker ps | grep -q webbadeploy_gui; then
+if docker ps | grep -q wharftales_gui; then
     echo -e "  ${GREEN}✓ Web GUI is running${NC}"
 else
     echo -e "  ${RED}✗ Web GUI is not running${NC}"
@@ -210,7 +210,7 @@ echo "  2. Check SSL Debug page for certificate status"
 echo "  3. If email was reset, update it in Settings → SSL Configuration"
 echo ""
 echo "If you encounter any issues:"
-echo "  • Restore from backup: cp $BACKUP_DIR/docker-compose.yml /opt/webbadeploy/"
+echo "  • Restore from backup: cp $BACKUP_DIR/docker-compose.yml /opt/wharftales/"
 echo "  • Check logs: docker-compose logs -f"
 echo "  • Restart services: docker-compose restart"
 echo ""

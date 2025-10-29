@@ -26,7 +26,7 @@ I've updated the code to:
 ### Apply the Fix
 
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 
 # Rebuild the container with new configuration
 docker-compose down
@@ -34,14 +34,14 @@ docker-compose build --no-cache web-gui
 docker-compose up -d
 
 # Check if it's running
-docker ps | grep webbadeploy_gui
+docker ps | grep wharftales_gui
 ```
 
 ### Verify the Fix
 
 ```bash
 # Check PHP session configuration
-docker exec webbadeploy_gui php -i | grep session
+docker exec wharftales_gui php -i | grep session
 
 # Should show:
 # session.gc_maxlifetime => 86400
@@ -50,16 +50,16 @@ docker exec webbadeploy_gui php -i | grep session
 
 ## What Changed
 
-### 1. Enhanced JavaScript Error Handling (`/opt/webbadeploy/gui/js/app.js`)
+### 1. Enhanced JavaScript Error Handling (`/opt/wharftales/gui/js/app.js`)
 - Added `apiCall()` helper function that detects HTML responses
 - Shows user-friendly "Session expired" message
 - Auto-redirects to login page
 
-### 2. Extended Session Lifetime (`/opt/webbadeploy/gui/includes/auth.php`)
+### 2. Extended Session Lifetime (`/opt/wharftales/gui/includes/auth.php`)
 - Session lifetime: 24 hours (was ~24 minutes)
 - Better session security settings
 
-### 3. PHP Configuration (`/opt/webbadeploy/gui/php-session.ini`)
+### 3. PHP Configuration (`/opt/wharftales/gui/php-session.ini`)
 - System-wide session configuration
 - Increased memory limits
 - Better error logging
@@ -75,19 +75,19 @@ docker exec webbadeploy_gui php -i | grep session
    ```
    - Chrome: Ctrl+Shift+Delete
    - Firefox: Ctrl+Shift+Delete
-   - Clear cookies for your Webbadeploy domain
+   - Clear cookies for your WharfTales domain
    ```
 
 2. **Check if container rebuilt properly**
    ```bash
-   docker exec webbadeploy_gui cat /usr/local/etc/php/conf.d/php-session.ini
+   docker exec wharftales_gui cat /usr/local/etc/php/conf.d/php-session.ini
    ```
    
    Should show the session configuration.
 
 3. **Check logs**
    ```bash
-   docker logs webbadeploy_gui --tail 50
+   docker logs wharftales_gui --tail 50
    ```
 
 4. **Force complete rebuild**
@@ -101,7 +101,7 @@ docker exec webbadeploy_gui php -i | grep session
 ### Session still expiring quickly?
 
 Check if your browser is blocking cookies:
-- Allow cookies for your Webbadeploy domain
+- Allow cookies for your WharfTales domain
 - Disable "Clear cookies on exit" for this site
 - Check browser privacy settings
 
@@ -133,6 +133,6 @@ Check the browser console (F12 → Console tab) for detailed error messages.
 
 If you're still experiencing issues:
 1. Check browser console for errors
-2. Check Docker logs: `docker logs webbadeploy_gui`
+2. Check Docker logs: `docker logs wharftales_gui`
 3. Verify you're logged in: Visit `/login.php`
 4. Try a different browser to rule out browser-specific issues

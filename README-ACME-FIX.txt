@@ -2,7 +2,7 @@
 ║                    ACME SSL FIX - QUICK REFERENCE                 ║
 ╚═══════════════════════════════════════════════════════════════════╝
 
-PROBLEM: "ACME file not found at: /opt/webbadeploy/ssl/acme.json"
+PROBLEM: "ACME file not found at: /opt/wharftales/ssl/acme.json"
 
 ═══════════════════════════════════════════════════════════════════
 
@@ -10,7 +10,7 @@ SOLUTION FOR EXISTING INSTALLATIONS (Remote Server):
 
 Option 1: Quick One-Liner (Copy & Paste)
 ─────────────────────────────────────────
-cd /opt/webbadeploy && sudo mkdir -p ssl && sudo tee ssl/acme.json > /dev/null << 'EOF'
+cd /opt/wharftales && sudo mkdir -p ssl && sudo tee ssl/acme.json > /dev/null << 'EOF'
 {
   "letsencrypt": {
     "Account": {
@@ -27,9 +27,9 @@ sudo chmod 600 ssl/acme.json && sudo chown root:root ssl/acme.json && docker-com
 
 Option 2: Use Fix Script
 ────────────────────────
-scp fix-acme.sh user@remote:/opt/webbadeploy/
+scp fix-acme.sh user@remote:/opt/wharftales/
 ssh user@remote
-cd /opt/webbadeploy
+cd /opt/wharftales
 sudo bash fix-acme.sh
 docker-compose restart traefik
 
@@ -49,10 +49,10 @@ Just run:
 
 VERIFICATION:
 
-ls -la /opt/webbadeploy/ssl/acme.json
+ls -la /opt/wharftales/ssl/acme.json
 # Expected: -rw------- 1 root root 169 Oct 11 14:43 acme.json
 
-docker logs webbadeploy_traefik -f
+docker logs wharftales_traefik -f
 # Watch for certificate acquisition messages
 
 ═══════════════════════════════════════════════════════════════════
@@ -87,7 +87,7 @@ IMPORTANT:
 NEXT STEPS:
 
 1. Apply fix to remote server (use Option 1 or 2 above)
-2. Monitor Traefik logs: docker logs webbadeploy_traefik -f
+2. Monitor Traefik logs: docker logs wharftales_traefik -f
 3. Verify HTTPS works on your domain
 4. Run security audit: sudo bash production-check.sh
 

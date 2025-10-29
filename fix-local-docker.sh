@@ -6,7 +6,7 @@
 set -e
 
 echo "╔════════════════════════════════════════════════════════════════╗"
-echo "║  Webbadeploy - Fix Local Docker Permissions                   ║"
+echo "║  WharfTales - Fix Local Docker Permissions                   ║"
 echo "╚════════════════════════════════════════════════════════════════╝"
 echo ""
 
@@ -16,7 +16,7 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
-cd /opt/webbadeploy
+cd /opt/wharftales
 
 # Get the actual Docker group ID
 DOCKER_GID=$(getent group docker | cut -d: -f3)
@@ -35,26 +35,26 @@ chown root:docker /var/run/docker.sock
 
 # Fix host directory permissions
 echo "📁 Fixing host directory permissions..."
-mkdir -p /opt/webbadeploy/data
-mkdir -p /opt/webbadeploy/apps
-mkdir -p /opt/webbadeploy/ssl
-mkdir -p /opt/webbadeploy/logs
+mkdir -p /opt/wharftales/data
+mkdir -p /opt/wharftales/apps
+mkdir -p /opt/wharftales/ssl
+mkdir -p /opt/wharftales/logs
 
 # Set ownership to current user (for local development)
-chown -R $SUDO_USER:$SUDO_USER /opt/webbadeploy/data
-chown -R $SUDO_USER:$SUDO_USER /opt/webbadeploy/apps
-chown -R $SUDO_USER:$SUDO_USER /opt/webbadeploy/ssl
-chown -R $SUDO_USER:$SUDO_USER /opt/webbadeploy/logs
+chown -R $SUDO_USER:$SUDO_USER /opt/wharftales/data
+chown -R $SUDO_USER:$SUDO_USER /opt/wharftales/apps
+chown -R $SUDO_USER:$SUDO_USER /opt/wharftales/ssl
+chown -R $SUDO_USER:$SUDO_USER /opt/wharftales/logs
 
 # Set permissions
-chmod -R 777 /opt/webbadeploy/data
-chmod -R 777 /opt/webbadeploy/apps
-chmod 755 /opt/webbadeploy/ssl
-chmod 755 /opt/webbadeploy/logs
+chmod -R 777 /opt/wharftales/data
+chmod -R 777 /opt/wharftales/apps
+chmod 755 /opt/wharftales/ssl
+chmod 755 /opt/wharftales/logs
 
 # Fix docker-compose.yml permissions
-chown $SUDO_USER:$SUDO_USER /opt/webbadeploy/docker-compose.yml
-chmod 664 /opt/webbadeploy/docker-compose.yml
+chown $SUDO_USER:$SUDO_USER /opt/wharftales/docker-compose.yml
+chmod 664 /opt/wharftales/docker-compose.yml
 
 echo "🔨 Rebuilding containers with correct permissions..."
 docker-compose down
@@ -66,22 +66,22 @@ sleep 5
 
 # Fix permissions inside containers
 echo "🔧 Fixing permissions inside containers..."
-docker exec -u root webbadeploy_gui chown -R www-data:www-data /app/data
-docker exec -u root webbadeploy_gui chmod -R 777 /app/data
+docker exec -u root wharftales_gui chown -R www-data:www-data /app/data
+docker exec -u root wharftales_gui chmod -R 777 /app/data
 
-docker exec -u root webbadeploy_gui chown -R www-data:www-data /app/apps
-docker exec -u root webbadeploy_gui chmod -R 777 /app/apps
+docker exec -u root wharftales_gui chown -R www-data:www-data /app/apps
+docker exec -u root wharftales_gui chmod -R 777 /app/apps
 
 # Fix database permissions
 echo "💾 Fixing database permissions..."
-docker exec -u root webbadeploy_gui bash -c "if [ -f /app/data/database.sqlite ]; then chown www-data:www-data /app/data/database.sqlite && chmod 666 /app/data/database.sqlite; fi"
+docker exec -u root wharftales_gui bash -c "if [ -f /app/data/database.sqlite ]; then chown www-data:www-data /app/data/database.sqlite && chmod 666 /app/data/database.sqlite; fi"
 
 # Run migrations
 echo "🔄 Running database migrations..."
-docker exec webbadeploy_gui php /var/www/html/migrate-rbac-2fa.php 2>/dev/null || true
-docker exec webbadeploy_gui php /var/www/html/migrate-php-version.php 2>/dev/null || true
-docker exec webbadeploy_gui php /var/www/html/migrations/add_github_fields.php 2>/dev/null || true
-docker exec webbadeploy_gui php /var/www/html/migrate-compose-to-db.php 2>/dev/null || true
+docker exec wharftales_gui php /var/www/html/migrate-rbac-2fa.php 2>/dev/null || true
+docker exec wharftales_gui php /var/www/html/migrate-php-version.php 2>/dev/null || true
+docker exec wharftales_gui php /var/www/html/migrations/add_github_fields.php 2>/dev/null || true
+docker exec wharftales_gui php /var/www/html/migrate-compose-to-db.php 2>/dev/null || true
 
 echo ""
 echo "╔════════════════════════════════════════════════════════════════╗"

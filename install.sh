@@ -2,7 +2,7 @@
 
 set -e
 
-echo "Webbadeploy Installation Script"
+echo "WharfTales Installation Script"
 echo "==============================="
 
 # Check if running as root
@@ -11,8 +11,8 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
-# Check if this is an update (webbadeploy already exists)
-if [ -d "/opt/webbadeploy/.git" ]; then
+# Check if this is an update (wharftales already exists)
+if [ -d "/opt/wharftales/.git" ]; then
     echo "Existing installation detected. Running update mode..."
     UPDATE_MODE=true
 else
@@ -45,21 +45,21 @@ if ! command -v docker-compose &> /dev/null; then
     chmod +x /usr/local/bin/docker-compose
 fi
 
-# Create webbadeploy user
-echo "Creating webbadeploy user..."
-if ! id "webbadeploy" &>/dev/null; then
-    useradd -m -s /bin/bash webbadeploy
-    usermod -aG docker webbadeploy
+# Create wharftales user
+echo "Creating wharftales user..."
+if ! id "wharftales" &>/dev/null; then
+    useradd -m -s /bin/bash wharftales
+    usermod -aG docker wharftales
 fi
 
 # Set up directories
 if [ "$UPDATE_MODE" = true ]; then
     echo "Updating existing installation..."
-    cd /opt/webbadeploy
+    cd /opt/wharftales
     
     # Backup critical files before update
     echo "Backing up configurations..."
-    BACKUP_DIR="/opt/webbadeploy/data/backups/update-$(date +%Y%m%d-%H%M%S)"
+    BACKUP_DIR="/opt/wharftales/data/backups/update-$(date +%Y%m%d-%H%M%S)"
     mkdir -p "$BACKUP_DIR"
     
     # Backup docker-compose.yml (contains Let's Encrypt email)
@@ -115,8 +115,8 @@ if [ "$UPDATE_MODE" = true ]; then
     
     # Create backup directory if it doesn't exist
     echo "Ensuring backup directory exists..."
-    mkdir -p /opt/webbadeploy/data/backups
-    chown -R www-data:www-data /opt/webbadeploy/data/backups
+    mkdir -p /opt/wharftales/data/backups
+    chown -R www-data:www-data /opt/wharftales/data/backups
     
     # Rebuild and restart containers
     echo "Rebuilding containers..."
@@ -128,37 +128,37 @@ if [ "$UPDATE_MODE" = true ]; then
     
     # Install MySQL extensions manually (in case build fails)
     echo "Installing MySQL extensions..."
-    docker exec -u root webbadeploy_gui docker-php-ext-install pdo_mysql mysqli 2>/dev/null || true
-    docker exec webbadeploy_gui apache2ctl restart 2>/dev/null || true
+    docker exec -u root wharftales_gui docker-php-ext-install pdo_mysql mysqli 2>/dev/null || true
+    docker exec wharftales_gui apache2ctl restart 2>/dev/null || true
     
     # Fix data directory permissions
     echo "Fixing data directory permissions..."
-    docker exec -u root webbadeploy_gui chown -R www-data:www-data /app/data
-    docker exec -u root webbadeploy_gui chmod -R 775 /app/data
+    docker exec -u root wharftales_gui chown -R www-data:www-data /app/data
+    docker exec -u root wharftales_gui chmod -R 775 /app/data
     
     echo "Fixing apps directory permissions..."
-    docker exec -u root webbadeploy_gui chown -R www-data:www-data /app/apps
-    docker exec -u root webbadeploy_gui chmod -R 775 /app/apps
+    docker exec -u root wharftales_gui chown -R www-data:www-data /app/apps
+    docker exec -u root wharftales_gui chmod -R 775 /app/apps
     
     # Run database migrations
     echo "Running database migrations..."
     sleep 2
-    docker exec webbadeploy_gui php /var/www/html/migrate-rbac-2fa.php 2>/dev/null || echo "Migration completed or already applied"
-    docker exec webbadeploy_gui php /var/www/html/migrate-php-version.php 2>/dev/null || echo "PHP version migration completed or already applied"
-    docker exec webbadeploy_gui php /var/www/html/migrations/add_github_fields.php 2>/dev/null || echo "GitHub fields migration completed or already applied"
-    docker exec webbadeploy_gui php /var/www/html/migrations/fix-site-permissions-database.php 2>/dev/null || echo "Site permissions migration completed or already applied"
+    docker exec wharftales_gui php /var/www/html/migrate-rbac-2fa.php 2>/dev/null || echo "Migration completed or already applied"
+    docker exec wharftales_gui php /var/www/html/migrate-php-version.php 2>/dev/null || echo "PHP version migration completed or already applied"
+    docker exec wharftales_gui php /var/www/html/migrations/add_github_fields.php 2>/dev/null || echo "GitHub fields migration completed or already applied"
+    docker exec wharftales_gui php /var/www/html/migrations/fix-site-permissions-database.php 2>/dev/null || echo "Site permissions migration completed or already applied"
     
     echo "Ensuring database file has correct permissions..."
-    docker exec -u root webbadeploy_gui bash -c "if [ -f /app/data/database.sqlite ]; then chown www-data:www-data /app/data/database.sqlite && chmod 664 /app/data/database.sqlite; fi"
+    docker exec -u root wharftales_gui bash -c "if [ -f /app/data/database.sqlite ]; then chown www-data:www-data /app/data/database.sqlite && chmod 664 /app/data/database.sqlite; fi"
     
     echo "Importing docker-compose configurations to database..."
-    docker exec webbadeploy_gui php /var/www/html/migrate-compose-to-db.php 2>/dev/null || echo "Compose migration completed or already applied"
+    docker exec wharftales_gui php /var/www/html/migrate-compose-to-db.php 2>/dev/null || echo "Compose migration completed or already applied"
     
     echo ""
     echo "==============================="
     echo "Update completed successfully!"
     echo "==============================="
-    echo "Webbadeploy has been updated to the latest version."
+    echo "WharfTales has been updated to the latest version."
     echo "Access the dashboard at: http://your-server-ip:9000"
     echo ""
     echo "New features in this update:"
@@ -171,26 +171,26 @@ if [ "$UPDATE_MODE" = true ]; then
 else
     echo "Setting up directories..."
     
-    # Check if we're running from /opt/webbadeploy already
-    if [ "$PWD" = "/opt/webbadeploy" ]; then
-        echo "Already in /opt/webbadeploy, skipping clone..."
+    # Check if we're running from /opt/wharftales already
+    if [ "$PWD" = "/opt/wharftales" ]; then
+        echo "Already in /opt/wharftales, skipping clone..."
     else
         # Clone from GitHub if not already present
-        if [ ! -d "/opt/webbadeploy/.git" ]; then
-            echo "Cloning Webbadeploy from GitHub..."
-            git clone https://github.com/giodc/webba.git /opt/webbadeploy
+        if [ ! -d "/opt/wharftales/.git" ]; then
+            echo "Cloning WharfTales from GitHub..."
+            git clone https://github.com/giodc/webba.git /opt/wharftales
         fi
     fi
     
-    cd /opt/webbadeploy
-    chown -R webbadeploy:webbadeploy /opt/webbadeploy
+    cd /opt/wharftales
+    chown -R wharftales:wharftales /opt/wharftales
     
     # Create required directories
-    mkdir -p /opt/webbadeploy/{data,nginx/sites,ssl,apps,web}
+    mkdir -p /opt/wharftales/{data,nginx/sites,ssl,apps,web}
     
     # Create ACME file for SSL certificates
     echo "Creating ACME file for SSL certificates..."
-    cat > /opt/webbadeploy/ssl/acme.json << 'ACME_EOF'
+    cat > /opt/wharftales/ssl/acme.json << 'ACME_EOF'
 {
   "letsencrypt": {
     "Account": {
@@ -203,20 +203,20 @@ else
   }
 }
 ACME_EOF
-    chmod 600 /opt/webbadeploy/ssl/acme.json
-    chown root:root /opt/webbadeploy/ssl/acme.json
+    chmod 600 /opt/wharftales/ssl/acme.json
+    chown root:root /opt/wharftales/ssl/acme.json
     
     # Set proper permissions for data directory (needs to be writable by www-data in container)
-    chown -R www-data:www-data /opt/webbadeploy/data
-    chmod -R 775 /opt/webbadeploy/data
+    chown -R www-data:www-data /opt/wharftales/data
+    chmod -R 775 /opt/wharftales/data
     
-    chown -R webbadeploy:webbadeploy /opt/webbadeploy
+    chown -R wharftales:wharftales /opt/wharftales
     
     # Create docker-compose.yml from template if it doesn't exist
-    if [ ! -f "/opt/webbadeploy/docker-compose.yml" ]; then
-        if [ -f "/opt/webbadeploy/docker-compose.yml.template" ]; then
+    if [ ! -f "/opt/wharftales/docker-compose.yml" ]; then
+        if [ -f "/opt/wharftales/docker-compose.yml.template" ]; then
             echo "Creating docker-compose.yml from template..."
-            cp /opt/webbadeploy/docker-compose.yml.template /opt/webbadeploy/docker-compose.yml
+            cp /opt/wharftales/docker-compose.yml.template /opt/wharftales/docker-compose.yml
             echo "⚠️  IMPORTANT: Edit docker-compose.yml to configure:"
             echo "   - Email address (search for CHANGE_ME@example.com)"
             echo "   - Dashboard domain (search for CHANGE_ME.example.com)"
@@ -226,10 +226,10 @@ ACME_EOF
     fi
     
     # Set permissions on docker-compose.yml
-    if [ -f "/opt/webbadeploy/docker-compose.yml" ]; then
+    if [ -f "/opt/wharftales/docker-compose.yml" ]; then
         echo "Setting permissions on docker-compose.yml..."
-        chmod 664 /opt/webbadeploy/docker-compose.yml
-        chown www-data:www-data /opt/webbadeploy/docker-compose.yml
+        chmod 664 /opt/wharftales/docker-compose.yml
+        chown www-data:www-data /opt/wharftales/docker-compose.yml
     fi
     
     # Set Docker socket permissions (use docker group instead of world-writable)
@@ -241,8 +241,8 @@ ACME_EOF
     
     # Create backup directory
     echo "Creating backup directory..."
-    mkdir -p /opt/webbadeploy/data/backups
-    chown -R www-data:www-data /opt/webbadeploy/data/backups
+    mkdir -p /opt/wharftales/data/backups
+    chown -R www-data:www-data /opt/wharftales/data/backups
 fi
 
 # Install certbot for SSL
@@ -259,9 +259,9 @@ if command -v ufw &> /dev/null; then
 fi
 
 # Verify ACME file exists
-if [ ! -f "/opt/webbadeploy/ssl/acme.json" ]; then
+if [ ! -f "/opt/wharftales/ssl/acme.json" ]; then
     echo "Creating ACME file for SSL certificates..."
-    cat > /opt/webbadeploy/ssl/acme.json << 'ACME_EOF'
+    cat > /opt/wharftales/ssl/acme.json << 'ACME_EOF'
 {
   "letsencrypt": {
     "Account": {
@@ -274,39 +274,39 @@ if [ ! -f "/opt/webbadeploy/ssl/acme.json" ]; then
   }
 }
 ACME_EOF
-    chmod 600 /opt/webbadeploy/ssl/acme.json
-    chown root:root /opt/webbadeploy/ssl/acme.json
+    chmod 600 /opt/wharftales/ssl/acme.json
+    chown root:root /opt/wharftales/ssl/acme.json
 fi
 
 echo "Starting services..."
-cd /opt/webbadeploy
+cd /opt/wharftales
 docker-compose up -d
 
 echo "Installing MySQL extensions..."
 sleep 5  # Wait for container to start
-docker exec -u root webbadeploy_gui docker-php-ext-install pdo_mysql mysqli 2>/dev/null || true
-docker exec webbadeploy_gui apache2ctl restart 2>/dev/null || true
+docker exec -u root wharftales_gui docker-php-ext-install pdo_mysql mysqli 2>/dev/null || true
+docker exec wharftales_gui apache2ctl restart 2>/dev/null || true
 
 echo "Fixing data directory permissions..."
-docker exec -u root webbadeploy_gui chown -R www-data:www-data /app/data
-docker exec -u root webbadeploy_gui chmod -R 775 /app/data
+docker exec -u root wharftales_gui chown -R www-data:www-data /app/data
+docker exec -u root wharftales_gui chmod -R 775 /app/data
 
 echo "Fixing apps directory permissions..."
-docker exec -u root webbadeploy_gui chown -R www-data:www-data /app/apps
-docker exec -u root webbadeploy_gui chmod -R 775 /app/apps
+docker exec -u root wharftales_gui chown -R www-data:www-data /app/apps
+docker exec -u root wharftales_gui chmod -R 775 /app/apps
 
 echo "Running database migrations..."
 sleep 2
-docker exec webbadeploy_gui php /var/www/html/migrate-rbac-2fa.php 2>/dev/null || echo "Migration will run on first access"
-docker exec webbadeploy_gui php /var/www/html/migrate-php-version.php 2>/dev/null || echo "PHP version migration will run on first access"
-docker exec webbadeploy_gui php /var/www/html/migrations/add_github_fields.php 2>/dev/null || echo "GitHub fields migration will run on first access"
-docker exec webbadeploy_gui php /var/www/html/migrations/fix-site-permissions-database.php 2>/dev/null || echo "Site permissions migration will run on first access"
+docker exec wharftales_gui php /var/www/html/migrate-rbac-2fa.php 2>/dev/null || echo "Migration will run on first access"
+docker exec wharftales_gui php /var/www/html/migrate-php-version.php 2>/dev/null || echo "PHP version migration will run on first access"
+docker exec wharftales_gui php /var/www/html/migrations/add_github_fields.php 2>/dev/null || echo "GitHub fields migration will run on first access"
+docker exec wharftales_gui php /var/www/html/migrations/fix-site-permissions-database.php 2>/dev/null || echo "Site permissions migration will run on first access"
 
 echo "Ensuring database file has correct permissions..."
-docker exec -u root webbadeploy_gui bash -c "if [ -f /app/data/database.sqlite ]; then chown www-data:www-data /app/data/database.sqlite && chmod 664 /app/data/database.sqlite; fi"
+docker exec -u root wharftales_gui bash -c "if [ -f /app/data/database.sqlite ]; then chown www-data:www-data /app/data/database.sqlite && chmod 664 /app/data/database.sqlite; fi"
 
 echo "Importing docker-compose configurations to database..."
-docker exec webbadeploy_gui php /var/www/html/migrate-compose-to-db.php 2>/dev/null || echo "Compose migration will run on first settings update"
+docker exec wharftales_gui php /var/www/html/migrate-compose-to-db.php 2>/dev/null || echo "Compose migration will run on first settings update"
 
 echo ""
 echo "==============================="

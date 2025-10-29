@@ -30,8 +30,8 @@ sudo systemctl start docker
 ### 2. Clone Repository
 ```bash
 cd /opt
-sudo git clone https://github.com/yourusername/webbadeploy.git
-cd webbadeploy
+sudo git clone https://github.com/yourusername/wharftales.git
+cd wharftales
 ```
 
 ### 3. Run Installation Script
@@ -81,7 +81,7 @@ sudo ufw status
 ```
 
 #### Optional: Change Dashboard Port
-Edit `/opt/webbadeploy/docker-compose.yml`:
+Edit `/opt/wharftales/docker-compose.yml`:
 ```yaml
 web-gui:
   ports:
@@ -90,7 +90,7 @@ web-gui:
 
 Then restart:
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 sudo docker-compose up -d
 ```
 
@@ -100,14 +100,14 @@ sudo docker-compose up -d
 
 ### Check Services Status
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 docker-compose ps
 ```
 
 All services should show "Up":
-- webbadeploy_gui
-- webbadeploy_traefik
-- webbadeploy_db
+- wharftales_gui
+- wharftales_traefik
+- wharftales_db
 
 ### Test Dashboard Access
 ```bash
@@ -138,27 +138,27 @@ docker-compose logs -f traefik
 ### Dashboard Not Loading
 ```bash
 # Check if container is running
-docker ps | grep webbadeploy_gui
+docker ps | grep wharftales_gui
 
 # Check logs
-docker logs webbadeploy_gui
+docker logs wharftales_gui
 
 # Restart if needed
-cd /opt/webbadeploy
+cd /opt/wharftales
 docker-compose restart web-gui
 ```
 
 ### Permission Issues
 ```bash
 # Run the fix script
-cd /opt/webbadeploy
+cd /opt/wharftales
 sudo ./fix-docker-permissions.sh
 ```
 
 ### SSL Not Working
 ```bash
 # Check Traefik logs
-docker logs webbadeploy_traefik
+docker logs wharftales_traefik
 
 # Verify ports 80 and 443 are accessible
 sudo ufw status
@@ -168,21 +168,21 @@ curl -I http://yourdomain.com
 ### Can't Update Settings
 ```bash
 # Verify docker-compose.yml permissions
-ls -la /opt/webbadeploy/docker-compose.yml
+ls -la /opt/wharftales/docker-compose.yml
 # Should show: -rw-rw-r-- 1 www-data www-data
 
 # Fix if needed
-sudo chown www-data:www-data /opt/webbadeploy/docker-compose.yml
-sudo chmod 664 /opt/webbadeploy/docker-compose.yml
+sudo chown www-data:www-data /opt/wharftales/docker-compose.yml
+sudo chmod 664 /opt/wharftales/docker-compose.yml
 ```
 
 ---
 
 ## Maintenance Commands
 
-### Update Webbadeploy
+### Update WharfTales
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 git pull
 docker-compose pull
 docker-compose up -d --build
@@ -190,7 +190,7 @@ docker-compose up -d --build
 
 ### Backup Database
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 cp data/database.sqlite data/database.sqlite.backup.$(date +%Y%m%d)
 ```
 
@@ -201,19 +201,19 @@ docker stats
 
 ### Restart All Services
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 docker-compose restart
 ```
 
 ### Stop All Services
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 docker-compose down
 ```
 
 ### Start All Services
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 docker-compose up -d
 ```
 
@@ -221,9 +221,9 @@ docker-compose up -d
 
 ## Support
 
-- Documentation: `/opt/webbadeploy/docs/`
-- Fixes Applied: `/opt/webbadeploy/FIXES_APPLIED.md`
-- Quick Start: `/opt/webbadeploy/QUICK_START_UPDATES.md`
+- Documentation: `/opt/wharftales/docs/`
+- Fixes Applied: `/opt/wharftales/FIXES_APPLIED.md`
+- Quick Start: `/opt/wharftales/QUICK_START_UPDATES.md`
 
 ---
 

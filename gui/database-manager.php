@@ -101,10 +101,10 @@ if ($dbType === 'dedicated' || in_array($dbType, ['mysql', 'postgresql'])) {
     $dbPassword = $site['db_password'] ?? '';
 } else {
     // Shared database
-    $dbHost = 'webbadeploy_db';
-    $dbName = 'webbadeploy';
-    $dbUser = 'webbadeploy';
-    $dbPassword = 'webbadeploy_pass';
+    $dbHost = 'wharftales_db';
+    $dbName = 'wharftales';
+    $dbUser = 'wharftales';
+    $dbPassword = 'wharftales_pass';
 }
 
 // Auto-login: Pre-fill credentials and auto-submit

@@ -34,7 +34,7 @@ $sslSites = array_filter($sites, function($site) {
 });
 
 // Get Let's Encrypt email from docker-compose.yml or Traefik container
-$dockerComposePath = '/opt/webbadeploy/docker-compose.yml';
+$dockerComposePath = '/opt/wharftales/docker-compose.yml';
 clearstatcache(true, $dockerComposePath);
 $dockerComposeContent = @file_get_contents($dockerComposePath);
 if ($dockerComposeContent !== false) {
@@ -42,7 +42,7 @@ if ($dockerComposeContent !== false) {
     $letsEncryptEmail = $matches[1] ?? 'Not configured';
 } else {
     // Try to get from running container
-    exec("docker inspect webbadeploy_traefik --format '{{range .Config.Cmd}}{{println .}}{{end}}' 2>&1 | grep 'acme.email' | cut -d'=' -f2", $emailOutput);
+    exec("docker inspect wharftales_traefik --format '{{range .Config.Cmd}}{{println .}}{{end}}' 2>&1 | grep 'acme.email' | cut -d'=' -f2", $emailOutput);
     $letsEncryptEmail = !empty($emailOutput[0]) ? trim($emailOutput[0]) : 'Cannot read configuration';
 }
 
@@ -54,13 +54,13 @@ $port80Open = @fsockopen('127.0.0.1', 80, $errno, $errstr, 1);
 $port443Open = @fsockopen('127.0.0.1', 443, $errno, $errstr, 1);
 
 // Get Traefik logs
-exec('docker logs webbadeploy_traefik --tail 50 2>&1', $traefikLogs);
+exec('docker logs wharftales_traefik --tail 50 2>&1', $traefikLogs);
 $sslErrors = array_filter($traefikLogs, function($line) {
     return stripos($line, 'acme') !== false || stripos($line, 'certificate') !== false || stripos($line, 'error') !== false;
 });
 
 // Check acme.json
-$acmeJsonPath = '/opt/webbadeploy/ssl/acme.json';
+$acmeJsonPath = '/opt/wharftales/ssl/acme.json';
 $acmeJsonExists = file_exists($acmeJsonPath);
 $acmeJsonSize = $acmeJsonExists ? filesize($acmeJsonPath) : 0;
 $acmeJsonEmpty = false;
@@ -78,7 +78,7 @@ if ($acmeJsonExists && $acmeJsonSize > 0) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SSL Debug - Webbadeploy</title>
+    <title>SSL Debug - WharfTales</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <link href="css/custom.css" rel="stylesheet">
@@ -100,7 +100,7 @@ if ($acmeJsonExists && $acmeJsonSize > 0) {
                             <ol class="mb-0 mt-2">
                                 <li>Go to <a href="/settings.php" class="alert-link">Settings → SSL Configuration</a></li>
                                 <li>Update the email to a real address (e.g., admin@yourdomain.com)</li>
-                                <li>Restart Traefik: <code>cd /opt/webbadeploy && docker-compose restart traefik</code></li>
+                                <li>Restart Traefik: <code>cd /opt/wharftales && docker-compose restart traefik</code></li>
                             </ol>
                         </p>
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -307,7 +307,7 @@ if ($acmeJsonExists && $acmeJsonSize > 0) {
                                     <li>Go to Settings → SSL Configuration</li>
                                     <li>Change to a real email address</li>
                                     <li>Restart Traefik</li>
-                                    <li>Delete <code>/opt/webbadeploy/ssl/acme.json</code> and restart</li>
+                                    <li>Delete <code>/opt/wharftales/ssl/acme.json</code> and restart</li>
                                 </ul>
                             </li>
                             <li>
@@ -329,9 +329,9 @@ if ($acmeJsonExists && $acmeJsonSize > 0) {
                             <li>
                                 <strong>Certificate not renewing</strong>
                                 <ul>
-                                    <li>Delete acme.json: <code>sudo rm /opt/webbadeploy/ssl/acme.json</code></li>
+                                    <li>Delete acme.json: <code>sudo rm /opt/wharftales/ssl/acme.json</code></li>
                                     <li>Restart Traefik: <code>docker-compose restart traefik</code></li>
-                                    <li>Check logs: <code>docker logs webbadeploy_traefik -f</code></li>
+                                    <li>Check logs: <code>docker logs wharftales_traefik -f</code></li>
                                 </ul>
                             </li>
                         </ol>

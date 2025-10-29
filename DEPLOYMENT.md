@@ -1,4 +1,4 @@
-# Webbadeploy Deployment Guide
+# WharfTales Deployment Guide
 
 ## Quick Install (Fresh Ubuntu Server)
 
@@ -11,7 +11,7 @@ curl -fsSL https://raw.githubusercontent.com/giodc/webba/master/install-producti
 Or download and run:
 
 ```bash
-wget https://raw.githubusercontent.com/yourrepo/webbadeploy/main/install-production.sh
+wget https://raw.githubusercontent.com/yourrepo/wharftales/main/install-production.sh
 chmod +x install-production.sh
 sudo ./install-production.sh
 ```
@@ -46,21 +46,21 @@ sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-
 sudo chmod +x /usr/local/bin/docker-compose
 ```
 
-### 2. Clone/Download Webbadeploy
+### 2. Clone/Download WharfTales
 
 ```bash
 # Create directory
-sudo mkdir -p /opt/webbadeploy
-cd /opt/webbadeploy
+sudo mkdir -p /opt/wharftales
+cd /opt/wharftales
 
 # Download files (or git clone if available)
-# Copy all Webbadeploy files here
+# Copy all WharfTales files here
 ```
 
 ### 3. Start Services
 
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 sudo docker-compose up -d
 ```
 
@@ -90,7 +90,7 @@ sudo ufw enable
 ## Directory Structure
 
 ```
-/opt/webbadeploy/
+/opt/wharftales/
 ├── docker-compose.yml       # Main compose file
 ├── gui/                     # Web interface
 │   ├── Dockerfile
@@ -116,7 +116,7 @@ Edit `docker-compose.yml` to customize:
 ```yaml
 environment:
   - MYSQL_ROOT_PASSWORD=your_secure_password
-  - MYSQL_DATABASE=webbadeploy
+  - MYSQL_DATABASE=wharftales
 ```
 
 ### Ports
@@ -133,26 +133,26 @@ Default ports:
 
 ```bash
 # Backup database
-sudo cp -r /opt/webbadeploy/data /backup/webbadeploy-data-$(date +%Y%m%d)
+sudo cp -r /opt/wharftales/data /backup/wharftales-data-$(date +%Y%m%d)
 
 # Backup site files
-sudo cp -r /opt/webbadeploy/apps /backup/webbadeploy-apps-$(date +%Y%m%d)
+sudo cp -r /opt/wharftales/apps /backup/wharftales-apps-$(date +%Y%m%d)
 
 # Backup SSL certificates
-sudo cp -r /opt/webbadeploy/ssl /backup/webbadeploy-ssl-$(date +%Y%m%d)
+sudo cp -r /opt/wharftales/ssl /backup/wharftales-ssl-$(date +%Y%m%d)
 ```
 
 ### Restore
 
 ```bash
 # Stop services
-cd /opt/webbadeploy
+cd /opt/wharftales
 sudo docker-compose down
 
 # Restore files
-sudo cp -r /backup/webbadeploy-data-YYYYMMDD /opt/webbadeploy/data
-sudo cp -r /backup/webbadeploy-apps-YYYYMMDD /opt/webbadeploy/apps
-sudo cp -r /backup/webbadeploy-ssl-YYYYMMDD /opt/webbadeploy/ssl
+sudo cp -r /backup/wharftales-data-YYYYMMDD /opt/wharftales/data
+sudo cp -r /backup/wharftales-apps-YYYYMMDD /opt/wharftales/apps
+sudo cp -r /backup/wharftales-ssl-YYYYMMDD /opt/wharftales/ssl
 
 # Start services
 sudo docker-compose up -d
@@ -163,21 +163,21 @@ sudo docker-compose up -d
 ### View Logs
 
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 sudo docker-compose logs -f
 ```
 
 ### Restart Services
 
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 sudo docker-compose restart
 ```
 
-### Update Webbadeploy
+### Update WharfTales
 
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 sudo docker-compose pull
 sudo docker-compose up -d
 ```
@@ -185,7 +185,7 @@ sudo docker-compose up -d
 ### Stop Services
 
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 sudo docker-compose down
 ```
 
@@ -208,8 +208,8 @@ sudo systemctl restart docker
 
 ```bash
 # Fix permissions
-sudo chmod -R 777 /opt/webbadeploy/apps
-sudo chmod -R 777 /opt/webbadeploy/data
+sudo chmod -R 777 /opt/wharftales/apps
+sudo chmod -R 777 /opt/wharftales/data
 ```
 
 ### Port conflicts
@@ -248,8 +248,8 @@ command:
 
 ## Support
 
-- Documentation: https://github.com/yourrepo/webbadeploy
-- Issues: https://github.com/yourrepo/webbadeploy/issues
+- Documentation: https://github.com/yourrepo/wharftales
+- Issues: https://github.com/yourrepo/wharftales/issues
 - Community: https://discord.gg/yourserver
 
 ## License

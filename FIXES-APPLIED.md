@@ -1,4 +1,4 @@
-# Fixes Applied to Webbadeploy
+# Fixes Applied to WharfTales
 
 ## Issue 1: Forgotten Admin Password ✅
 
@@ -20,7 +20,7 @@ Created comprehensive password reset tools:
 ./reset-admin-password.sh admin YourNewPassword123
 
 # Or direct Docker command
-docker exec webbadeploy_gui php /var/www/html/reset-password.php admin YourNewPassword123
+docker exec wharftales_gui php /var/www/html/reset-password.php admin YourNewPassword123
 ```
 
 ---
@@ -68,7 +68,7 @@ When deploying new apps, getting JSON parse error. This happens when:
 ### How to Apply
 
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 
 # Option 1: Use the automated script
 ./fix-and-rebuild.sh
@@ -119,7 +119,7 @@ docker-compose up -d
 ### Session Fix
 - [ ] Run `./fix-and-rebuild.sh`
 - [ ] Clear browser cache
-- [ ] Log in to Webbadeploy
+- [ ] Log in to WharfTales
 - [ ] Try deploying a new app
 - [ ] Verify no JSON parse errors
 - [ ] Wait 30+ minutes and verify session persists
@@ -127,17 +127,17 @@ docker-compose up -d
 ### Verification Commands
 ```bash
 # Check container is running
-docker ps | grep webbadeploy_gui
+docker ps | grep wharftales_gui
 
 # Verify session configuration
-docker exec webbadeploy_gui php -i | grep session.gc_maxlifetime
+docker exec wharftales_gui php -i | grep session.gc_maxlifetime
 # Should show: 86400
 
 # Check PHP config file exists
-docker exec webbadeploy_gui cat /usr/local/etc/php/conf.d/php-session.ini
+docker exec wharftales_gui cat /usr/local/etc/php/conf.d/php-session.ini
 
 # View logs
-docker logs webbadeploy_gui --tail 50
+docker logs wharftales_gui --tail 50
 ```
 
 ---
@@ -147,7 +147,7 @@ docker logs webbadeploy_gui --tail 50
 If something goes wrong:
 
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 
 # Restore from git (if tracked)
 git checkout gui/includes/auth.php
@@ -170,11 +170,11 @@ docker-compose up -d
 For issues:
 1. Check `FIX-SESSION-ERROR.md` for troubleshooting
 2. Check `PASSWORD-RESET-GUIDE.md` for password issues
-3. View Docker logs: `docker logs webbadeploy_gui`
+3. View Docker logs: `docker logs wharftales_gui`
 4. Check browser console (F12) for JavaScript errors
 
 ---
 
 **Status**: ✅ All fixes applied and ready to deploy
 **Date**: 2025-10-10
-**Version**: Webbadeploy v5.1 (Enhanced Error Handling)
+**Version**: WharfTales v5.1 (Enhanced Error Handling)

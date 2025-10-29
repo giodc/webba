@@ -1,13 +1,13 @@
-# Security Fixes for Webbadeploy
+# Security Fixes for WharfTales
 
 ## IMMEDIATE ACTIONS (Do these NOW)
 
 ### 1. Fix File Permissions (CRITICAL)
 ```bash
 # Fix directory permissions
-cd /opt/webbadeploy
-chmod -R 755 /opt/webbadeploy/apps
-chmod -R 755 /opt/webbadeploy/data
+cd /opt/wharftales
+chmod -R 755 /opt/wharftales/apps
+chmod -R 755 /opt/wharftales/data
 
 # Fix Docker socket (more secure approach)
 # Option A: Use Docker group instead of 666
@@ -17,7 +17,7 @@ sudo chmod 660 /var/run/docker.sock
 sudo chown root:docker /var/run/docker.sock
 
 # Restart the GUI container
-docker restart webbadeploy_gui
+docker restart wharftales_gui
 ```
 
 ### 2. Secure SFTP Access (CRITICAL)
@@ -39,13 +39,13 @@ NEW_ROOT_PASS=$(openssl rand -base64 32)
 NEW_USER_PASS=$(openssl rand -base64 32)
 
 # Update database passwords
-docker exec webbadeploy_db mariadb -uroot -pwebbadeploy_root_pass -e "ALTER USER 'root'@'%' IDENTIFIED BY '$NEW_ROOT_PASS'; ALTER USER 'webbadeploy'@'%' IDENTIFIED BY '$NEW_USER_PASS'; FLUSH PRIVILEGES;"
+docker exec wharftales_db mariadb -uroot -pwharftales_root_pass -e "ALTER USER 'root'@'%' IDENTIFIED BY '$NEW_ROOT_PASS'; ALTER USER 'wharftales'@'%' IDENTIFIED BY '$NEW_USER_PASS'; FLUSH PRIVILEGES;"
 
 # Update docker-compose.yml with new passwords
 # IMPORTANT: Save these passwords securely!
-echo "Root Password: $NEW_ROOT_PASS" > /opt/webbadeploy/.db_credentials
-echo "User Password: $NEW_USER_PASS" >> /opt/webbadeploy/.db_credentials
-chmod 600 /opt/webbadeploy/.db_credentials
+echo "Root Password: $NEW_ROOT_PASS" > /opt/wharftales/.db_credentials
+echo "User Password: $NEW_USER_PASS" >> /opt/wharftales/.db_credentials
+chmod 600 /opt/wharftales/.db_credentials
 ```
 
 ### 4. Restrict Dashboard Access (MEDIUM PRIORITY)
@@ -99,7 +99,7 @@ docker exec wordpress_wordpress_1759785396 wp user update admin --user_pass="$(o
 ## LONG-TERM FIXES (Implement ASAP)
 
 ### 7. Harden WordPress Deployment
-Create `/opt/webbadeploy/apps/wordpress/.htaccess-security`:
+Create `/opt/wharftales/apps/wordpress/.htaccess-security`:
 ```apache
 # Disable PHP execution in uploads
 <FilesMatch "\\.php$">

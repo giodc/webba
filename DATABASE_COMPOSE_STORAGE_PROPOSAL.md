@@ -4,9 +4,9 @@
 
 ### Current Approach (File-Based)
 ```
-Webbadeploy currently stores docker-compose.yml files on disk:
-├── /opt/webbadeploy/docker-compose.yml (main Traefik config)
-└── /opt/webbadeploy/apps/
+WharfTales currently stores docker-compose.yml files on disk:
+├── /opt/wharftales/docker-compose.yml (main Traefik config)
+└── /opt/wharftales/apps/
     ├── wordpress/sites/{container_name}/docker-compose.yml
     ├── php/sites/{container_name}/docker-compose.yml
     └── laravel/sites/{container_name}/docker-compose.yml
@@ -50,7 +50,7 @@ Coolify (Laravel-based) uses a **database-first approach**:
 User Action → API Endpoint → Database Update → Generate Compose File → Docker Deploy
 ```
 
-## Proposed Implementation for Webbadeploy
+## Proposed Implementation for WharfTales
 
 ### Phase 1: Database Schema Changes
 
@@ -204,7 +204,7 @@ function migrateComposeToDatabase($db) {
     echo "Starting compose configuration migration...\n";
     
     // 1. Migrate main Traefik config
-    $mainComposePath = '/opt/webbadeploy/docker-compose.yml';
+    $mainComposePath = '/opt/wharftales/docker-compose.yml';
     if (file_exists($mainComposePath)) {
         $yaml = file_get_contents($mainComposePath);
         
@@ -272,7 +272,7 @@ if (isset($_POST['letsencrypt_email'])) {
             updateComposeParameter($db, $config['id'], 'letsencrypt_email', $newEmail, $currentUser['id']);
             
             // Regenerate file for Docker
-            generateComposeFile($db, $config['id'], '/opt/webbadeploy/docker-compose.yml');
+            generateComposeFile($db, $config['id'], '/opt/wharftales/docker-compose.yml');
             
             $successMessage = 'Let\'s Encrypt email updated successfully!';
             
@@ -352,7 +352,7 @@ function getComposeFilePath($db, $siteId = null, $forceRegenerate = false) {
     $config = getComposeConfig($db, $siteId);
     
     if ($siteId === null) {
-        $filePath = '/opt/webbadeploy/docker-compose.yml';
+        $filePath = '/opt/wharftales/docker-compose.yml';
     } else {
         $site = getSiteById($db, $siteId);
         $filePath = "/app/apps/{$site['type']}/sites/{$site['container_name']}/docker-compose.yml";
@@ -416,4 +416,4 @@ During transition period:
 - Documentation: 2-3 hours
 - **Total: ~20-25 hours** for complete implementation
 
-This approach transforms Webbadeploy from a file-based system to a modern, database-driven platform, similar to Coolify's architecture.
+This approach transforms WharfTales from a file-based system to a modern, database-driven platform, similar to Coolify's architecture.

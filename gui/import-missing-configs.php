@@ -41,7 +41,7 @@ try {
         // Try to find the docker-compose.yml file
         $possiblePaths = [
             "/app/apps/{$siteType}/sites/{$containerName}/docker-compose.yml",
-            "/opt/webbadeploy/apps/{$siteType}/sites/{$containerName}/docker-compose.yml"
+            "/opt/wharftales/apps/{$siteType}/sites/{$containerName}/docker-compose.yml"
         ];
         
         $composePath = null;

@@ -3,7 +3,7 @@
 
 echo "Adding rate limiting to Traefik configuration..."
 
-cd /opt/webbadeploy || exit 1
+cd /opt/wharftales || exit 1
 
 # Backup current docker-compose.yml
 cp docker-compose.yml docker-compose.yml.backup.$(date +%Y%m%d_%H%M%S)

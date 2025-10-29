@@ -46,11 +46,11 @@
             <div style="margin-top:20px;opacity:.8;font-size:14px">
                 <strong>Next steps:</strong><br>
                 • Upload your PHP files via SFTP<br>
-                • Or use the file manager in Webbadeploy<br>
+                • Or use the file manager in WharfTales<br>
                 • Replace this index.php with your application
             </div>
             
-            <div class="badge">Powered by Webbadeploy</div>
+            <div class="badge">Powered by WharfTales</div>
         </div>
     </div>
 </body>

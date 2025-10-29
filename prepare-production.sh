@@ -17,13 +17,13 @@ echo -e "${BLUE}"
 cat << "EOF"
 ╔════════════════════════════════════════════════════════════╗
 ║                                                            ║
-║        Webbadeploy Production Preparation Wizard          ║
+║        WharfTales Production Preparation Wizard          ║
 ║                                                            ║
 ╚════════════════════════════════════════════════════════════╝
 EOF
 echo -e "${NC}"
 
-echo -e "${GREEN}This wizard will help you prepare Webbadeploy for production.${NC}\n"
+echo -e "${GREEN}This wizard will help you prepare WharfTales for production.${NC}\n"
 
 # Check if running as root
 if [ "$EUID" -ne 0 ]; then
@@ -47,7 +47,7 @@ read -p "Have you reviewed the documentation? (y/n) " -n 1 -r
 echo
 if [[ ! $REPLY =~ ^[Yy]$ ]]; then
     echo -e "${YELLOW}Please review PRODUCTION-README.md first:${NC}"
-    echo "  cat /opt/webbadeploy/PRODUCTION-README.md | less"
+    echo "  cat /opt/wharftales/PRODUCTION-README.md | less"
     exit 0
 fi
 
@@ -59,12 +59,12 @@ echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━�
 read -p "Create backup before proceeding? (recommended) (y/n) " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-    BACKUP_DIR="/opt/webbadeploy/backups/pre-production-$(date +%Y%m%d-%H%M%S)"
+    BACKUP_DIR="/opt/wharftales/backups/pre-production-$(date +%Y%m%d-%H%M%S)"
     mkdir -p "$BACKUP_DIR"
     
     echo "Creating backup..."
-    cp -r /opt/webbadeploy/data "$BACKUP_DIR/" 2>/dev/null || true
-    cp /opt/webbadeploy/docker-compose.yml "$BACKUP_DIR/" 2>/dev/null || true
+    cp -r /opt/wharftales/data "$BACKUP_DIR/" 2>/dev/null || true
+    cp /opt/wharftales/docker-compose.yml "$BACKUP_DIR/" 2>/dev/null || true
     
     echo -e "${GREEN}✓ Backup created: $BACKUP_DIR${NC}"
 fi
@@ -77,7 +77,7 @@ echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━�
 echo "Running security check without making changes..."
 echo ""
 
-bash /opt/webbadeploy/production-readiness-check.sh --dry-run
+bash /opt/wharftales/production-readiness-check.sh --dry-run
 CHECK_RESULT=$?
 
 echo ""
@@ -93,11 +93,11 @@ else
         echo ""
         echo -e "${YELLOW}Applying fixes...${NC}"
         echo ""
-        bash /opt/webbadeploy/production-readiness-check.sh
+        bash /opt/wharftales/production-readiness-check.sh
         echo ""
         echo -e "${GREEN}✓ Fixes applied. Running check again...${NC}"
         echo ""
-        bash /opt/webbadeploy/production-readiness-check.sh --dry-run
+        bash /opt/wharftales/production-readiness-check.sh --dry-run
     fi
 fi
 
@@ -123,7 +123,7 @@ echo
 if [[ ! $REPLY =~ ^[Yy]$ ]]; then
     echo ""
     echo -e "${YELLOW}Please complete manual steps before deploying to production.${NC}"
-    echo "Guide: /opt/webbadeploy/PRODUCTION-DEPLOYMENT-GUIDE.md"
+    echo "Guide: /opt/wharftales/PRODUCTION-DEPLOYMENT-GUIDE.md"
     exit 0
 fi
 
@@ -135,7 +135,7 @@ echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━�
 echo "Running final security check..."
 echo ""
 
-bash /opt/webbadeploy/production-readiness-check.sh --dry-run
+bash /opt/wharftales/production-readiness-check.sh --dry-run
 FINAL_RESULT=$?
 
 echo ""
@@ -147,7 +147,7 @@ if [ $FINAL_RESULT -eq 0 ]; then
 ║                                                            ║
 ║                  ✓ PRODUCTION READY!                      ║
 ║                                                            ║
-║     Your Webbadeploy installation is secure and ready     ║
+║     Your WharfTales installation is secure and ready     ║
 ║              for production deployment.                    ║
 ║                                                            ║
 ╚════════════════════════════════════════════════════════════╝

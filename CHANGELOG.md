@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to Webbadeploy will be documented in this file.
+All notable changes to WharfTales will be documented in this file.
 
 ## [2.0.0] - 2025-10-05
 
@@ -168,12 +168,12 @@ This is a major release introducing enterprise-grade security and multi-user sup
 
 1. **Backup your database**:
    ```bash
-   cp /opt/webbadeploy/data/database.sqlite /opt/webbadeploy/data/database.sqlite.backup
+   cp /opt/wharftales/data/database.sqlite /opt/wharftales/data/database.sqlite.backup
    ```
 
 2. **Run the migration**:
    ```bash
-   docker exec webbadeploy_gui php /var/www/html/migrate-rbac-2fa.php
+   docker exec wharftales_gui php /var/www/html/migrate-rbac-2fa.php
    ```
 
 3. **Restart services**:
@@ -213,7 +213,7 @@ This is a major release introducing enterprise-grade security and multi-user sup
 ## Support
 
 For issues, questions, or feature requests:
-- Check documentation in `/opt/webbadeploy/docs/`
+- Check documentation in `/opt/wharftales/docs/`
 - Review troubleshooting guides
 - Check GitHub issues
 - Open a new issue with details

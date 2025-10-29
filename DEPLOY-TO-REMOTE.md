@@ -7,7 +7,7 @@
 Copy this entire block and paste into your remote server terminal:
 
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 sudo mkdir -p ssl
 sudo tee ssl/acme.json > /dev/null << 'EOF'
 {
@@ -26,7 +26,7 @@ sudo chmod 600 ssl/acme.json
 sudo chown root:root ssl/acme.json
 ls -la ssl/acme.json
 docker-compose restart traefik
-echo "✅ Done! Monitor: docker logs webbadeploy_traefik -f"
+echo "✅ Done! Monitor: docker logs wharftales_traefik -f"
 ```
 
 ### Method 2: Copy Script and Run 📋 (1 minute)
@@ -35,20 +35,20 @@ From your local machine:
 
 ```bash
 # Copy the fix script
-scp /opt/webbadeploy/fix-acme.sh user@your-server:/opt/webbadeploy/
+scp /opt/wharftales/fix-acme.sh user@your-server:/opt/wharftales/
 
 # SSH to remote
 ssh user@your-server
 
 # Run the script
-cd /opt/webbadeploy
+cd /opt/wharftales
 sudo bash fix-acme.sh
 
 # Restart Traefik
 docker-compose restart traefik
 
 # Monitor logs
-docker logs webbadeploy_traefik -f
+docker logs wharftales_traefik -f
 ```
 
 ### Method 3: Full Deployment Script 🚀 (2 minutes)
@@ -57,14 +57,14 @@ Use this if you have other pending fixes too:
 
 ```bash
 # From local machine, copy deployment files
-scp /opt/webbadeploy/fix-acme.sh user@your-server:/opt/webbadeploy/
-scp /opt/webbadeploy/DEPLOY-FIXES.sh user@your-server:/opt/webbadeploy/
+scp /opt/wharftales/fix-acme.sh user@your-server:/opt/wharftales/
+scp /opt/wharftales/DEPLOY-FIXES.sh user@your-server:/opt/wharftales/
 
 # SSH to remote
 ssh user@your-server
 
 # Run deployment
-cd /opt/webbadeploy
+cd /opt/wharftales
 bash DEPLOY-FIXES.sh
 ```
 
@@ -74,30 +74,30 @@ After deploying, verify everything is working:
 
 ```bash
 # 1. Check file exists with correct permissions
-ls -la /opt/webbadeploy/ssl/acme.json
+ls -la /opt/wharftales/ssl/acme.json
 # Expected output: -rw------- 1 root root 169 Oct 11 14:43 acme.json
 
 # 2. Verify file content
-sudo cat /opt/webbadeploy/ssl/acme.json | jq
+sudo cat /opt/wharftales/ssl/acme.json | jq
 # Should show JSON structure
 
 # 3. Check Traefik is running
 docker ps | grep traefik
-# Should show webbadeploy_traefik container
+# Should show wharftales_traefik container
 
 # 4. Monitor certificate acquisition
-docker logs webbadeploy_traefik 2>&1 | tail -50
+docker logs wharftales_traefik 2>&1 | tail -50
 # Look for certificate-related messages
 
 # 5. Watch real-time logs
-docker logs webbadeploy_traefik -f
+docker logs wharftales_traefik -f
 # Press Ctrl+C to exit
 ```
 
 ## Expected Results
 
 ### Immediately After Fix
-- ✅ File exists: `/opt/webbadeploy/ssl/acme.json`
+- ✅ File exists: `/opt/wharftales/ssl/acme.json`
 - ✅ Permissions: `600` (rw-------)
 - ✅ Owner: `root:root`
 - ✅ Size: `169 bytes` (initial template)
@@ -155,7 +155,7 @@ https://letsencrypt.org/docs/rate-limits/
 ```bash
 docker-compose down
 docker-compose up -d
-docker logs webbadeploy_traefik -f
+docker logs wharftales_traefik -f
 ```
 
 ## Important Notes
@@ -197,10 +197,10 @@ docker logs webbadeploy_traefik -f
 
 ```bash
 # View all SSL-related logs
-docker logs webbadeploy_traefik 2>&1 | grep -i "acme\|certificate\|ssl"
+docker logs wharftales_traefik 2>&1 | grep -i "acme\|certificate\|ssl"
 
 # Check Traefik configuration
-docker exec webbadeploy_traefik traefik version
+docker exec wharftales_traefik traefik version
 
 # Restart just Traefik
 docker-compose restart traefik
@@ -238,5 +238,5 @@ You'll know it's working when:
 
 **Need Help?**
 - Check `REMOTE-ACME-FIX.md` for detailed troubleshooting
-- Review Traefik logs: `docker logs webbadeploy_traefik -f`
+- Review Traefik logs: `docker logs wharftales_traefik -f`
 - Verify with: `sudo bash production-check.sh`

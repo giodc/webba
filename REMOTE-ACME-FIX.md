@@ -1,7 +1,7 @@
 # Remote ACME File Fix Guide
 
 ## Problem
-The error "ACME file not found at: /opt/webbadeploy/ssl/acme.json" indicates that the SSL certificate storage file is missing or empty on the remote server.
+The error "ACME file not found at: /opt/wharftales/ssl/acme.json" indicates that the SSL certificate storage file is missing or empty on the remote server.
 
 ## Solution
 
@@ -9,7 +9,7 @@ The error "ACME file not found at: /opt/webbadeploy/ssl/acme.json" indicates tha
 
 1. **Copy the fix script to remote server:**
    ```bash
-   scp fix-acme.sh user@remote-server:/opt/webbadeploy/
+   scp fix-acme.sh user@remote-server:/opt/wharftales/
    ```
 
 2. **SSH into remote server:**
@@ -19,7 +19,7 @@ The error "ACME file not found at: /opt/webbadeploy/ssl/acme.json" indicates tha
 
 3. **Run the fix script:**
    ```bash
-   cd /opt/webbadeploy
+   cd /opt/wharftales
    sudo bash fix-acme.sh
    ```
 
@@ -30,7 +30,7 @@ The error "ACME file not found at: /opt/webbadeploy/ssl/acme.json" indicates tha
 
 5. **Monitor certificate acquisition:**
    ```bash
-   docker logs webbadeploy_traefik -f
+   docker logs wharftales_traefik -f
    ```
 
 ### Option 2: Manual Fix
@@ -38,8 +38,8 @@ The error "ACME file not found at: /opt/webbadeploy/ssl/acme.json" indicates tha
 If you can't copy the script, run these commands on the remote server:
 
 ```bash
-# Navigate to webbadeploy directory
-cd /opt/webbadeploy
+# Navigate to wharftales directory
+cd /opt/wharftales
 
 # Create ssl directory if missing
 sudo mkdir -p ssl
@@ -70,7 +70,7 @@ ls -la ssl/acme.json
 docker-compose restart traefik
 
 # Watch logs
-docker logs webbadeploy_traefik -f
+docker logs wharftales_traefik -f
 ```
 
 ## Verification
@@ -79,7 +79,7 @@ After applying the fix, verify:
 
 1. **File exists and has correct permissions:**
    ```bash
-   ls -la /opt/webbadeploy/ssl/acme.json
+   ls -la /opt/wharftales/ssl/acme.json
    # Should show: -rw------- 1 root root
    ```
 
@@ -90,12 +90,12 @@ After applying the fix, verify:
 
 3. **Check for certificate acquisition in logs:**
    ```bash
-   docker logs webbadeploy_traefik 2>&1 | grep -i "certificate"
+   docker logs wharftales_traefik 2>&1 | grep -i "certificate"
    ```
 
 4. **Verify acme.json is being populated:**
    ```bash
-   sudo cat /opt/webbadeploy/ssl/acme.json | jq '.letsencrypt.Certificates'
+   sudo cat /opt/wharftales/ssl/acme.json | jq '.letsencrypt.Certificates'
    ```
 
 ## Important Notes
@@ -131,14 +131,14 @@ After applying the fix, verify:
 
 4. **Force certificate renewal:**
    ```bash
-   sudo rm /opt/webbadeploy/ssl/acme.json
+   sudo rm /opt/wharftales/ssl/acme.json
    sudo bash fix-acme.sh
    docker-compose restart traefik
    ```
 
 5. **Check Traefik logs for errors:**
    ```bash
-   docker logs webbadeploy_traefik 2>&1 | grep -i "error\|fail"
+   docker logs wharftales_traefik 2>&1 | grep -i "error\|fail"
    ```
 
 ## What Happens Next

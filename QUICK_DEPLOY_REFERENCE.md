@@ -4,7 +4,7 @@
 
 ### Step 1: Commit Your Changes
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 git add .
 git commit -m "Fix site permissions database bug"
 git push origin master
@@ -24,7 +24,7 @@ nano scripts/servers.txt
 **Option B: Manual**
 ```bash
 # SSH into each server and run:
-cd /opt/webbadeploy
+cd /opt/wharftales
 sudo ./safe-update.sh
 ```
 
@@ -32,8 +32,8 @@ sudo ./safe-update.sh
 ```bash
 # Check one server to confirm
 ssh user@server1.example.com
-docker ps | grep webbadeploy
-docker logs webbadeploy_gui --tail 20
+docker ps | grep wharftales
+docker logs wharftales_gui --tail 20
 ```
 
 ---
@@ -60,7 +60,7 @@ When you run `safe-update.sh` on a remote server:
 
 ## 🔧 Current Fix Details
 
-**File:** `/opt/webbadeploy/gui/migrations/fix-site-permissions-database.php`
+**File:** `/opt/wharftales/gui/migrations/fix-site-permissions-database.php`
 
 **What it fixes:**
 - Regular users getting "Access denied" errors
@@ -74,7 +74,7 @@ When you run `safe-update.sh` on a remote server:
 
 ## 📝 servers.txt Format
 
-Create `/opt/webbadeploy/scripts/servers.txt`:
+Create `/opt/wharftales/scripts/servers.txt`:
 
 ```txt
 # Production servers
@@ -96,27 +96,27 @@ prod-server-4
 ### Migration didn't run?
 ```bash
 # Run manually
-docker exec webbadeploy_gui php /var/www/html/migrations/fix-site-permissions-database.php
+docker exec wharftales_gui php /var/www/html/migrations/fix-site-permissions-database.php
 ```
 
 ### Users still can't access sites?
 ```bash
 # Check database
-docker exec webbadeploy_gui sqlite3 /app/data/database.sqlite "SELECT * FROM site_permissions"
+docker exec wharftales_gui sqlite3 /app/data/database.sqlite "SELECT * FROM site_permissions"
 
 # Check permissions
-docker exec webbadeploy_gui php -r "require '/var/www/html/includes/auth.php'; var_dump(canAccessSite(2, 1, 'view'));"
+docker exec wharftales_gui php -r "require '/var/www/html/includes/auth.php'; var_dump(canAccessSite(2, 1, 'view'));"
 ```
 
 ### Need to rollback?
 ```bash
 # Find backup
-ls -lt /opt/webbadeploy/data/backups/
+ls -lt /opt/wharftales/data/backups/
 
 # Restore
-BACKUP="/opt/webbadeploy/data/backups/update-20241028-233045"
-sudo cp $BACKUP/docker-compose.yml /opt/webbadeploy/
-sudo cp $BACKUP/database.sqlite /opt/webbadeploy/data/
+BACKUP="/opt/wharftales/data/backups/update-20241028-233045"
+sudo cp $BACKUP/docker-compose.yml /opt/wharftales/
+sudo cp $BACKUP/database.sqlite /opt/wharftales/data/
 sudo docker-compose restart
 ```
 
@@ -146,6 +146,6 @@ git add . && git commit -m "Fix permissions" && git push && ./scripts/deploy-to-
 
 ## 📚 Full Documentation
 
-- **Complete Guide:** `/opt/webbadeploy/REMOTE_DEPLOYMENT_GUIDE.md`
-- **Update Guide:** `/opt/webbadeploy/UPDATE_GUIDE.md`
-- **SSL Fix Guide:** `/opt/webbadeploy/SSL_FIX_GUIDE.md`
+- **Complete Guide:** `/opt/wharftales/REMOTE_DEPLOYMENT_GUIDE.md`
+- **Update Guide:** `/opt/wharftales/UPDATE_GUIDE.md`
+- **SSL Fix Guide:** `/opt/wharftales/SSL_FIX_GUIDE.md`

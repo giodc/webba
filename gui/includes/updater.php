@@ -1,6 +1,6 @@
 <?php
 /**
- * Webbadeploy Update Manager
+ * WharfTales Update Manager
  */
 
 require_once 'update-config.php';

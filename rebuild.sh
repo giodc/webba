@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# WebbaDeploy Quick Rebuild Script
+# WharfTales Quick Rebuild Script
 # This script only rebuilds and restarts containers without pulling from git
 # Useful for local changes or when you know containers just need a restart
 
 set -e
 
-echo "🔄 Quick rebuilding WebbaDeploy containers..."
+echo "🔄 Quick rebuilding WharfTales containers..."
 
 # Stop running containers
 echo "⏹️  Stopping containers..."

@@ -1,4 +1,4 @@
-# Password Reset Guide for Webbadeploy
+# Password Reset Guide for WharfTales
 
 This guide explains how to reset the admin password from the command line when you've forgotten it.
 
@@ -7,7 +7,7 @@ This guide explains how to reset the admin password from the command line when y
 From the host machine (where Docker is running):
 
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 ./reset-admin-password.sh admin YourNewPassword123
 ```
 
@@ -31,10 +31,10 @@ If the shell script doesn't work, you can run the PHP script directly:
 
 ```bash
 # Find your container name
-docker ps | grep webbadeploy
+docker ps | grep wharftales
 
 # Run the reset script (replace CONTAINER_NAME with actual name)
-docker exec webbadeploy-gui-1 php /var/www/html/reset-password.php admin YourNewPassword
+docker exec wharftales-gui-1 php /var/www/html/reset-password.php admin YourNewPassword
 ```
 
 ### Method 3: Inside the Container
@@ -43,7 +43,7 @@ If you're already inside the container:
 
 ```bash
 # Enter the container
-docker exec -it webbadeploy-gui-1 bash
+docker exec -it wharftales-gui-1 bash
 
 # Run the reset script
 cd /var/www/html
@@ -56,7 +56,7 @@ For advanced users, you can directly modify the SQLite database:
 
 ```bash
 # Enter the container
-docker exec -it webbadeploy-gui-1 bash
+docker exec -it wharftales-gui-1 bash
 
 # Access the database
 sqlite3 /app/data/database.sqlite
@@ -83,7 +83,7 @@ UPDATE users SET password_hash = 'PASTE_HASH_HERE', failed_attempts = 0, locked_
 
 ### Container Not Found
 
-If you get "Could not find Webbadeploy GUI container":
+If you get "Could not find WharfTales GUI container":
 
 ```bash
 # List all containers
@@ -99,10 +99,10 @@ If you get permission errors:
 
 ```bash
 # Make the script executable
-chmod +x /opt/webbadeploy/reset-admin-password.sh
+chmod +x /opt/wharftales/reset-admin-password.sh
 
 # Or run with bash
-bash /opt/webbadeploy/reset-admin-password.sh admin NewPassword
+bash /opt/wharftales/reset-admin-password.sh admin NewPassword
 ```
 
 ### Database Locked
@@ -111,10 +111,10 @@ If you get "database is locked":
 
 ```bash
 # Stop the container temporarily
-docker stop webbadeploy-gui-1
+docker stop wharftales-gui-1
 
 # Start it again
-docker start webbadeploy-gui-1
+docker start wharftales-gui-1
 
 # Try the reset again
 ./reset-admin-password.sh admin NewPassword
@@ -125,7 +125,7 @@ docker start webbadeploy-gui-1
 If you're locked out due to 2FA and lost your authenticator:
 
 ```bash
-docker exec -it webbadeploy-gui-1 sqlite3 /app/data/database.sqlite
+docker exec -it wharftales-gui-1 sqlite3 /app/data/database.sqlite
 
 # Disable 2FA for admin user
 UPDATE users SET totp_enabled = 0, totp_secret = NULL WHERE username = 'admin';
@@ -134,4 +134,4 @@ UPDATE users SET totp_enabled = 0, totp_secret = NULL WHERE username = 'admin';
 
 ## Support
 
-For more help, check the Webbadeploy documentation or open an issue on GitHub.
+For more help, check the WharfTales documentation or open an issue on GitHub.

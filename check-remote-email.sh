@@ -7,7 +7,7 @@ echo "║           ACME Email Configuration Checker                ║"
 echo "╚═══════════════════════════════════════════════════════════╝"
 echo ""
 
-cd /opt/webbadeploy || exit 1
+cd /opt/wharftales || exit 1
 
 # Check docker-compose.yml
 echo "1. Email in docker-compose.yml (Traefik reads this):"
@@ -39,7 +39,7 @@ echo ""
 echo "3. Email in RUNNING Traefik container:"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 if docker ps | grep -q traefik; then
-    docker inspect webbadeploy_traefik 2>/dev/null | grep "acme.email" | sed 's/.*email=//' | sed 's/",*//' | sed 's/^[[:space:]]*//'
+    docker inspect wharftales_traefik 2>/dev/null | grep "acme.email" | sed 's/.*email=//' | sed 's/",*//' | sed 's/^[[:space:]]*//'
 else
     echo "❌ Traefik container not running"
 fi

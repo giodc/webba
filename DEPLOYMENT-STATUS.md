@@ -3,7 +3,7 @@
 ## ✅ Completed Tasks
 
 ### Local Environment (Development)
-- ✅ ACME file created: `/opt/webbadeploy/ssl/acme.json`
+- ✅ ACME file created: `/opt/wharftales/ssl/acme.json`
 - ✅ Permissions set: `600 (rw-------)`
 - ✅ Ownership set: `root:root`
 - ✅ File size: `169 bytes` (initialized template)
@@ -29,7 +29,7 @@
 ## 📋 What Was Fixed
 
 ### Problem
-Remote server error: "ACME file not found at: /opt/webbadeploy/ssl/acme.json"
+Remote server error: "ACME file not found at: /opt/wharftales/ssl/acme.json"
 
 ### Root Cause
 - ACME file was empty (0 bytes) or missing
@@ -61,7 +61,7 @@ Choose one of these methods:
 #### Method 1: Quick Fix (Fastest)
 ```bash
 ssh user@remote-server
-cd /opt/webbadeploy
+cd /opt/wharftales
 sudo mkdir -p ssl
 sudo tee ssl/acme.json > /dev/null << 'EOF'
 {
@@ -79,31 +79,31 @@ EOF
 sudo chmod 600 ssl/acme.json
 sudo chown root:root ssl/acme.json
 docker-compose restart traefik
-docker logs webbadeploy_traefik -f
+docker logs wharftales_traefik -f
 ```
 
 #### Method 2: Use Fix Script (Recommended)
 ```bash
 # From local machine
-scp /opt/webbadeploy/fix-acme.sh user@remote-server:/opt/webbadeploy/
+scp /opt/wharftales/fix-acme.sh user@remote-server:/opt/wharftales/
 
 # SSH to remote
 ssh user@remote-server
-cd /opt/webbadeploy
+cd /opt/wharftales
 sudo bash fix-acme.sh
 docker-compose restart traefik
-docker logs webbadeploy_traefik -f
+docker logs wharftales_traefik -f
 ```
 
 #### Method 3: Full Deployment
 ```bash
 # From local machine
-scp /opt/webbadeploy/fix-acme.sh user@remote-server:/opt/webbadeploy/
-scp /opt/webbadeploy/DEPLOY-FIXES.sh user@remote-server:/opt/webbadeploy/
+scp /opt/wharftales/fix-acme.sh user@remote-server:/opt/wharftales/
+scp /opt/wharftales/DEPLOY-FIXES.sh user@remote-server:/opt/wharftales/
 
 # SSH to remote
 ssh user@remote-server
-cd /opt/webbadeploy
+cd /opt/wharftales
 bash DEPLOY-FIXES.sh
 ```
 
@@ -146,17 +146,17 @@ bash DEPLOY-FIXES.sh
 
 ```bash
 # 1. Check file exists with correct permissions
-ls -la /opt/webbadeploy/ssl/acme.json
+ls -la /opt/wharftales/ssl/acme.json
 # Expected: -rw------- 1 root root 169 Oct 11 14:43 acme.json
 
 # 2. Verify content
-sudo cat /opt/webbadeploy/ssl/acme.json | jq
+sudo cat /opt/wharftales/ssl/acme.json | jq
 
 # 3. Check Traefik is running
 docker ps | grep traefik
 
 # 4. Monitor certificate acquisition
-docker logs webbadeploy_traefik -f
+docker logs wharftales_traefik -f
 
 # 5. Run security audit
 sudo bash production-check.sh
@@ -165,7 +165,7 @@ sudo bash production-check.sh
 ## 📈 Expected Results
 
 ### Immediately After Fix
-- ✅ File exists at `/opt/webbadeploy/ssl/acme.json`
+- ✅ File exists at `/opt/wharftales/ssl/acme.json`
 - ✅ Permissions: `600 (rw-------)`
 - ✅ Owner: `root:root`
 - ✅ Size: `169 bytes`

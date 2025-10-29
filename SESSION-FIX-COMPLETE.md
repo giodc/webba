@@ -62,7 +62,7 @@ const result = await apiCall("api.php?action=change_password", {...});
 ### Verify the Fix
 1. **Clear browser cache** (Ctrl+Shift+Delete)
 2. **Refresh the page** (Ctrl+F5)
-3. **Check console**: Should see "Webbadeploy JS v5.2 loaded"
+3. **Check console**: Should see "WharfTales JS v5.2 loaded"
 4. **Try these actions**:
    - Create a new site
    - Change your password
@@ -79,7 +79,7 @@ const result = await apiCall("api.php?action=change_password", {...});
 
 ```bash
 # Check session configuration
-docker exec webbadeploy_gui php -r "require_once '/var/www/html/includes/auth.php'; echo 'Session lifetime: ' . ini_get('session.gc_maxlifetime') . ' seconds';"
+docker exec wharftales_gui php -r "require_once '/var/www/html/includes/auth.php'; echo 'Session lifetime: ' . ini_get('session.gc_maxlifetime') . ' seconds';"
 
 # Expected output: Session lifetime: 86400 seconds (24 hours)
 ```
@@ -98,7 +98,7 @@ curl -s http://localhost:9000/api.php?action=create_site -X POST -H "Content-Typ
 
 Open browser console (F12) and you should see:
 ```
-Webbadeploy JS v5.2 loaded - All API calls use session detection!
+WharfTales JS v5.2 loaded - All API calls use session detection!
 ```
 
 If you see an older version (v5.0, v5.1), **clear your browser cache**.
@@ -116,7 +116,7 @@ If you see an older version (v5.0, v5.1), **clear your browser cache**.
 
 1. **Check session config**:
    ```bash
-   docker exec webbadeploy_gui php -i | grep session.gc_maxlifetime
+   docker exec wharftales_gui php -i | grep session.gc_maxlifetime
    ```
    Should show: `86400`
 
@@ -144,6 +144,6 @@ If you see an older version (v5.0, v5.1), **clear your browser cache**.
 
 ---
 
-**Version**: Webbadeploy JS v5.2
+**Version**: WharfTales JS v5.2
 **Date**: 2025-10-10
 **Ready**: YES - Test now!

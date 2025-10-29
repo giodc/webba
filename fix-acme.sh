@@ -11,8 +11,8 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-WEBBADEPLOY_DIR="/opt/webbadeploy"
-ACME_FILE="$WEBBADEPLOY_DIR/ssl/acme.json"
+WHARFTALES_DIR="/opt/wharftales"
+ACME_FILE="$WHARFTALES_DIR/ssl/acme.json"
 
 echo -e "${BLUE}Fixing ACME file for Traefik SSL...${NC}\n"
 
@@ -23,9 +23,9 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 # Create ssl directory if it doesn't exist
-if [ ! -d "$WEBBADEPLOY_DIR/ssl" ]; then
+if [ ! -d "$WHARFTALES_DIR/ssl" ]; then
     echo -e "${YELLOW}Creating ssl directory...${NC}"
-    mkdir -p "$WEBBADEPLOY_DIR/ssl"
+    mkdir -p "$WHARFTALES_DIR/ssl"
 fi
 
 # Check if acme.json exists
@@ -79,7 +79,7 @@ echo -e "Size: $FINAL_SIZE bytes"
 
 echo -e "\n${BLUE}Next steps:${NC}"
 echo -e "1. Restart Traefik: ${YELLOW}docker-compose restart traefik${NC}"
-echo -e "2. Check logs: ${YELLOW}docker logs webbadeploy_traefik -f${NC}"
+echo -e "2. Check logs: ${YELLOW}docker logs wharftales_traefik -f${NC}"
 echo -e "3. Verify certificates are being issued"
 
 echo -e "\n${YELLOW}Note: Traefik will populate this file with certificates automatically${NC}"

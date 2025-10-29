@@ -3,7 +3,7 @@
 ## For End Users (Dashboard)
 
 ### Check for Updates
-1. Open Webbadeploy dashboard
+1. Open WharfTales dashboard
 2. Look for **"Update Available"** notification in the navbar (appears automatically)
 3. Click the notification to see update details
 
@@ -17,7 +17,7 @@
 
 ### Step 1: Make Your Changes
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 # Make your code changes
 git add .
 git commit -m "Your changes description"
@@ -46,7 +46,7 @@ git push origin main
 
 ```bash
 # 1. Fix the bug
-cd /opt/webbadeploy
+cd /opt/wharftales
 vim gui/api.php  # Make your fix
 
 # 2. Commit the fix
@@ -82,10 +82,10 @@ If an update causes issues, restore from backup:
 
 ```bash
 # List backups
-docker exec webbadeploy_gui ls -lh /app/data/backups/
+docker exec wharftales_gui ls -lh /app/data/backups/
 
 # Extract a backup (example)
-docker exec webbadeploy_gui tar -xzf /app/data/backups/backup_v1.0.0_2025-10-02_19-30-00.tar.gz -C /tmp/
+docker exec wharftales_gui tar -xzf /app/data/backups/backup_v1.0.0_2025-10-02_19-30-00.tar.gz -C /tmp/
 ```
 
 ## Configuration

@@ -27,9 +27,9 @@ WharfTales is an open-source platform that makes deploying WordPress, PHP, and L
 curl -fsSL https://raw.githubusercontent.com/giodc/webba/master/install.sh | sudo bash
 ```
 
-2. **Webbadeploy starts automatically** after installation. To manage it manually:
+2. **WharfTales starts automatically** after installation. To manage it manually:
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 docker-compose up -d    # Start
 docker-compose down     # Stop
 docker-compose restart  # Restart
@@ -91,7 +91,7 @@ docker-compose restart  # Restart
 
 ## 🔐 SSL Certificates
 
-Webbadeploy automatically handles SSL certificates using Let's Encrypt:
+WharfTales automatically handles SSL certificates using Let's Encrypt:
 
 - **Test Domains** (*.test.local): No SSL needed for local development
 - **Custom Domains**: Automatic SSL certificate request and renewal
@@ -101,7 +101,7 @@ Webbadeploy automatically handles SSL certificates using Let's Encrypt:
 - **Automatic Renewal**: Traefik automatically renews certificates 30 days before expiry
 - **Certificate Duration**: 90 days (Let's Encrypt standard)
 - **No Manual Intervention**: Renewal happens automatically in the background
-- **Monitoring**: Check Traefik logs for renewal status: `docker logs webbadeploy_traefik`
+- **Monitoring**: Check Traefik logs for renewal status: `docker logs wharftales_traefik`
 - **Storage**: Certificates stored in `/letsencrypt/acme.json` within Traefik container
 
 ## 🎛️ Management
@@ -123,14 +123,14 @@ docker-compose logs -f [service]
 # Restart services
 docker-compose restart
 
-# Update Webbadeploy
+# Update WharfTales
 git pull && docker-compose build --no-cache
 ```
 
 ## 📁 Directory Structure
 
 ```
-/opt/webbadeploy/
+/opt/wharftales/
 ├── docker-compose.yml          # Main orchestration
 ├── install.sh                  # Installation script
 ├── gui/                        # Web interface
@@ -292,15 +292,15 @@ sudo usermod -aG docker $USER
 - Ensure domain points to server IP
 - Check firewall allows ports 80/443
 - Verify DNS propagation: `nslookup yourdomain.com`
-- Check Traefik logs: `docker logs webbadeploy_traefik`
+- Check Traefik logs: `docker logs wharftales_traefik`
 
 **SSL certificate renewal monitoring**
 ```bash
 # Check Traefik logs for renewal activity
-docker logs webbadeploy_traefik 2>&1 | grep -i "renew\|certificate"
+docker logs wharftales_traefik 2>&1 | grep -i "renew\|certificate"
 
 # View current certificates
-docker exec webbadeploy_traefik cat /letsencrypt/acme.json
+docker exec wharftales_traefik cat /letsencrypt/acme.json
 
 # Check Traefik dashboard for certificate status
 # Access: http://your-server:8080/dashboard/
@@ -338,8 +338,8 @@ We welcome contributions! Please see our contributing guidelines and feel free t
 
 ### Development Setup
 ```bash
-git clone https://github.com/your-repo/webbadeploy.git
-cd webbadeploy
+git clone https://github.com/your-repo/wharftales.git
+cd wharftales
 docker-compose up -d
 ```
 

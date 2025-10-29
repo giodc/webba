@@ -1,5 +1,5 @@
 #!/bin/bash
-# Reset Admin Password Script for Webbadeploy
+# Reset Admin Password Script for WharfTales
 # Usage: ./reset-admin-password.sh [username] [new_password]
 
 USERNAME="${1:-admin}"
@@ -13,7 +13,7 @@ if [ -z "$NEW_PASSWORD" ]; then
 fi
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "  Webbadeploy Password Reset"
+echo "  WharfTales Password Reset"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
@@ -23,10 +23,10 @@ if [ -f /.dockerenv ]; then
     php /var/www/html/reset-password.php "$USERNAME" "$NEW_PASSWORD"
 else
     # Running on host - execute in container
-    CONTAINER_NAME=$(docker ps --format '{{.Names}}' | grep -E 'webbadeploy.*gui' | head -n 1)
+    CONTAINER_NAME=$(docker ps --format '{{.Names}}' | grep -E 'wharftales.*gui' | head -n 1)
     
     if [ -z "$CONTAINER_NAME" ]; then
-        echo "❌ Error: Could not find Webbadeploy GUI container"
+        echo "❌ Error: Could not find WharfTales GUI container"
         echo ""
         echo "Available containers:"
         docker ps --format '{{.Names}}'

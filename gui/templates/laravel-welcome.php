@@ -61,7 +61,7 @@
                 5. Run <code>php artisan key:generate</code>
             </div>
             
-            <div class="badge">Powered by Webbadeploy</div>
+            <div class="badge">Powered by WharfTales</div>
         </div>
     </div>
 </body>

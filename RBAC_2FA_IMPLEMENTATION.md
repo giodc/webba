@@ -2,15 +2,15 @@
 
 ## Overview
 
-This document summarizes the implementation of Role-Based Access Control (RBAC), Two-Factor Authentication (2FA), and Redis support for all application types in Webbadeploy.
+This document summarizes the implementation of Role-Based Access Control (RBAC), Two-Factor Authentication (2FA), and Redis support for all application types in WharfTales.
 
 ## Features Implemented
 
 ### 1. Two-Factor Authentication (2FA/TOTP)
 
 **Files Created:**
-- `/opt/webbadeploy/gui/includes/totp.php` - TOTP implementation (RFC 6238 compliant)
-- `/opt/webbadeploy/gui/verify-2fa.php` - 2FA verification page
+- `/opt/wharftales/gui/includes/totp.php` - TOTP implementation (RFC 6238 compliant)
+- `/opt/wharftales/gui/verify-2fa.php` - 2FA verification page
 
 **Features:**
 - TOTP-based authentication using standard authenticator apps
@@ -36,7 +36,7 @@ ALTER TABLE users ADD COLUMN totp_backup_codes TEXT;
 ### 2. User Management & Role-Based Access Control
 
 **Files Created:**
-- `/opt/webbadeploy/gui/users.php` - User management interface (admin only)
+- `/opt/wharftales/gui/users.php` - User management interface (admin only)
 
 **User Roles:**
 - **Admin**: Full system access, user management, all sites
@@ -135,7 +135,7 @@ ALTER TABLE sites ADD COLUMN redis_password TEXT;
 ### 5. Database Migration
 
 **File Created:**
-- `/opt/webbadeploy/gui/migrate-rbac-2fa.php` - Automated migration script
+- `/opt/wharftales/gui/migrate-rbac-2fa.php` - Automated migration script
 
 **Migration Features:**
 - Adds all new columns to existing tables
@@ -147,18 +147,18 @@ ALTER TABLE sites ADD COLUMN redis_password TEXT;
 **Running Migration:**
 ```bash
 # Inside container
-docker exec webbadeploy_gui php /app/migrate-rbac-2fa.php
+docker exec wharftales_gui php /app/migrate-rbac-2fa.php
 
 # Or from host
-cd /opt/webbadeploy
+cd /opt/wharftales
 docker-compose exec web-gui php /app/migrate-rbac-2fa.php
 ```
 
 ## Installation Integration
 
 ### Updated Files:
-1. `/opt/webbadeploy/install.sh` - Local development installer
-2. `/opt/webbadeploy/install-production.sh` - Production installer
+1. `/opt/wharftales/install.sh` - Local development installer
+2. `/opt/wharftales/install-production.sh` - Production installer
 
 **Changes:**
 - Both installers now run `migrate-rbac-2fa.php` automatically
@@ -173,8 +173,8 @@ docker-compose exec web-gui php /app/migrate-rbac-2fa.php
 - Added admin badge indicator in user dropdown
 
 ### New Pages:
-1. `/opt/webbadeploy/gui/users.php` - User management interface
-2. `/opt/webbadeploy/gui/verify-2fa.php` - 2FA verification page
+1. `/opt/wharftales/gui/users.php` - User management interface
+2. `/opt/wharftales/gui/verify-2fa.php` - 2FA verification page
 
 ### User Management Interface Features:
 - List all users with roles and permissions
@@ -245,13 +245,13 @@ docker-compose exec web-gui php /app/migrate-rbac-2fa.php
 
 1. **Pull latest code:**
    ```bash
-   cd /opt/webbadeploy
+   cd /opt/wharftales
    git pull origin master
    ```
 
 2. **Run migration:**
    ```bash
-   docker exec webbadeploy_gui php /app/migrate-rbac-2fa.php
+   docker exec wharftales_gui php /app/migrate-rbac-2fa.php
    ```
 
 3. **Restart services:**
@@ -345,9 +345,9 @@ Body: password
 ## Support & Documentation
 
 ### Resources:
-- Main README: `/opt/webbadeploy/README.md`
-- This document: `/opt/webbadeploy/RBAC_2FA_IMPLEMENTATION.md`
-- Migration script: `/opt/webbadeploy/gui/migrate-rbac-2fa.php`
+- Main README: `/opt/wharftales/README.md`
+- This document: `/opt/wharftales/RBAC_2FA_IMPLEMENTATION.md`
+- Migration script: `/opt/wharftales/gui/migrate-rbac-2fa.php`
 
 ### Getting Help:
 - Check logs: `docker-compose logs -f web-gui`

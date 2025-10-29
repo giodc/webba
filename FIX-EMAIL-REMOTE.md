@@ -20,7 +20,7 @@ The GUI settings store the email in the database, but **docker-compose.yml is no
 SSH to your remote server and run:
 
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 bash check-remote-email.sh
 ```
 
@@ -35,7 +35,7 @@ This will show:
 Run the automated fix script:
 
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 bash fix-remote-email.sh
 ```
 
@@ -51,7 +51,7 @@ This script will:
 Monitor Traefik logs to see certificate acquisition:
 
 ```bash
-docker logs webbadeploy_traefik -f
+docker logs wharftales_traefik -f
 ```
 
 Look for:
@@ -64,7 +64,7 @@ Look for:
 If you prefer to do it manually:
 
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 
 # 1. Get email from database
 EMAIL=$(sqlite3 data/database.sqlite "SELECT value FROM settings WHERE key='letsencrypt_email';")
@@ -97,7 +97,7 @@ sudo chown root:root ssl/acme.json
 docker-compose up -d --force-recreate traefik
 
 # 6. Monitor logs
-docker logs webbadeploy_traefik -f
+docker logs wharftales_traefik -f
 ```
 
 ## Why This Happens
@@ -115,16 +115,16 @@ The GUI should update docker-compose.yml when email is changed. This would requi
 
 ```bash
 # Check email in docker-compose.yml
-grep "acme.email" /opt/webbadeploy/docker-compose.yml
+grep "acme.email" /opt/wharftales/docker-compose.yml
 
 # Check email in database
-sqlite3 /opt/webbadeploy/data/database.sqlite "SELECT value FROM settings WHERE key='letsencrypt_email';"
+sqlite3 /opt/wharftales/data/database.sqlite "SELECT value FROM settings WHERE key='letsencrypt_email';"
 
 # Check email in running container
-docker inspect webbadeploy_traefik | grep "acme.email"
+docker inspect wharftales_traefik | grep "acme.email"
 
 # Check Traefik logs for errors
-docker logs webbadeploy_traefik 2>&1 | grep -i "error\|forbidden"
+docker logs wharftales_traefik 2>&1 | grep -i "error\|forbidden"
 ```
 
 ## For All Remote Servers
@@ -133,12 +133,12 @@ Copy these scripts to each remote server:
 
 ```bash
 # From local machine
-scp check-remote-email.sh user@remote:/opt/webbadeploy/
-scp fix-remote-email.sh user@remote:/opt/webbadeploy/
+scp check-remote-email.sh user@remote:/opt/wharftales/
+scp fix-remote-email.sh user@remote:/opt/wharftales/
 
 # On each remote server
 ssh user@remote
-cd /opt/webbadeploy
+cd /opt/wharftales
 bash check-remote-email.sh
 bash fix-remote-email.sh
 ```

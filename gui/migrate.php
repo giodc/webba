@@ -6,7 +6,7 @@
 
 require_once 'includes/functions.php';
 
-echo "Webbadeploy Database Migration\n";
+echo "WharfTales Database Migration\n";
 echo "================================\n\n";
 
 try {

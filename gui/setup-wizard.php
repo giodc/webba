@@ -35,7 +35,7 @@ $currentUser = getCurrentUser();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Setup Wizard - Webbadeploy</title>
+    <title>Setup Wizard - WharfTales</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <style>
@@ -130,7 +130,7 @@ $currentUser = getCurrentUser();
     <div class="setup-container">
         <div class="setup-card">
             <div class="setup-header">
-                <h1><i class="bi bi-rocket-takeoff me-2"></i>Welcome to Webbadeploy!</h1>
+                <h1><i class="bi bi-rocket-takeoff me-2"></i>Welcome to WharfTales!</h1>
                 <p class="mb-0">Let's get your deployment platform configured</p>
             </div>
 
@@ -145,7 +145,7 @@ $currentUser = getCurrentUser();
             <!-- Step 1: Welcome -->
             <div class="setup-step active" data-step="1">
                 <h3><i class="bi bi-hand-wave me-2"></i>Welcome, <?= htmlspecialchars($currentUser['username']) ?>!</h3>
-                <p class="lead">This quick setup wizard will help you configure Webbadeploy for your environment.</p>
+                <p class="lead">This quick setup wizard will help you configure WharfTales for your environment.</p>
                 
                 <div class="info-box">
                     <strong><i class="bi bi-info-circle me-2"></i>What we'll configure:</strong>
@@ -331,7 +331,7 @@ $currentUser = getCurrentUser();
                 <div class="text-center">
                     <i class="bi bi-check-circle-fill success-icon"></i>
                     <h3 class="mt-3">Setup Complete!</h3>
-                    <p class="lead">Webbadeploy is now configured and ready to use.</p>
+                    <p class="lead">WharfTales is now configured and ready to use.</p>
 
                     <div class="info-box text-start mt-4">
                         <strong><i class="bi bi-info-circle me-2"></i>What's next?</strong>

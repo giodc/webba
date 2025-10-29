@@ -1,11 +1,11 @@
 #!/bin/bash
-# Deploy All Fixes for Webbadeploy
+# Deploy All Fixes for WharfTales
 # Run this on your remote server
 
 set -e
 
 echo "╔════════════════════════════════════════════════════════════════╗"
-echo "║                 WEBBADEPLOY - DEPLOY FIXES                     ║"
+echo "║                 WHARFTALES - DEPLOY FIXES                     ║"
 echo "╚════════════════════════════════════════════════════════════════╝"
 echo ""
 echo "This script will apply the following fixes:"
@@ -20,7 +20,7 @@ echo ""
 
 # Check if in correct directory
 if [ ! -f "docker-compose.yml" ]; then
-    echo "❌ Error: Must run from /opt/webbadeploy directory"
+    echo "❌ Error: Must run from /opt/wharftales directory"
     exit 1
 fi
 
@@ -79,7 +79,7 @@ fi
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo "⚠️  WARNING: This will restart your Webbadeploy containers"
+echo "⚠️  WARNING: This will restart your WharfTales containers"
 echo "   Downtime: ~30-60 seconds"
 echo ""
 
@@ -133,16 +133,16 @@ echo "6️⃣  Verifying deployment..."
 echo ""
 
 # Check container running
-if docker ps | grep -q "webbadeploy_gui"; then
+if docker ps | grep -q "wharftales_gui"; then
     echo "   ✅ GUI container running"
 else
     echo "   ❌ GUI container not running!"
-    docker logs webbadeploy_gui --tail 20
+    docker logs wharftales_gui --tail 20
     exit 1
 fi
 
 # Check session config
-SESSION_LIFETIME=$(docker exec webbadeploy_gui php -r "echo ini_get('session.gc_maxlifetime');" 2>/dev/null || echo "0")
+SESSION_LIFETIME=$(docker exec wharftales_gui php -r "echo ini_get('session.gc_maxlifetime');" 2>/dev/null || echo "0")
 if [ "$SESSION_LIFETIME" = "86400" ]; then
     echo "   ✅ Session lifetime: 24 hours"
 else
@@ -150,14 +150,14 @@ else
 fi
 
 # Check PHP config file
-if docker exec webbadeploy_gui test -f /usr/local/etc/php/conf.d/php-session.ini; then
+if docker exec wharftales_gui test -f /usr/local/etc/php/conf.d/php-session.ini; then
     echo "   ✅ PHP config file present"
 else
     echo "   ⚠️  PHP config file missing"
 fi
 
 # Check password reset script
-if docker exec webbadeploy_gui test -f /var/www/html/reset-password.php; then
+if docker exec wharftales_gui test -f /var/www/html/reset-password.php; then
     echo "   ✅ Password reset script available"
 else
     echo "   ⚠️  Password reset script missing"
@@ -186,7 +186,7 @@ echo ""
 echo "📝 Next Steps:"
 echo ""
 echo "  1. Clear your browser cache and cookies"
-echo "  2. Log in to Webbadeploy"
+echo "  2. Log in to WharfTales"
 echo "  3. Test deploying a new application"
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -197,10 +197,10 @@ echo "  # Reset admin password"
 echo "  ./reset-admin-password.sh admin YourNewPassword"
 echo ""
 echo "  # View logs"
-echo "  docker logs webbadeploy_gui --tail 50 -f"
+echo "  docker logs wharftales_gui --tail 50 -f"
 echo ""
 echo "  # Check session config"
-echo "  docker exec webbadeploy_gui php -i | grep session"
+echo "  docker exec wharftales_gui php -i | grep session"
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""

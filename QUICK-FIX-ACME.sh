@@ -6,8 +6,8 @@ echo "🔧 Quick ACME Fix"
 echo "=================="
 echo ""
 
-# Navigate to webbadeploy directory
-cd /opt/webbadeploy || exit 1
+# Navigate to wharftales directory
+cd /opt/wharftales || exit 1
 
 # Create ssl directory if missing
 sudo mkdir -p ssl
@@ -43,4 +43,4 @@ docker-compose restart traefik
 
 echo ""
 echo "✅ Done! Monitor logs with:"
-echo "   docker logs webbadeploy_traefik -f"
+echo "   docker logs wharftales_traefik -f"

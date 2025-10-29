@@ -1,7 +1,7 @@
 # Telemetry Server Setup
 
 ## Overview
-Simple endpoint to track WebbaDeploy installations anonymously.
+Simple endpoint to track WharfTales installations anonymously.
 
 ## Server Requirements
 - Any web server (Node.js, PHP, Python, etc.)
@@ -184,7 +184,7 @@ LIMIT 30;
 1. Deploy endpoint to your server (e.g., `https://telemetry.yourdomain.com/ping`)
 2. Secure with HTTPS
 3. Set up database
-4. Configure WebbaDeploy with your endpoint URL
+4. Configure WharfTales with your endpoint URL
 5. Monitor dashboard
 
 ## Rate Limiting

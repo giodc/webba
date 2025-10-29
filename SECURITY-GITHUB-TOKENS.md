@@ -17,7 +17,7 @@ GitHub Personal Access Tokens are **encrypted at rest** using AES-256-GCM encryp
 ### Key Management
 - Encryption key is automatically generated on first use
 - Stored securely in database settings
-- Unique per Webbadeploy installation
+- Unique per WharfTales installation
 - Never exposed in logs or API responses
 
 ---
@@ -110,7 +110,7 @@ $repoUrl = normalizeGitHubUrl($githubRepo, $githubToken);
    - Metadata: Read-only (automatic)
 5. Set **Expiration**: 90 days (recommended)
 6. Generate and copy token
-7. Paste into Webbadeploy (will be encrypted automatically)
+7. Paste into WharfTales (will be encrypted automatically)
 
 ---
 
@@ -223,7 +223,7 @@ $masked = maskSensitiveData($token, 4);
 
 ```bash
 # 1. Generate new token on GitHub
-# 2. Update in Webbadeploy UI (Settings → GitHub)
+# 2. Update in WharfTales UI (Settings → GitHub)
 # 3. Old token automatically replaced and encrypted
 # 4. Revoke old token on GitHub
 ```

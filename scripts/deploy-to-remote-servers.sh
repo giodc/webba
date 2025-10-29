@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Deploy WebbaDeploy Updates to Multiple Remote Servers
-# This script updates all your remote WebbaDeploy installations
+# Deploy WharfTales Updates to Multiple Remote Servers
+# This script updates all your remote WharfTales installations
 
 set -e
 
@@ -13,7 +13,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 echo "=========================================="
-echo "WebbaDeploy Remote Deployment Script"
+echo "WharfTales Remote Deployment Script"
 echo "=========================================="
 echo ""
 
@@ -23,7 +23,7 @@ CONFIG_FILE="${1:-servers.txt}"
 if [ ! -f "$CONFIG_FILE" ]; then
     echo -e "${YELLOW}Creating example servers.txt file...${NC}"
     cat > servers.txt << 'EOF'
-# WebbaDeploy Remote Servers
+# WharfTales Remote Servers
 # Format: user@hostname or just hostname (if using SSH config)
 # One server per line, lines starting with # are ignored
 
@@ -95,13 +95,13 @@ for server in "${SERVERS[@]}"; do
     if ssh "$server" << 'ENDSSH'
         set -e
         
-        # Check if WebbaDeploy is installed
-        if [ ! -d "/opt/webbadeploy" ]; then
-            echo "ERROR: WebbaDeploy not found at /opt/webbadeploy"
+        # Check if WharfTales is installed
+        if [ ! -d "/opt/wharftales" ]; then
+            echo "ERROR: WharfTales not found at /opt/wharftales"
             exit 1
         fi
         
-        cd /opt/webbadeploy
+        cd /opt/wharftales
         
         # Check if safe-update.sh exists
         if [ ! -f "safe-update.sh" ]; then

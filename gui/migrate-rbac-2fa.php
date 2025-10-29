@@ -7,7 +7,7 @@
 require_once 'includes/functions.php';
 require_once 'includes/auth.php';
 
-echo "Webbadeploy RBAC & 2FA Migration\n";
+echo "WharfTales RBAC & 2FA Migration\n";
 echo "==================================\n\n";
 
 try {

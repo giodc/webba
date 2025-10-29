@@ -1,7 +1,7 @@
-# Webbadeploy Security Checklist
+# WharfTales Security Checklist
 
 ## Overview
-This document outlines security considerations and fixes for Webbadeploy deployment.
+This document outlines security considerations and fixes for WharfTales deployment.
 
 ---
 
@@ -22,17 +22,17 @@ This document outlines security considerations and fixes for Webbadeploy deploym
 
 #### Production (Secure):
 ```bash
-/opt/webbadeploy/data:     755 (www-data:www-data)
-/opt/webbadeploy/apps:     755 (www-data:www-data)
-/opt/webbadeploy/ssl:      750 (root:www-data)
+/opt/wharftales/data:     755 (www-data:www-data)
+/opt/wharftales/apps:     755 (www-data:www-data)
+/opt/wharftales/ssl:      750 (root:www-data)
 docker-compose.yml:        640 (root:www-data)
 /var/run/docker.sock:      660 (root:docker)
 ```
 
 #### Local Development (Permissive):
 ```bash
-/opt/webbadeploy/data:     777 (user:user)
-/opt/webbadeploy/apps:     777 (user:user)
+/opt/wharftales/data:     777 (user:user)
+/opt/wharftales/apps:     777 (user:user)
 docker-compose.yml:        664 (user:user)
 /var/run/docker.sock:      666 (root:docker)
 ```
@@ -98,8 +98,8 @@ This script will:
 **Solution:**
 ```bash
 # Inside container
-docker exec -u root webbadeploy_gui chown www-data:www-data /app/data/database.sqlite
-docker exec -u root webbadeploy_gui chmod 666 /app/data/database.sqlite
+docker exec -u root wharftales_gui chown www-data:www-data /app/data/database.sqlite
+docker exec -u root wharftales_gui chmod 666 /app/data/database.sqlite
 ```
 
 ---
@@ -201,34 +201,34 @@ docker exec -u root webbadeploy_gui chmod 666 /app/data/database.sqlite
 
 ### Check File Permissions:
 ```bash
-ls -la /opt/webbadeploy/data
-ls -la /opt/webbadeploy/apps
-ls -la /opt/webbadeploy/docker-compose.yml
+ls -la /opt/wharftales/data
+ls -la /opt/wharftales/apps
+ls -la /opt/wharftales/docker-compose.yml
 ls -la /var/run/docker.sock
 ```
 
 ### Check Docker GID:
 ```bash
 getent group docker | cut -d: -f3
-grep "DOCKER_GID" /opt/webbadeploy/docker-compose.yml
+grep "DOCKER_GID" /opt/wharftales/docker-compose.yml
 ```
 
 ### Check Container Permissions:
 ```bash
-docker exec webbadeploy_gui ls -la /app/data
-docker exec webbadeploy_gui ls -la /app/apps
-docker exec webbadeploy_gui id www-data
+docker exec wharftales_gui ls -la /app/data
+docker exec wharftales_gui ls -la /app/apps
+docker exec wharftales_gui id www-data
 ```
 
 ### Check Database:
 ```bash
-docker exec webbadeploy_gui ls -la /app/data/database.sqlite
-docker exec webbadeploy_gui sqlite3 /app/data/database.sqlite ".tables"
+docker exec wharftales_gui ls -la /app/data/database.sqlite
+docker exec wharftales_gui sqlite3 /app/data/database.sqlite ".tables"
 ```
 
 ### Check Encryption Key:
 ```bash
-docker exec webbadeploy_gui php -r "
+docker exec wharftales_gui php -r "
 require_once '/var/www/html/includes/functions.php';
 \$db = initDatabase();
 \$key = getSetting(\$db, 'encryption_key');
@@ -279,8 +279,8 @@ sudo ./fix-docker-permissions.sh
 
 ### For Database Issues:
 ```bash
-docker exec -u root webbadeploy_gui chown -R www-data:www-data /app/data
-docker exec -u root webbadeploy_gui chmod -R 775 /app/data
+docker exec -u root wharftales_gui chown -R www-data:www-data /app/data
+docker exec -u root wharftales_gui chmod -R 775 /app/data
 ```
 
 ---
@@ -325,9 +325,9 @@ docker exec -u root webbadeploy_gui chmod -R 775 /app/data
 3. Fix permissions: `docker exec -u root <container> chown -R www-data:www-data /var/www/html`
 
 ### Database Errors:
-1. Check file exists: `docker exec webbadeploy_gui ls -la /app/data/database.sqlite`
-2. Fix permissions: `docker exec -u root webbadeploy_gui chmod 666 /app/data/database.sqlite`
-3. Run migrations: `docker exec webbadeploy_gui php /var/www/html/migrate-*.php`
+1. Check file exists: `docker exec wharftales_gui ls -la /app/data/database.sqlite`
+2. Fix permissions: `docker exec -u root wharftales_gui chmod 666 /app/data/database.sqlite`
+3. Run migrations: `docker exec wharftales_gui php /var/www/html/migrate-*.php`
 
 ---
 

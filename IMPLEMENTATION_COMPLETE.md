@@ -1,4 +1,4 @@
-# ✅ Implementation Complete - Webbadeploy RBAC & 2FA
+# ✅ Implementation Complete - WharfTales RBAC & 2FA
 
 ## 🎉 What's Been Implemented
 
@@ -14,9 +14,9 @@
   - Password confirmation for disabling
 
 **Files Created**:
-- `/opt/webbadeploy/gui/includes/totp.php` - TOTP implementation
-- `/opt/webbadeploy/gui/verify-2fa.php` - 2FA verification page
-- `/opt/webbadeploy/gui/qr-code.php` - QR code generator
+- `/opt/wharftales/gui/includes/totp.php` - TOTP implementation
+- `/opt/wharftales/gui/verify-2fa.php` - 2FA verification page
+- `/opt/wharftales/gui/qr-code.php` - QR code generator
 
 ### 2. ✅ User Management & RBAC
 - **Status**: Fully functional
@@ -29,7 +29,7 @@
   - Protection against deleting last admin
 
 **Files Created**:
-- `/opt/webbadeploy/gui/users.php` - User management interface
+- `/opt/wharftales/gui/users.php` - User management interface
 
 ### 3. ✅ Site Permissions System
 - **Status**: Fully functional
@@ -184,7 +184,7 @@ All tables and columns created:
 
 1. **Backup Database**:
    ```bash
-   cd /opt/webbadeploy
+   cd /opt/wharftales
    cp data/database.sqlite data/database.sqlite.backup
    ```
 
@@ -196,7 +196,7 @@ All tables and columns created:
 
 3. **Run Migration**:
    ```bash
-   docker exec webbadeploy_gui php /var/www/html/migrate-rbac-2fa.php
+   docker exec wharftales_gui php /var/www/html/migrate-rbac-2fa.php
    ```
 
 4. **Restart Services**:
@@ -219,7 +219,7 @@ curl -fsSL https://raw.githubusercontent.com/giodc/webba/master/install-producti
 
 Or local install:
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 sudo bash install.sh
 ```
 
@@ -306,7 +306,7 @@ Managed via Users interface:
 3. Use a backup code
 4. If locked out, admin can disable via CLI:
    ```bash
-   docker exec webbadeploy_gui php -r "
+   docker exec wharftales_gui php -r "
    require 'includes/auth.php';
    disable2FA(USER_ID);
    "
@@ -328,7 +328,7 @@ Managed via Users interface:
 **Solutions**:
 1. Stop all services: `docker-compose stop`
 2. Start only web-gui: `docker-compose start web-gui`
-3. Run migration: `docker exec webbadeploy_gui php /var/www/html/complete-migration.php`
+3. Run migration: `docker exec wharftales_gui php /var/www/html/complete-migration.php`
 4. Start all services: `docker-compose up -d`
 
 ---
@@ -397,10 +397,10 @@ The schema is ready, but you still need to:
 
 ## 📚 Additional Resources
 
-- **Main README**: `/opt/webbadeploy/README.md`
-- **Implementation Details**: `/opt/webbadeploy/RBAC_2FA_IMPLEMENTATION.md`
-- **Quick Start Guide**: `/opt/webbadeploy/QUICK_START_NEW_FEATURES.md`
-- **This Document**: `/opt/webbadeploy/IMPLEMENTATION_COMPLETE.md`
+- **Main README**: `/opt/wharftales/README.md`
+- **Implementation Details**: `/opt/wharftales/RBAC_2FA_IMPLEMENTATION.md`
+- **Quick Start Guide**: `/opt/wharftales/QUICK_START_NEW_FEATURES.md`
+- **This Document**: `/opt/wharftales/IMPLEMENTATION_COMPLETE.md`
 
 ---
 
@@ -423,7 +423,7 @@ Before considering this complete:
 
 ## 🎉 Congratulations!
 
-Your Webbadeploy installation now has:
+Your WharfTales installation now has:
 - ✅ Enterprise-grade authentication with 2FA
 - ✅ Role-based access control
 - ✅ Granular site permissions

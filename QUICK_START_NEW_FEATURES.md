@@ -2,7 +2,7 @@
 
 ## 🚀 Getting Started with User Management & 2FA
 
-This guide will help you quickly set up and use the new features in Webbadeploy.
+This guide will help you quickly set up and use the new features in WharfTales.
 
 ---
 
@@ -20,7 +20,7 @@ This guide will help you quickly set up and use the new features in Webbadeploy.
 
 ### For New Installations
 
-1. **Install Webbadeploy:**
+1. **Install WharfTales:**
    ```bash
    curl -fsSL https://raw.githubusercontent.com/giodc/webba/master/install-production.sh | sudo bash
    ```
@@ -39,9 +39,9 @@ This guide will help you quickly set up and use the new features in Webbadeploy.
 
 ### For Existing Installations
 
-1. **Update Webbadeploy:**
+1. **Update WharfTales:**
    ```bash
-   cd /opt/webbadeploy
+   cd /opt/wharftales
    git pull origin master
    docker-compose down
    docker-compose up -d --build
@@ -49,7 +49,7 @@ This guide will help you quickly set up and use the new features in Webbadeploy.
 
 2. **Run Migration:**
    ```bash
-   docker exec webbadeploy_gui php /app/migrate-rbac-2fa.php
+   docker exec wharftales_gui php /app/migrate-rbac-2fa.php
    ```
 
 3. **Verify:**
@@ -353,7 +353,7 @@ For sites without a database (or with Redis enabled):
 
 **Solution:**
 - You need admin role
-- Run migration: `docker exec webbadeploy_gui php /app/migrate-rbac-2fa.php`
+- Run migration: `docker exec wharftales_gui php /app/migrate-rbac-2fa.php`
 - First user is automatically made admin
 
 ### 2FA Not Working
@@ -386,7 +386,7 @@ For sites without a database (or with Redis enabled):
 2. **Admin Reset (if you're locked out):**
    ```bash
    # Disable 2FA via command line
-   docker exec webbadeploy_gui php -r "
+   docker exec wharftales_gui php -r "
    require 'includes/auth.php';
    \$db = initAuthDatabase();
    \$stmt = \$db->prepare('UPDATE users SET totp_enabled = 0, totp_secret = NULL WHERE username = ?');
@@ -423,10 +423,10 @@ For sites without a database (or with Redis enabled):
 **Solution:**
 ```bash
 # Check logs
-docker logs webbadeploy_gui
+docker logs wharftales_gui
 
 # Try running migration manually
-docker exec -it webbadeploy_gui bash
+docker exec -it wharftales_gui bash
 cd /app
 php migrate-rbac-2fa.php
 
@@ -446,7 +446,7 @@ Currently, audit logs are stored in the database:
 
 ```bash
 # Access database
-docker exec -it webbadeploy_gui bash
+docker exec -it wharftales_gui bash
 sqlite3 /app/data/database.sqlite
 
 # View recent audit logs
@@ -543,9 +543,9 @@ LIMIT 20;
 
 ## 📚 Additional Resources
 
-- **Main Documentation:** `/opt/webbadeploy/README.md`
-- **Implementation Details:** `/opt/webbadeploy/RBAC_2FA_IMPLEMENTATION.md`
-- **Migration Script:** `/opt/webbadeploy/gui/migrate-rbac-2fa.php`
+- **Main Documentation:** `/opt/wharftales/README.md`
+- **Implementation Details:** `/opt/wharftales/RBAC_2FA_IMPLEMENTATION.md`
+- **Migration Script:** `/opt/wharftales/gui/migrate-rbac-2fa.php`
 
 ---
 

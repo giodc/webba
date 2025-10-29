@@ -1,6 +1,6 @@
 # Docker Volumes for Site Storage
 
-Webbadeploy now uses **Docker volumes** instead of bind mounts for site data storage.
+WharfTales now uses **Docker volumes** instead of bind mounts for site data storage.
 
 ## Why Docker Volumes?
 
@@ -179,7 +179,7 @@ Or use the helper script:
 #### Option 1: Copy Files After Deployment
 
 ```bash
-# 1. Deploy site via Webbadeploy GUI
+# 1. Deploy site via WharfTales GUI
 # 2. Copy your application files
 docker cp /path/to/your/app/. php_demo_1759272459:/var/www/html/
 
@@ -190,7 +190,7 @@ docker exec php_demo_1759272459 chown -R www-data:www-data /var/www/html
 #### Option 2: Use Volume Upload Script
 
 ```bash
-# 1. Deploy site via Webbadeploy GUI
+# 1. Deploy site via WharfTales GUI
 # 2. Upload your files
 ./scripts/manage-volumes.sh upload /path/to/your/app php_demo_1759272459_data
 ```
@@ -198,7 +198,7 @@ docker exec php_demo_1759272459 chown -R www-data:www-data /var/www/html
 #### Option 3: Git Clone Inside Container
 
 ```bash
-# 1. Deploy site via Webbadeploy GUI
+# 1. Deploy site via WharfTales GUI
 # 2. Install git and clone
 docker exec php_demo_1759272459 sh -c "
   apt-get update && apt-get install -y git
@@ -214,7 +214,7 @@ For active development, you can temporarily mount a local directory:
 
 ```bash
 # Stop the site
-docker-compose -f /opt/webbadeploy/apps/php/sites/php_demo_1759272459/docker-compose.yml down
+docker-compose -f /opt/wharftales/apps/php/sites/php_demo_1759272459/docker-compose.yml down
 
 # Edit docker-compose.yml to add bind mount:
 volumes:
@@ -222,7 +222,7 @@ volumes:
   - /path/to/local/dev:/var/www/html  # Add this
 
 # Restart
-docker-compose -f /opt/webbadeploy/apps/php/sites/php_demo_1759272459/docker-compose.yml up -d
+docker-compose -f /opt/wharftales/apps/php/sites/php_demo_1759272459/docker-compose.yml up -d
 ```
 
 ---
@@ -269,7 +269,7 @@ If you have existing sites using bind mounts (`./html:/var/www/html`):
 ### Step 1: Backup Current Data
 
 ```bash
-cd /opt/webbadeploy/apps/php/sites/OLD_SITE
+cd /opt/wharftales/apps/php/sites/OLD_SITE
 tar czf ~/old_site_backup.tar.gz html/
 ```
 

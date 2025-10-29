@@ -2,10 +2,10 @@
 
 ## Problem Summary
 
-The Let's Encrypt email could not be updated through the web interface due to PHP file access issues with `/opt/webbadeploy/docker-compose.yml`. The error message was:
+The Let's Encrypt email could not be updated through the web interface due to PHP file access issues with `/opt/wharftales/docker-compose.yml`. The error message was:
 
 ```
-Cannot access docker-compose.yml at /opt/webbadeploy/docker-compose.yml. 
+Cannot access docker-compose.yml at /opt/wharftales/docker-compose.yml. 
 Check if file exists and has proper permissions.
 ```
 
@@ -15,7 +15,7 @@ The issue was caused by aggressive PHP stat caching and potential OPcache interf
 
 ## Solution Implemented
 
-Updated `/opt/webbadeploy/gui/settings.php` with the following improvements:
+Updated `/opt/wharftales/gui/settings.php` with the following improvements:
 
 ### 1. **Comprehensive Cache Clearing**
 - Clear all PHP stat cache (not just for specific file)
@@ -38,7 +38,7 @@ Updated `/opt/webbadeploy/gui/settings.php` with the following improvements:
 
 ## Changes Made
 
-### File: `/opt/webbadeploy/gui/settings.php`
+### File: `/opt/wharftales/gui/settings.php`
 
 **Three sections updated:**
 
@@ -75,16 +75,16 @@ http://your-server-ip:9000/settings.php
 ### 3. Verify Update
 ```bash
 # Check docker-compose.yml directly
-cat /opt/webbadeploy/docker-compose.yml | grep acme.email
+cat /opt/wharftales/docker-compose.yml | grep acme.email
 
 # Or from within container
-docker-compose exec web-gui cat /opt/webbadeploy/docker-compose.yml | grep acme.email
+docker-compose exec web-gui cat /opt/wharftales/docker-compose.yml | grep acme.email
 ```
 
 ### 4. Restart Traefik
 After updating the email, restart Traefik to apply changes:
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 docker-compose restart traefik
 ```
 
@@ -111,7 +111,7 @@ Or use the web interface button that appears after successful update.
 
 3. **Check certificate storage:**
    ```bash
-   ls -la /opt/webbadeploy/ssl/acme.json
+   ls -la /opt/wharftales/ssl/acme.json
    ```
 
 ### Important Notes
@@ -125,18 +125,18 @@ Or use the web interface button that appears after successful update.
 
 ```bash
 # Check file permissions
-ls -la /opt/webbadeploy/docker-compose.yml
+ls -la /opt/wharftales/docker-compose.yml
 # Should show: -rw-rw-rw- 1 www-data www-data
 
 # Check from container
-docker-compose exec web-gui ls -la /opt/webbadeploy/docker-compose.yml
+docker-compose exec web-gui ls -la /opt/wharftales/docker-compose.yml
 
 # Test PHP access
 docker-compose exec web-gui php -r "
 clearstatcache(true);
-\$content = file_get_contents('/opt/webbadeploy/docker-compose.yml');
+\$content = file_get_contents('/opt/wharftales/docker-compose.yml');
 echo 'Read: ' . strlen(\$content) . ' bytes\n';
-echo 'Writable: ' . (is_writable('/opt/webbadeploy/docker-compose.yml') ? 'YES' : 'NO') . '\n';
+echo 'Writable: ' . (is_writable('/opt/wharftales/docker-compose.yml') ? 'YES' : 'NO') . '\n';
 "
 ```
 
@@ -152,7 +152,7 @@ echo 'Writable: ' . (is_writable('/opt/webbadeploy/docker-compose.yml') ? 'YES' 
 2. **Test file access manually:**
    ```bash
    docker-compose exec web-gui php -r "
-   \$path = '/opt/webbadeploy/docker-compose.yml';
+   \$path = '/opt/wharftales/docker-compose.yml';
    clearstatcache(true);
    var_dump(file_exists(\$path));
    var_dump(is_readable(\$path));
@@ -168,8 +168,8 @@ echo 'Writable: ' . (is_writable('/opt/webbadeploy/docker-compose.yml') ? 'YES' 
 4. **Verify permissions:**
    ```bash
    # On host
-   sudo chmod 666 /opt/webbadeploy/docker-compose.yml
-   sudo chown www-data:www-data /opt/webbadeploy/docker-compose.yml
+   sudo chmod 666 /opt/wharftales/docker-compose.yml
+   sudo chown www-data:www-data /opt/wharftales/docker-compose.yml
    ```
 
 ### If Certificates Don't Generate
@@ -199,7 +199,7 @@ echo 'Writable: ' . (is_writable('/opt/webbadeploy/docker-compose.yml') ? 'YES' 
 
 5. **Check ACME storage:**
    ```bash
-   cat /opt/webbadeploy/ssl/acme.json
+   cat /opt/wharftales/ssl/acme.json
    ```
 
 ## Technical Details

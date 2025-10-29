@@ -7,7 +7,7 @@ The `docker-compose.yml` file is **server-specific** and **NOT tracked in git**.
 ## 🗂️ File Structure
 
 ```
-/opt/webbadeploy/
+/opt/wharftales/
 ├── docker-compose.yml          # Server-specific (git-ignored)
 ├── docker-compose.yml.template # Template (tracked in git)
 └── .gitignore                  # Ignores docker-compose.yml
@@ -32,7 +32,7 @@ The `docker-compose.yml` file is **server-specific** and **NOT tracked in git**.
 
 ```bash
 # 1. Clone or pull repository
-cd /opt/webbadeploy
+cd /opt/wharftales
 git pull
 
 # 2. Create docker-compose.yml from template (if doesn't exist)
@@ -95,7 +95,7 @@ Change to:
 When you pull updates:
 
 ```bash
-cd /opt/webbadeploy
+cd /opt/wharftales
 git pull
 
 # Check if template changed

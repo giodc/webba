@@ -1,7 +1,7 @@
 # ACME SSL Certificate File Fix - Summary
 
 ## Problem Identified
-The error "ACME file not found at: /opt/webbadeploy/ssl/acme.json" occurred on the remote server because the `acme.json` file was either missing or empty (0 bytes).
+The error "ACME file not found at: /opt/wharftales/ssl/acme.json" occurred on the remote server because the `acme.json` file was either missing or empty (0 bytes).
 
 ## Root Cause
 - The `acme.json` file is required by Traefik for Let's Encrypt SSL certificate management
@@ -23,7 +23,7 @@ You have **3 options** to fix the remote server:
 
 #### Option 1: Quick One-Liner (Fastest)
 ```bash
-ssh user@remote-server "cd /opt/webbadeploy && sudo mkdir -p ssl && sudo tee ssl/acme.json > /dev/null << 'EOF'
+ssh user@remote-server "cd /opt/wharftales && sudo mkdir -p ssl && sudo tee ssl/acme.json > /dev/null << 'EOF'
 {
   \"letsencrypt\": {
     \"Account\": {
@@ -42,11 +42,11 @@ sudo chmod 600 ssl/acme.json && sudo chown root:root ssl/acme.json && docker-com
 #### Option 2: Copy and Run Script (Recommended)
 ```bash
 # Copy the fix script to remote
-scp fix-acme.sh user@remote-server:/opt/webbadeploy/
+scp fix-acme.sh user@remote-server:/opt/wharftales/
 
 # SSH and run
 ssh user@remote-server
-cd /opt/webbadeploy
+cd /opt/wharftales
 sudo bash fix-acme.sh
 docker-compose restart traefik
 ```
@@ -54,11 +54,11 @@ docker-compose restart traefik
 #### Option 3: Use Deployment Script (Best for Multiple Fixes)
 ```bash
 # Copy all files to remote
-scp fix-acme.sh DEPLOY-FIXES.sh user@remote-server:/opt/webbadeploy/
+scp fix-acme.sh DEPLOY-FIXES.sh user@remote-server:/opt/wharftales/
 
 # SSH and run deployment
 ssh user@remote-server
-cd /opt/webbadeploy
+cd /opt/wharftales
 bash DEPLOY-FIXES.sh
 ```
 
@@ -76,17 +76,17 @@ After applying the fix on remote server:
 
 ```bash
 # 1. Check file exists with correct permissions
-ls -la /opt/webbadeploy/ssl/acme.json
+ls -la /opt/wharftales/ssl/acme.json
 # Expected: -rw------- 1 root root
 
 # 2. Verify Traefik is running
 docker ps | grep traefik
 
 # 3. Check Traefik logs for certificate acquisition
-docker logs webbadeploy_traefik 2>&1 | grep -i "certificate"
+docker logs wharftales_traefik 2>&1 | grep -i "certificate"
 
 # 4. Monitor real-time logs
-docker logs webbadeploy_traefik -f
+docker logs wharftales_traefik -f
 ```
 
 ## What Happens Next
@@ -132,10 +132,10 @@ For Let's Encrypt certificates to work, ensure:
 
 4. **Force fresh certificate request:**
    ```bash
-   sudo rm /opt/webbadeploy/ssl/acme.json
+   sudo rm /opt/wharftales/ssl/acme.json
    sudo bash fix-acme.sh
    docker-compose restart traefik
-   docker logs webbadeploy_traefik -f
+   docker logs wharftales_traefik -f
    ```
 
 5. **Check for rate limits:**
@@ -156,16 +156,16 @@ For Let's Encrypt certificates to work, ensure:
 
 ```bash
 # Check ACME file
-sudo cat /opt/webbadeploy/ssl/acme.json | jq
+sudo cat /opt/wharftales/ssl/acme.json | jq
 
 # View certificates
-sudo cat /opt/webbadeploy/ssl/acme.json | jq '.letsencrypt.Certificates'
+sudo cat /opt/wharftales/ssl/acme.json | jq '.letsencrypt.Certificates'
 
 # Restart Traefik
 docker-compose restart traefik
 
 # View Traefik logs
-docker logs webbadeploy_traefik -f
+docker logs wharftales_traefik -f
 
 # Check SSL certificate online
 curl -vI https://your-domain.com 2>&1 | grep -i "certificate\|ssl"

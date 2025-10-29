@@ -1,7 +1,7 @@
 # Install Scripts Comparison
 
 ## Overview
-Webbadeploy has different installation scripts for different environments.
+WharfTales has different installation scripts for different environments.
 
 ---
 
@@ -191,12 +191,12 @@ If your remote server was installed with `install.sh`, you **can** run `install-
 
 1. **Backup Created Automatically**
    ```bash
-   /opt/webbadeploy → /opt/webbadeploy_backup_20251011_010000
+   /opt/wharftales → /opt/wharftales_backup_20251011_010000
    ```
 
 2. **Confirmation Prompt**
    ```
-   Warning: /opt/webbadeploy already exists
+   Warning: /opt/wharftales already exists
    Do you want to overwrite? (y/N):
    ```
 
@@ -219,9 +219,9 @@ If your remote server was installed with `install.sh`, you **can** run `install-
 ### What Gets Preserved:
 
 ✅ **Your Data:**
-- `/opt/webbadeploy/data/database.sqlite` - All sites, users, settings
-- `/opt/webbadeploy/apps/` - All deployed sites and files
-- `/opt/webbadeploy/ssl/` - SSL certificates
+- `/opt/wharftales/data/database.sqlite` - All sites, users, settings
+- `/opt/wharftales/apps/` - All deployed sites and files
+- `/opt/wharftales/ssl/` - SSL certificates
 
 ✅ **Your Sites:**
 - All WordPress sites keep running
@@ -256,7 +256,7 @@ docker-compose: 664         docker-compose: 640
 
 ```bash
 # On your remote server
-cd /opt/webbadeploy
+cd /opt/wharftales
 sudo ./install-production.sh
 
 # When prompted:
@@ -270,8 +270,8 @@ sudo ./install-production.sh
 
 ```bash
 # If something goes wrong:
-sudo rm -rf /opt/webbadeploy
-sudo mv /opt/webbadeploy_backup_* /opt/webbadeploy
+sudo rm -rf /opt/wharftales
+sudo mv /opt/wharftales_backup_* /opt/wharftales
 docker-compose restart
 ```
 
@@ -280,15 +280,15 @@ docker-compose restart
 ```bash
 # 1. Test on local/staging first (optional but recommended)
 # 2. Backup manually (extra safety)
-sudo tar -czf ~/webbadeploy-manual-backup.tar.gz /opt/webbadeploy
+sudo tar -czf ~/wharftales-manual-backup.tar.gz /opt/wharftales
 
 # 3. Run production installer
-cd /opt/webbadeploy
+cd /opt/wharftales
 sudo ./install-production.sh
 
 # 4. Verify everything works
 # 5. Delete old backup after confirming
-sudo rm -rf /opt/webbadeploy_backup_*
+sudo rm -rf /opt/wharftales_backup_*
 ```
 
 ---
@@ -340,7 +340,7 @@ nameserver 1.1.1.1
 If your containers are already built, skip the rebuild:
 ```bash
 # Just fix permissions without rebuilding:
-cd /opt/webbadeploy
+cd /opt/wharftales
 
 # Get Docker GID
 DOCKER_GID=$(getent group docker | cut -d: -f3)
@@ -350,8 +350,8 @@ echo "Docker GID: $DOCKER_GID"
 sudo sed -i "s/DOCKER_GID: [0-9]*/DOCKER_GID: $DOCKER_GID/" docker-compose.yml
 
 # Fix permissions
-sudo chmod 777 /opt/webbadeploy/data
-sudo chmod 777 /opt/webbadeploy/apps
+sudo chmod 777 /opt/wharftales/data
+sudo chmod 777 /opt/wharftales/apps
 sudo chmod 666 /var/run/docker.sock
 
 # Restart containers (don't rebuild)
@@ -439,15 +439,15 @@ DOCKER_GID=$(getent group docker | cut -d: -f3)
 sudo sed -i "s/DOCKER_GID: [0-9]*/DOCKER_GID: $DOCKER_GID/" docker-compose.yml
 
 # 3. Fix host permissions (local dev)
-sudo chmod 777 /opt/webbadeploy/data
-sudo chmod 777 /opt/webbadeploy/apps
+sudo chmod 777 /opt/wharftales/data
+sudo chmod 777 /opt/wharftales/apps
 sudo chmod 666 /var/run/docker.sock
 
 # 4. Fix container permissions (if running)
-docker exec -u root webbadeploy_gui chown -R www-data:www-data /app/data
-docker exec -u root webbadeploy_gui chmod -R 777 /app/data
-docker exec -u root webbadeploy_gui chown -R www-data:www-data /app/apps
-docker exec -u root webbadeploy_gui chmod -R 777 /app/apps
+docker exec -u root wharftales_gui chown -R www-data:www-data /app/data
+docker exec -u root wharftales_gui chmod -R 777 /app/data
+docker exec -u root wharftales_gui chown -R www-data:www-data /app/apps
+docker exec -u root wharftales_gui chmod -R 777 /app/apps
 
 # 5. Restart (don't rebuild)
 docker-compose restart
