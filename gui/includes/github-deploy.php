@@ -330,7 +330,7 @@ function runLaravelBuild($containerName, $siteType = 'laravel') {
     $results[] = "✓ Set proper permissions";
     
     // 5. Run migrations (if database is configured)
-    exec("docker exec {$containerName} sh -c 'cd /var/www/html && php artisan migrate --force 2>&1'", $migrateOutput, $migrateReturn);
+    exec("docker exec {$containerName} sh -c 'cd /var/www/html && php artisan migrate'", $migrateOutput, $migrateReturn);
     if ($migrateReturn === 0) {
         $results[] = "✓ Database migrations completed";
     } else {
