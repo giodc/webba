@@ -149,6 +149,17 @@ docker exec wharftales_gui php /var/www/html/migrations/fix-site-permissions-dat
 # Import compose configs to database (only if not already there)
 docker exec wharftales_gui php /var/www/html/migrate-compose-to-db.php 2>/dev/null || echo "  ℹ Compose configs already in database"
 
+# Ensure settings table exists
+docker exec wharftales_gui sqlite3 /app/data/database.sqlite << 'EOSQL' 2>/dev/null || echo "  ℹ Settings table already exists"
+CREATE TABLE IF NOT EXISTS settings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    key TEXT UNIQUE NOT NULL,
+    value TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+EOSQL
+
 echo -e "${GREEN}  ✓ Migrations completed${NC}"
 echo ""
 

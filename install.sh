@@ -308,6 +308,17 @@ docker exec -u root wharftales_gui bash -c "if [ -f /app/data/database.sqlite ];
 echo "Importing docker-compose configurations to database..."
 docker exec wharftales_gui php /var/www/html/migrate-compose-to-db.php 2>/dev/null || echo "Compose migration will run on first settings update"
 
+echo "Initializing database settings from docker-compose.yml..."
+docker exec wharftales_gui sqlite3 /app/data/database.sqlite << 'EOSQL' 2>/dev/null || echo "Settings table will be created on first access"
+CREATE TABLE IF NOT EXISTS settings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    key TEXT UNIQUE NOT NULL,
+    value TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+EOSQL
+
 echo ""
 echo "==============================="
 echo "Installation completed!"

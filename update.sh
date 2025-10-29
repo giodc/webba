@@ -64,6 +64,24 @@ sudo docker-compose build --no-cache
 echo "🚀 Starting containers..."
 sudo docker-compose up -d
 
+# Wait for containers to be ready
+sleep 3
+
+# Ensure settings table exists
+echo "🗄️ Initializing database settings..."
+docker exec wharftales_gui sqlite3 /app/data/database.sqlite << 'EOSQL' 2>/dev/null || echo "Settings table already exists"
+CREATE TABLE IF NOT EXISTS settings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    key TEXT UNIQUE NOT NULL,
+    value TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+EOSQL
+
+# Run migrations
+docker exec wharftales_gui php /var/www/html/migrate-compose-to-db.php 2>/dev/null || echo "Compose migration already applied"
+
 # Show status
 echo "📊 Container status:"
 sudo docker-compose ps
