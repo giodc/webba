@@ -9,8 +9,14 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 ?>
 <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom shadow-sm">
     <div class="container-fluid">
-        <a class="navbar-brand fw-bold" href="/">
+        <a class="navbar-brand fw-bold d-flex align-items-center" href="/">
             <i class="bi bi-cloud-arrow-up me-2"></i>Wharftales
+            <span class="badge bg-secondary ms-2 fw-normal" style="font-size: 0.7rem;">
+                v<?php 
+                    $versionFile = '/var/www/html/../VERSION';
+                    echo file_exists($versionFile) ? trim(file_get_contents($versionFile)) : '1.0.0';
+                ?>
+            </span>
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
@@ -43,14 +49,6 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                             <span class="visually-hidden">Update available</span>
                         </span>
                     </a>
-                </li>
-                <li class="nav-item">
-                    <span class="nav-link text-muted">
-                        <i class="bi bi-tag me-1"></i>v<?php 
-                                    $versionFile = '/var/www/html/../VERSION';
-                                    echo file_exists($versionFile) ? trim(file_get_contents($versionFile)) : '1.0.0';
-                                ?>
-                    </span>
                 </li>
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
