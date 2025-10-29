@@ -329,12 +329,50 @@ function runLaravelBuild($containerName, $siteType = 'laravel') {
     
     $results[] = "✓ Set proper permissions";
     
-    // 5. Run migrations (if database is configured)
-    exec("docker exec {$containerName} sh -c 'cd /var/www/html && php artisan migrate'", $migrateOutput, $migrateReturn);
+    // 5. Setup SQLite database and run migrations
+    $results[] = "Setting up SQLite database...";
+    
+    // Check if database file exists in .env
+    exec("docker exec {$containerName} sh -c 'grep \"^DB_CONNECTION=\" /var/www/html/.env'", $dbConnectionOutput);
+    $dbConnection = isset($dbConnectionOutput[0]) ? trim(str_replace('DB_CONNECTION=', '', $dbConnectionOutput[0])) : 'unknown';
+    $results[] = "→ DB_CONNECTION: {$dbConnection}";
+    
+    // Get database path from .env
+    exec("docker exec {$containerName} sh -c 'grep \"^DB_DATABASE=\" /var/www/html/.env'", $dbPathOutput);
+    $dbPath = isset($dbPathOutput[0]) ? trim(str_replace('DB_DATABASE=', '', $dbPathOutput[0])) : '';
+    $results[] = "→ DB_DATABASE: {$dbPath}";
+    
+    // If SQLite, ensure database file exists
+    if ($dbConnection === 'sqlite' && !empty($dbPath)) {
+        // Create the database file if it doesn't exist
+        exec("docker exec {$containerName} sh -c 'touch {$dbPath} 2>&1'", $touchOutput, $touchReturn);
+        if ($touchReturn === 0) {
+            $results[] = "✓ SQLite database file created/verified";
+            
+            // Set proper permissions on database file
+            exec("docker exec {$containerName} sh -c 'chmod 664 {$dbPath} 2>&1'");
+            exec("docker exec {$containerName} sh -c 'chown www-data:www-data {$dbPath} 2>&1'");
+            $results[] = "✓ Database file permissions set";
+        } else {
+            $results[] = "⚠ Could not create database file: " . implode("\n", $touchOutput);
+        }
+    }
+    
+    // Run migrations with detailed output
+    $results[] = "Running migrations...";
+    exec("docker exec {$containerName} sh -c 'cd /var/www/html && php artisan migrate --force 2>&1'", $migrateOutput, $migrateReturn);
+    
     if ($migrateReturn === 0) {
         $results[] = "✓ Database migrations completed";
+        if (!empty($migrateOutput)) {
+            $results[] = "  Output: " . implode("\n  ", array_slice($migrateOutput, 0, 5));
+        }
     } else {
-        $results[] = "⚠ Migrations skipped (database may not be configured)";
+        $results[] = "✗ Migration failed (exit code: {$migrateReturn})";
+        $results[] = "  Error output:";
+        foreach (array_slice($migrateOutput, 0, 10) as $line) {
+            $results[] = "  " . $line;
+        }
     }
     
     // 6. Clear and cache config
