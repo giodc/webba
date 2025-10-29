@@ -9,6 +9,26 @@ $db = initDatabase();
 $currentUser = getCurrentUser();
 $users = getAllUsers();
 $allSites = getAllSites($db);
+
+// Get site counts for each user
+$siteCounts = [];
+foreach ($users as $user) {
+    // Count owned sites
+    $stmt = $db->prepare("SELECT COUNT(*) as count FROM sites WHERE owner_id = ?");
+    $stmt->execute([$user['id']]);
+    $ownedCount = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+    
+    // Count granted sites
+    $stmt = $db->prepare("SELECT COUNT(*) as count FROM site_permissions WHERE user_id = ?");
+    $stmt->execute([$user['id']]);
+    $grantedCount = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+    
+    $siteCounts[$user['id']] = [
+        'owned' => $ownedCount,
+        'granted' => $grantedCount,
+        'total' => $ownedCount + $grantedCount
+    ];
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -42,6 +62,7 @@ $allSites = getAllSites($db);
                                         <th>Username</th>
                                         <th>Email</th>
                                         <th>Role</th>
+                                        <th>Granted Sites</th>
                                         <th>Can Create Sites</th>
                                         <th>2FA</th>
                                         <th>Last Login</th>
@@ -63,6 +84,27 @@ $allSites = getAllSites($db);
                                                 <span class="badge bg-danger">Admin</span>
                                             <?php else: ?>
                                                 <span class="badge bg-secondary">User</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <?php 
+                                            $counts = $siteCounts[$user['id']];
+                                            if ($user['role'] === 'admin'): 
+                                            ?>
+                                                <span class="badge bg-info" title="Admins have access to all sites">
+                                                    <i class="bi bi-infinity"></i> All Sites
+                                                </span>
+                                            <?php elseif ($counts['total'] > 0): ?>
+                                                <span class="badge bg-success" title="<?= $counts['owned'] ?> owned, <?= $counts['granted'] ?> granted">
+                                                    <i class="bi bi-hdd-stack"></i> <?= $counts['total'] ?> site<?= $counts['total'] != 1 ? 's' : '' ?>
+                                                </span>
+                                                <?php if ($counts['owned'] > 0): ?>
+                                                    <small class="text-muted">(<?= $counts['owned'] ?> owned)</small>
+                                                <?php endif; ?>
+                                            <?php else: ?>
+                                                <span class="badge bg-secondary">
+                                                    <i class="bi bi-dash-circle"></i> No sites
+                                                </span>
                                             <?php endif; ?>
                                         </td>
                                         <td>
@@ -353,15 +395,20 @@ $allSites = getAllSites($db);
                     } else {
                         let html = '<div class="list-group">';
                         data.permissions.forEach(perm => {
+                            const badgeColor = perm.permission === 'manage' ? 'primary' : (perm.permission === 'edit' ? 'info' : 'secondary');
                             html += `
                                 <div class="list-group-item d-flex justify-content-between align-items-center">
                                     <div>
                                         <strong>${perm.site_name}</strong>
                                         <br><small class="text-muted">${perm.domain}</small>
                                     </div>
-                                    <div>
-                                        <span class="badge bg-primary">${perm.permission}</span>
-                                        <button class="btn btn-sm btn-outline-danger" onclick="revokePermission(${userId}, ${perm.site_id})">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <select class="form-select form-select-sm" style="width: 120px;" onchange="changePermission(${userId}, ${perm.site_id}, this.value)">
+                                            <option value="view" ${perm.permission === 'view' ? 'selected' : ''}>View</option>
+                                            <option value="edit" ${perm.permission === 'edit' ? 'selected' : ''}>Edit</option>
+                                            <option value="manage" ${perm.permission === 'manage' ? 'selected' : ''}>Manage</option>
+                                        </select>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="revokePermission(${userId}, ${perm.site_id})" title="Remove access">
                                             <i class="bi bi-x"></i>
                                         </button>
                                     </div>
@@ -401,6 +448,33 @@ $allSites = getAllSites($db);
                     document.getElementById('siteSelect').value = '';
                 } else {
                     alert('Error: ' + data.error);
+                }
+            });
+        }
+
+        function changePermission(userId, siteId, newPermission) {
+            const formData = new FormData();
+            formData.append('user_id', userId);
+            formData.append('site_id', siteId);
+            formData.append('permission', newPermission);
+            
+            fetch('/api.php?action=grant_site_permission', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Show success message briefly
+                    const msg = document.createElement('div');
+                    msg.className = 'alert alert-success position-fixed top-0 start-50 translate-middle-x mt-3';
+                    msg.style.zIndex = '9999';
+                    msg.innerHTML = '<i class="bi bi-check-circle me-2"></i>Permission updated to ' + newPermission;
+                    document.body.appendChild(msg);
+                    setTimeout(() => msg.remove(), 2000);
+                } else {
+                    alert('Error: ' + data.error);
+                    loadUserPermissions(userId); // Reload to reset dropdown
                 }
             });
         }

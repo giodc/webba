@@ -57,9 +57,24 @@ try {
                 UNIQUE(user_id, site_id)
             )");
             
-            // Copy data
-            $mainDb->exec("INSERT INTO site_permissions_new (id, user_id, site_id, permission_level, granted_by, created_at)
-                          SELECT id, user_id, site_id, permission, granted_by, created_at FROM site_permissions");
+            // Copy data (handle missing columns gracefully)
+            // Check if old table has granted_by column
+            $oldColumns = $mainDb->query("PRAGMA table_info(site_permissions)")->fetchAll(PDO::FETCH_ASSOC);
+            $hasGrantedBy = false;
+            foreach ($oldColumns as $col) {
+                if ($col['name'] === 'granted_by') {
+                    $hasGrantedBy = true;
+                    break;
+                }
+            }
+            
+            if ($hasGrantedBy) {
+                $mainDb->exec("INSERT INTO site_permissions_new (id, user_id, site_id, permission_level, granted_by, created_at)
+                              SELECT id, user_id, site_id, permission, granted_by, created_at FROM site_permissions");
+            } else {
+                $mainDb->exec("INSERT INTO site_permissions_new (id, user_id, site_id, permission_level, created_at)
+                              SELECT id, user_id, site_id, permission, created_at FROM site_permissions");
+            }
             
             // Drop old table
             $mainDb->exec("DROP TABLE site_permissions");
@@ -129,8 +144,13 @@ try {
         
         // Optionally drop the table from auth database
         echo "  → Removing site_permissions from auth database...\n";
-        $authDb->exec("DROP TABLE site_permissions");
-        echo "  ✓ Cleanup complete\n";
+        try {
+            $authDb->exec("DROP TABLE site_permissions");
+            echo "  ✓ Cleanup complete\n";
+        } catch (Exception $e) {
+            echo "  ⚠ Could not drop table from auth database (may be locked): " . $e->getMessage() . "\n";
+            echo "  ℹ This is OK - the table is no longer used\n";
+        }
     } else {
         echo "  ✓ No orphaned permissions in auth database\n";
     }

@@ -3215,10 +3215,9 @@ function getUserPermissionsHandler($db) {
             throw new Exception("User ID is required");
         }
         
-        // Get all sites with user permissions
-        $authDb = initAuthDatabase();
-        $stmt = $authDb->prepare("
-            SELECT sp.site_id, sp.permission, s.name as site_name, s.domain
+        // Get all sites with user permissions - use main database
+        $stmt = $db->prepare("
+            SELECT sp.site_id, sp.permission_level as permission, s.name as site_name, s.domain
             FROM site_permissions sp
             JOIN sites s ON sp.site_id = s.id
             WHERE sp.user_id = ?

@@ -35,6 +35,9 @@ if (canAccessSite($_SESSION['user_id'], $siteId, 'manage')) {
     $userPermission = 'edit';
 }
 
+// Check if user can edit (edit or manage permission required)
+$canEdit = ($userPermission === 'edit' || $userPermission === 'manage');
+
 // Get active tab from URL parameter (for bookmarking)
 $activeTab = $_GET['tab'] ?? 'overview';
 
@@ -130,6 +133,16 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
             </a>
         </div>
     </div>
+
+    <!-- View-Only Notice -->
+    <?php if ($userPermission === 'view'): ?>
+    <div class="container-fluid px-4 mt-3">
+        <div class="alert alert-info" role="alert">
+            <i class="bi bi-info-circle me-2"></i>
+            <strong>View-Only Access:</strong> You can view this site's details but cannot make changes. Contact an administrator for edit access.
+        </div>
+    </div>
+    <?php endif; ?>
 
     <!-- Main Content with Two Columns -->
     <div class="container-fluid mt-4 px-4">
@@ -1150,6 +1163,8 @@ QUEUE_CONNECTION=redis</code></pre>
         const containerName = '<?= addslashes($site['container_name']) ?>';
         const siteDomain = '<?= addslashes($site['domain']) ?>';
         const siteSSL = <?= $site['ssl'] ? 'true' : 'false' ?>;
+        const userPermission = '<?= $userPermission ?>';
+        const canEdit = <?= $canEdit ? 'true' : 'false' ?>;
 
         // Navigation
         document.querySelectorAll('.sidebar-nav-item').forEach(item => {
@@ -1190,9 +1205,35 @@ QUEUE_CONNECTION=redis</code></pre>
             }
         }
 
+        // Disable all forms and buttons for view-only users
+        if (!canEdit) {
+            // Disable all form inputs
+            document.querySelectorAll('input:not([type="hidden"]), select, textarea').forEach(el => {
+                el.disabled = true;
+                el.classList.add('bg-light');
+            });
+            
+            // Disable all submit buttons
+            document.querySelectorAll('button[type="submit"], button.btn-primary, button.btn-success, button.btn-warning').forEach(btn => {
+                if (!btn.classList.contains('btn-outline-secondary')) { // Keep "Back" button enabled
+                    btn.disabled = true;
+                    btn.classList.add('disabled');
+                }
+            });
+            
+            // Add click handler to show message
+            document.querySelectorAll('form').forEach(form => {
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    alert('You have view-only access. Contact an administrator for edit permissions.');
+                });
+            });
+        }
+
         // Settings Form
         document.getElementById('settingsForm')?.addEventListener('submit', async function(e) {
             e.preventDefault();
+            if (!canEdit) return;
             const name = document.getElementById('siteName').value;
             
             try {
