@@ -85,6 +85,10 @@ try {
     case "pull_from_github":
         pullFromGitHubHandler($db, $_GET["id"]);
         break;
+    
+    case "build_laravel":
+        buildLaravelHandler($db, $_GET["id"]);
+        break;
 
     case "delete_site":
         deleteSiteById($db, $_GET["id"]);
@@ -2512,9 +2516,28 @@ function saveEnvironmentVariables($db) {
             }
         }
         
+        // For Laravel sites, sync environment variables to .env file
+        $syncMessage = '';
+        if ($site['type'] === 'laravel') {
+            // Convert env vars array to associative array
+            $envVarsAssoc = [];
+            foreach ($envVars as $env) {
+                $key = trim($env['key'] ?? '');
+                $value = trim($env['value'] ?? '');
+                if (!empty($key)) {
+                    $envVarsAssoc[$key] = $value;
+                }
+            }
+            
+            $syncResult = syncEnvToLaravel($containerName, $envVarsAssoc);
+            if ($syncResult['success']) {
+                $syncMessage = ' and synced to Laravel .env file';
+            }
+        }
+        
         echo json_encode([
             'success' => true,
-            'message' => 'Environment variables saved and container restarted',
+            'message' => 'Environment variables saved and container restarted' . $syncMessage,
             'warning' => $returnCode !== 0 ? 'Container restarted but with warnings' : null
         ]);
         
@@ -3813,6 +3836,45 @@ function pullFromGitHubHandler($db, $siteId) {
                 'message' => $result['message'],
                 'commit_hash' => $result['commit_hash'] ?? null,
                 'pull_time' => date('Y-m-d H:i:s')
+            ]);
+        } else {
+            throw new Exception($result['message']);
+        }
+        
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    }
+}
+
+/**
+ * Build Laravel application
+ */
+function buildLaravelHandler($db, $siteId) {
+    try {
+        // Check permissions
+        if (!canManageSite($_SESSION['user_id'], $siteId)) {
+            http_response_code(403);
+            throw new Exception("You don't have permission to manage this site");
+        }
+        
+        $site = getSiteById($db, $siteId);
+        if (!$site) {
+            throw new Exception("Site not found");
+        }
+        
+        if ($site['type'] !== 'laravel') {
+            throw new Exception("This action is only available for Laravel sites");
+        }
+        
+        $containerName = $site['container_name'];
+        $result = runLaravelBuild($containerName, $site['type']);
+        
+        if ($result['success']) {
+            echo json_encode([
+                'success' => true,
+                'message' => $result['message'],
+                'details' => $result['details'] ?? ''
             ]);
         } else {
             throw new Exception($result['message']);

@@ -483,6 +483,9 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                         <div class="alert alert-info">
                             <i class="bi bi-info-circle me-2"></i>
                             <strong>Note:</strong> Changes to environment variables require a container restart to take effect.
+                            <?php if ($site['type'] === 'laravel'): ?>
+                            <br><strong>Laravel:</strong> These variables are set as Docker environment variables. To use them in Laravel, they're also synced to your <code>.env</code> file when you save.
+                            <?php endif; ?>
                         </div>
                         
                         <div id="envVarsList">
@@ -553,6 +556,11 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                                     <button type="button" class="btn btn-sm btn-primary" onclick="pullFromGithubRepo()">
                                         <i class="bi bi-download me-1"></i>Pull Latest Changes
                                     </button>
+                                    <?php if ($site['type'] === 'laravel'): ?>
+                                    <button type="button" class="btn btn-sm btn-success" onclick="runLaravelBuild()">
+                                        <i class="bi bi-hammer me-1"></i>Build Laravel
+                                    </button>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                             <?php endif; ?>
@@ -1328,6 +1336,29 @@ QUEUE_CONNECTION=redis</code></pre>
                 
                 if (result.success) {
                     alert(result.message || 'Successfully pulled latest changes!');
+                    location.reload();
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('Network error: ' + error.message);
+            }
+        }
+        
+        // Run Laravel Build
+        async function runLaravelBuild() {
+            if (!confirm('Run Laravel build steps?\n\nThis will:\n- Install Composer dependencies\n- Run migrations\n- Install NPM dependencies\n- Build frontend assets\n- Cache configuration')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api.php?action=build_laravel&id=${siteId}`, {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('Laravel build completed!\n\n' + (result.details || result.message));
                     location.reload();
                 } else {
                     alert('Error: ' + result.error);
