@@ -647,16 +647,29 @@ function updateComposeParameter($pdo, $paramKey, $paramValue, $userId, $siteId =
     
     if (!$config) {
         // If no config exists, create initial config from docker-compose.yml
-        $composeFile = '/opt/wharftales/docker-compose.yml';
-        if (file_exists($composeFile)) {
-            $yaml = file_get_contents($composeFile);
+        // Try multiple possible paths
+        $possiblePaths = [
+            '/opt/wharftales/docker-compose.yml',  // Mounted path in container
+            '../docker-compose.yml',                // Relative to gui folder
+            '/var/www/html/../docker-compose.yml'   // Relative to web root
+        ];
+        
+        $yaml = null;
+        foreach ($possiblePaths as $composeFile) {
+            if (file_exists($composeFile)) {
+                $yaml = file_get_contents($composeFile);
+                break;
+            }
+        }
+        
+        if ($yaml) {
             // Save initial config
             saveComposeConfig($pdo, $yaml, $userId, $siteId);
             $config = getComposeConfig($pdo, $siteId);
         }
         
         if (!$config) {
-            throw new Exception("Compose configuration not found and could not be created");
+            throw new Exception("Compose configuration not found and could not be created. Tried paths: " . implode(', ', $possiblePaths));
         }
     }
     
