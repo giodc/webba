@@ -41,20 +41,24 @@ cd /opt/wharftales
 git pull origin master
 
 echo ""
-echo -e "${BLUE}Step 5: Restarting Docker...${NC}"
+echo -e "${BLUE}Step 5: Fixing docker-compose.yml mount path...${NC}"
+sed -i 's|/opt/webbadeploy/docker-compose.yml|/opt/wharftales/docker-compose.yml|g' docker-compose.yml
+
+echo ""
+echo -e "${BLUE}Step 6: Restarting Docker...${NC}"
 systemctl restart docker
 sleep 3
 
 echo ""
-echo -e "${BLUE}Step 6: Starting WharfTales...${NC}"
+echo -e "${BLUE}Step 7: Starting WharfTales...${NC}"
 docker-compose up -d
 
 echo ""
-echo -e "${BLUE}Step 7: Waiting for containers to start...${NC}"
+echo -e "${BLUE}Step 8: Waiting for containers to start...${NC}"
 sleep 5
 
 echo ""
-echo -e "${BLUE}Step 8: Creating database tables...${NC}"
+echo -e "${BLUE}Step 9: Creating database tables...${NC}"
 docker exec wharftales_gui sqlite3 /app/data/database.sqlite << 'EOSQL' 2>/dev/null || echo "  Tables already exist"
 CREATE TABLE IF NOT EXISTS settings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -94,7 +98,29 @@ docker exec wharftales_gui php /var/www/html/migrations/fix-site-permissions-dat
 docker exec wharftales_gui php /var/www/html/migrate-compose-to-db.php 2>/dev/null || echo "  Compose migration done"
 
 echo ""
-echo -e "${BLUE}Step 11: Restarting GUI container...${NC}"
+echo -e "${BLUE}Step 11: Importing docker-compose.yml into database...${NC}"
+docker exec wharftales_gui php -r "
+require '/var/www/html/includes/functions.php';
+\$db = initDatabase();
+\$composeFile = '/opt/wharftales/docker-compose.yml';
+if (file_exists(\$composeFile)) {
+    \$yaml = file_get_contents(\$composeFile);
+    \$stmt = \$db->prepare('SELECT * FROM compose_configs WHERE config_type = \"main\" LIMIT 1');
+    \$stmt->execute();
+    \$existing = \$stmt->fetch(PDO::FETCH_ASSOC);
+    if (\$existing) {
+        \$stmt = \$db->prepare('UPDATE compose_configs SET compose_yaml = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?');
+        \$stmt->execute([\$yaml, \$existing['id']]);
+    } else {
+        \$stmt = \$db->prepare('INSERT INTO compose_configs (config_type, compose_yaml, created_at, updated_at) VALUES (\"main\", ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)');
+        \$stmt->execute([\$yaml]);
+    }
+    echo 'Compose config imported';
+}
+" 2>/dev/null || echo "  Compose config already imported"
+
+echo ""
+echo -e "${BLUE}Step 12: Restarting GUI container...${NC}"
 docker restart wharftales_gui
 
 echo ""
