@@ -277,9 +277,8 @@ ACME_EOF
     chown -R www-data:www-data /opt/wharftales/data/backups
 fi
 
-# Install certbot for SSL
-echo "Installing Certbot for SSL certificates..."
-apt install -y certbot python3-certbot-nginx
+# Note: SSL certificates are handled by Traefik (no certbot needed)
+# Traefik automatically requests and renews Let's Encrypt certificates
 
 # Set up firewall
 echo "Configuring firewall..."
