@@ -139,6 +139,8 @@ if [ "$UPDATE_MODE" = true ]; then
     echo "Fixing apps directory permissions..."
     docker exec -u root wharftales_gui chown -R www-data:www-data /app/apps
     docker exec -u root wharftales_gui chmod -R 775 /app/apps
+    docker exec -u root wharftales_gui bash -c "find /app/apps -type d -exec chmod 775 {} \\;" 2>/dev/null || true
+    docker exec -u root wharftales_gui bash -c "find /app/apps -type f -exec chmod 664 {} \\;" 2>/dev/null || true
     
     # Run database migrations
     echo "Running database migrations..."
@@ -153,6 +155,28 @@ if [ "$UPDATE_MODE" = true ]; then
     
     echo "Importing docker-compose configurations to database..."
     docker exec wharftales_gui php /var/www/html/migrate-compose-to-db.php 2>/dev/null || echo "Compose migration completed or already applied"
+    
+    echo "Initializing database tables..."
+    docker exec wharftales_gui sqlite3 /app/data/database.sqlite << 'EOSQL' 2>/dev/null || echo "Database tables already exist"
+CREATE TABLE IF NOT EXISTS settings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    key TEXT UNIQUE NOT NULL,
+    value TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS compose_configs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    config_type TEXT NOT NULL,
+    site_id INTEGER,
+    compose_yaml TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    created_by INTEGER,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_by INTEGER
+);
+EOSQL
     
     echo ""
     echo "==============================="
@@ -302,6 +326,8 @@ docker exec -u root wharftales_gui chmod -R 775 /app/data
 echo "Fixing apps directory permissions..."
 docker exec -u root wharftales_gui chown -R www-data:www-data /app/apps
 docker exec -u root wharftales_gui chmod -R 775 /app/apps
+docker exec -u root wharftales_gui bash -c "find /app/apps -type d -exec chmod 775 {} \\;" 2>/dev/null || true
+docker exec -u root wharftales_gui bash -c "find /app/apps -type f -exec chmod 664 {} \\;" 2>/dev/null || true
 
 echo "Running database migrations..."
 sleep 2
