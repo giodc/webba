@@ -297,29 +297,7 @@ function createNginxSiteConfig($site) {
     return $config;
 }
 
-function requestSSLCertificate($domain, $email) {
-    $command = "certbot certonly --webroot -w /var/www/html -d $domain --email $email --agree-tos --non-interactive";
-    $output = [];
-    $returnCode = 0;
-    exec($command . " 2>&1", $output, $returnCode);
-
-    return [
-        'success' => $returnCode === 0,
-        'output' => implode("\n", $output)
-    ];
-}
-
-function renewAllSSLCertificates() {
-    $command = "certbot renew --quiet";
-    $output = [];
-    $returnCode = 0;
-    exec($command . " 2>&1", $output, $returnCode);
-
-    return [
-        'success' => $returnCode === 0,
-        'output' => implode("\n", $output)
-    ];
-}
+// Legacy certbot functions removed - Traefik now handles all SSL certificates automatically
 
 function getDockerContainerStatus($containerName) {
     // Use docker inspect for exact container name match
