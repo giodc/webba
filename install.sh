@@ -328,40 +328,25 @@ docker exec -u root wharftales_gui chmod -R 775 /app/apps
 docker exec -u root wharftales_gui bash -c "find /app/apps -type d -exec chmod 775 {} \\;" 2>/dev/null || true
 docker exec -u root wharftales_gui bash -c "find /app/apps -type f -exec chmod 664 {} \\;" 2>/dev/null || true
 
-echo "Running database migrations..."
+echo "Initializing database..."
 sleep 2
+docker exec wharftales_gui php -r "
+require '/var/www/html/includes/functions.php';
+\$db = initDatabase();
+echo 'Database initialized successfully\n';
+" || echo "Database initialization failed - will be created on first access"
+
+echo "Setting database permissions..."
+docker exec -u root wharftales_gui bash -c "if [ -f /app/data/database.sqlite ]; then chown www-data:www-data /app/data/database.sqlite && chmod 664 /app/data/database.sqlite; fi"
+
+echo "Running database migrations..."
 docker exec wharftales_gui php /var/www/html/migrate-rbac-2fa.php 2>/dev/null || echo "Migration will run on first access"
 docker exec wharftales_gui php /var/www/html/migrate-php-version.php 2>/dev/null || echo "PHP version migration will run on first access"
 docker exec wharftales_gui php /var/www/html/migrations/add_github_fields.php 2>/dev/null || echo "GitHub fields migration will run on first access"
 docker exec wharftales_gui php /var/www/html/migrations/fix-site-permissions-database.php 2>/dev/null || echo "Site permissions migration will run on first access"
 
-echo "Ensuring database file has correct permissions..."
-docker exec -u root wharftales_gui bash -c "if [ -f /app/data/database.sqlite ]; then chown www-data:www-data /app/data/database.sqlite && chmod 664 /app/data/database.sqlite; fi"
-
 echo "Importing docker-compose configurations to database..."
 docker exec wharftales_gui php /var/www/html/migrate-compose-to-db.php 2>/dev/null || echo "Compose migration will run on first settings update"
-
-echo "Initializing database settings from docker-compose.yml..."
-docker exec wharftales_gui sqlite3 /app/data/database.sqlite << 'EOSQL' 2>/dev/null || echo "Settings table will be created on first access"
-CREATE TABLE IF NOT EXISTS settings (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    key TEXT UNIQUE NOT NULL,
-    value TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS compose_configs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    config_type TEXT NOT NULL,
-    site_id INTEGER,
-    compose_yaml TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    created_by INTEGER,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_by INTEGER
-);
-EOSQL
 
 echo "Importing docker-compose.yml into database..."
 docker exec wharftales_gui php -r "
@@ -380,7 +365,7 @@ if (file_exists(\$composeFile)) {
         \$stmt = \$db->prepare('INSERT INTO compose_configs (config_type, compose_yaml, created_at, updated_at) VALUES (\"main\", ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)');
         \$stmt->execute([\$yaml]);
     }
-    echo 'Docker compose configuration imported successfully';
+    echo 'Docker compose configuration imported successfully\n';
 }
 " 2>/dev/null || echo "Compose config will be imported on first settings save"
 
