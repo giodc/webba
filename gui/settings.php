@@ -1,6 +1,7 @@
 <?php
 require_once 'includes/functions.php';
 require_once 'includes/auth.php';
+require_once 'includes/telemetry.php';
 
 // Require authentication
 requireAuth();
@@ -34,6 +35,10 @@ $customWildcardDomain = getSetting($db, 'custom_wildcard_domain', '');
 // Get dashboard domain settings
 $dashboardDomain = getSetting($db, 'dashboard_domain', '');
 $dashboardSSL = getSetting($db, 'dashboard_ssl', '0');
+
+// Get telemetry settings
+$telemetryEnabled = isTelemetryEnabled();
+$installationId = getInstallationId();
 
 $successMessage = '';
 $errorMessage = '';
@@ -186,6 +191,23 @@ function updateDashboardTraefikConfig($domain, $enableSSL) {
     } catch (Exception $e) {
         return ['success' => false, 'error' => 'Failed to save configuration: ' . $e->getMessage()];
     }
+}
+
+// Handle telemetry toggle
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['telemetry_enabled'])) {
+    $enabled = $_POST['telemetry_enabled'] === '1';
+    setTelemetryEnabled($enabled);
+    
+    if ($enabled) {
+        // Send immediate ping
+        sendTelemetryPing();
+        $successMessage = 'Telemetry enabled. Thank you for helping improve WebbaDeploy!';
+    } else {
+        $successMessage = 'Telemetry disabled.';
+    }
+    
+    // Refresh telemetry status
+    $telemetryEnabled = isTelemetryEnabled();
 }
 ?>
 <!DOCTYPE html>
@@ -363,6 +385,55 @@ function updateDashboardTraefikConfig($domain, $enableSSL) {
 
 
                
+
+                <!-- Telemetry Settings -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <i class="bi bi-bar-chart me-2"></i>Usage Statistics (Optional)
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <strong>Help us improve WebbaDeploy!</strong> By enabling anonymous usage statistics, you help us understand how the platform is used and prioritize features. 
+                            <br><br>
+                            <strong>What we collect:</strong>
+                            <ul class="mb-0 mt-2">
+                                <li>Anonymous installation ID (not linked to you)</li>
+                                <li>Version number</li>
+                                <li>PHP version</li>
+                                <li>Number of sites (count only)</li>
+                                <li>Last ping timestamp</li>
+                            </ul>
+                            <br>
+                            <strong>What we DON'T collect:</strong>
+                            <ul class="mb-0">
+                                <li>❌ IP addresses</li>
+                                <li>❌ Domain names</li>
+                                <li>❌ Email addresses</li>
+                                <li>❌ Any personal information</li>
+                            </ul>
+                        </div>
+                        
+                        <form method="POST">
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="telemetryEnabled" name="telemetry_enabled" value="1" <?= $telemetryEnabled ? 'checked' : '' ?> onchange="this.form.submit()">
+                                    <label class="form-check-label" for="telemetryEnabled">
+                                        <strong>Enable anonymous usage statistics</strong>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <?php if ($telemetryEnabled): ?>
+                            <div class="alert alert-success">
+                                <i class="bi bi-check-circle me-2"></i>
+                                <strong>Thank you!</strong> Your anonymous installation ID is: <code><?= htmlspecialchars($installationId) ?></code>
+                                <br><small class="text-muted">Data is sent once per day automatically.</small>
+                            </div>
+                            <?php endif; ?>
+                        </form>
+                    </div>
+                </div>
 
                      <!-- System Information -->
                 <div class="card">

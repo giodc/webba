@@ -560,6 +560,9 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                                     <button type="button" class="btn btn-sm btn-success" onclick="runLaravelBuild()">
                                         <i class="bi bi-hammer me-1"></i>Build Laravel
                                     </button>
+                                    <button type="button" class="btn btn-sm btn-warning" onclick="fixLaravelPermissions()">
+                                        <i class="bi bi-shield-lock me-1"></i>Fix Permissions
+                                    </button>
                                     <?php endif; ?>
                                 </div>
                             </div>
@@ -1359,6 +1362,29 @@ QUEUE_CONNECTION=redis</code></pre>
                 
                 if (result.success) {
                     alert('Laravel build completed!\n\n' + (result.details || result.message));
+                    location.reload();
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('Network error: ' + error.message);
+            }
+        }
+        
+        // Fix Laravel Permissions
+        async function fixLaravelPermissions() {
+            if (!confirm('Fix Laravel file permissions?\n\nThis will:\n- Set ownership to www-data\n- Set directory permissions (755)\n- Set file permissions (644)\n- Set storage/cache permissions (775)')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api.php?action=fix_laravel_permissions&id=${siteId}`, {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('Permissions fixed!\n\n' + (result.details || result.message));
                     location.reload();
                 } else {
                     alert('Error: ' + result.error);

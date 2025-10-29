@@ -37,6 +37,7 @@ try {
     require_once 'includes/auth.php';
     require_once 'includes/encryption.php';
     require_once 'includes/github-deploy.php';
+    require_once 'includes/laravel-helpers.php';
 } catch (Throwable $e) {
     ob_clean();
     http_response_code(500);
@@ -88,6 +89,10 @@ try {
     
     case "build_laravel":
         buildLaravelHandler($db, $_GET["id"]);
+        break;
+    
+    case "fix_laravel_permissions":
+        fixLaravelPermissionsHandler($db, $_GET["id"]);
         break;
 
     case "delete_site":
@@ -3869,6 +3874,45 @@ function buildLaravelHandler($db, $siteId) {
         
         $containerName = $site['container_name'];
         $result = runLaravelBuild($containerName, $site['type']);
+        
+        if ($result['success']) {
+            echo json_encode([
+                'success' => true,
+                'message' => $result['message'],
+                'details' => $result['details'] ?? ''
+            ]);
+        } else {
+            throw new Exception($result['message']);
+        }
+        
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    }
+}
+
+/**
+ * Fix Laravel permissions
+ */
+function fixLaravelPermissionsHandler($db, $siteId) {
+    try {
+        // Check permissions
+        if (!canManageSite($_SESSION['user_id'], $siteId)) {
+            http_response_code(403);
+            throw new Exception("You don't have permission to manage this site");
+        }
+        
+        $site = getSiteById($db, $siteId);
+        if (!$site) {
+            throw new Exception("Site not found");
+        }
+        
+        if ($site['type'] !== 'laravel') {
+            throw new Exception("This action is only available for Laravel sites");
+        }
+        
+        $containerName = $site['container_name'];
+        $result = fixLaravelPermissions($containerName);
         
         if ($result['success']) {
             echo json_encode([

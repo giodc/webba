@@ -1,12 +1,16 @@
 <?php
 require_once 'includes/functions.php';
 require_once 'includes/auth.php';
+require_once 'includes/telemetry.php';
 
 // Require authentication
 requireAuth();
 
 $db = initDatabase();
 $currentUser = getCurrentUser();
+
+// Auto-send telemetry ping if due (non-blocking)
+autoSendTelemetryPing();
 
 // Check if setup wizard should be shown (for admins on fresh install)
 $setupCompleted = getSetting($db, 'setup_completed', '0');

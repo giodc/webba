@@ -290,9 +290,22 @@ function runLaravelBuild($containerName, $siteType = 'laravel') {
         $results[] = "✓ Generated application key";
     }
     
-    // 3. Set proper permissions
-    exec("docker exec {$containerName} sh -c 'cd /var/www/html && chmod -R 775 storage bootstrap/cache 2>&1'");
+    // 3. Set proper permissions (critical for Laravel)
+    // First set ownership to www-data
     exec("docker exec {$containerName} chown -R www-data:www-data /var/www/html");
+    
+    // Set directory permissions (755 = rwxr-xr-x)
+    exec("docker exec {$containerName} find /var/www/html -type d -exec chmod 755 {} \\;");
+    
+    // Set file permissions (644 = rw-r--r--)
+    exec("docker exec {$containerName} find /var/www/html -type f -exec chmod 644 {} \\;");
+    
+    // Storage and cache need write permissions (775 = rwxrwxr-x)
+    exec("docker exec {$containerName} sh -c 'chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache 2>&1'");
+    
+    // Ensure public/index.php is readable
+    exec("docker exec {$containerName} chmod 644 /var/www/html/public/index.php");
+    
     $results[] = "✓ Set proper permissions";
     
     // 4. Run migrations (if database is configured)
