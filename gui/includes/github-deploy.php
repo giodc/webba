@@ -290,25 +290,46 @@ function runLaravelBuild($containerName, $siteType = 'laravel') {
         $results[] = "✓ Generated application key";
     }
     
-    // 3. Set proper permissions (critical for Laravel)
+    // Ensure critical .env values are set
+    exec("docker exec {$containerName} sh -c 'grep -q \"^LOG_CHANNEL=\" /var/www/html/.env || echo \"LOG_CHANNEL=stack\" >> /var/www/html/.env'");
+    exec("docker exec {$containerName} sh -c 'grep -q \"^APP_ENV=\" /var/www/html/.env || echo \"APP_ENV=production\" >> /var/www/html/.env'");
+    $results[] = "✓ Verified .env configuration";
+    
+    // 3. Create required Laravel directories
+    $results[] = "Creating required directories...";
+    exec("docker exec {$containerName} sh -c 'mkdir -p /var/www/html/storage/framework/sessions 2>&1'");
+    exec("docker exec {$containerName} sh -c 'mkdir -p /var/www/html/storage/framework/views 2>&1'");
+    exec("docker exec {$containerName} sh -c 'mkdir -p /var/www/html/storage/framework/cache 2>&1'");
+    exec("docker exec {$containerName} sh -c 'mkdir -p /var/www/html/storage/logs 2>&1'");
+    exec("docker exec {$containerName} sh -c 'mkdir -p /var/www/html/bootstrap/cache 2>&1'");
+    exec("docker exec {$containerName} sh -c 'mkdir -p /var/www/html/database 2>&1'");
+    $results[] = "✓ Required directories created";
+    
+    // 4. Set proper permissions (critical for Laravel)
     // First set ownership to www-data
-    exec("docker exec {$containerName} chown -R www-data:www-data /var/www/html");
+    exec("docker exec {$containerName} chown -R www-data:www-data /var/www/html 2>&1", $chownOutput, $chownReturn);
+    if ($chownReturn !== 0) {
+        $results[] = "⚠ Warning: Could not set ownership (may need root access)";
+    }
     
     // Set directory permissions (755 = rwxr-xr-x)
-    exec("docker exec {$containerName} find /var/www/html -type d -exec chmod 755 {} \\;");
+    exec("docker exec {$containerName} find /var/www/html -type d -exec chmod 755 {} \\; 2>&1");
     
     // Set file permissions (644 = rw-r--r--)
-    exec("docker exec {$containerName} find /var/www/html -type f -exec chmod 644 {} \\;");
+    exec("docker exec {$containerName} find /var/www/html -type f -exec chmod 644 {} \\; 2>&1");
     
     // Storage and cache need write permissions (775 = rwxrwxr-x)
     exec("docker exec {$containerName} sh -c 'chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache 2>&1'");
     
+    // Database directory needs write permissions for SQLite
+    exec("docker exec {$containerName} sh -c 'chmod -R 775 /var/www/html/database 2>&1'");
+    
     // Ensure public/index.php is readable
-    exec("docker exec {$containerName} chmod 644 /var/www/html/public/index.php");
+    exec("docker exec {$containerName} chmod 644 /var/www/html/public/index.php 2>&1");
     
     $results[] = "✓ Set proper permissions";
     
-    // 4. Run migrations (if database is configured)
+    // 5. Run migrations (if database is configured)
     exec("docker exec {$containerName} sh -c 'cd /var/www/html && php artisan migrate --force 2>&1'", $migrateOutput, $migrateReturn);
     if ($migrateReturn === 0) {
         $results[] = "✓ Database migrations completed";
@@ -316,13 +337,13 @@ function runLaravelBuild($containerName, $siteType = 'laravel') {
         $results[] = "⚠ Migrations skipped (database may not be configured)";
     }
     
-    // 5. Clear and cache config
+    // 6. Clear and cache config
     exec("docker exec {$containerName} sh -c 'cd /var/www/html && php artisan config:cache 2>&1'");
     exec("docker exec {$containerName} sh -c 'cd /var/www/html && php artisan route:cache 2>&1'");
     exec("docker exec {$containerName} sh -c 'cd /var/www/html && php artisan view:cache 2>&1'");
     $results[] = "✓ Cached configuration, routes, and views";
     
-    // 6. Check if package.json exists for npm
+    // 7. Check if package.json exists for npm
     exec("docker exec {$containerName} test -f /var/www/html/package.json", $npmCheckOutput, $npmCheckReturn);
     if ($npmCheckReturn === 0) {
         // Check if npm is installed
