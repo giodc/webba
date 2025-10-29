@@ -646,7 +646,18 @@ function updateComposeParameter($pdo, $paramKey, $paramValue, $userId, $siteId =
     $config = getComposeConfig($pdo, $siteId);
     
     if (!$config) {
-        throw new Exception("Compose configuration not found");
+        // If no config exists, create initial config from docker-compose.yml
+        $composeFile = '/opt/wharftales/docker-compose.yml';
+        if (file_exists($composeFile)) {
+            $yaml = file_get_contents($composeFile);
+            // Save initial config
+            saveComposeConfig($pdo, $yaml, $userId, $siteId);
+            $config = getComposeConfig($pdo, $siteId);
+        }
+        
+        if (!$config) {
+            throw new Exception("Compose configuration not found and could not be created");
+        }
     }
     
     $yaml = $config['compose_yaml'];
