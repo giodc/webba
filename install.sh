@@ -364,6 +364,27 @@ CREATE TABLE IF NOT EXISTS compose_configs (
 );
 EOSQL
 
+echo "Importing docker-compose.yml into database..."
+docker exec wharftales_gui php -r "
+require '/var/www/html/includes/functions.php';
+\$db = initDatabase();
+\$composeFile = '/opt/wharftales/docker-compose.yml';
+if (file_exists(\$composeFile)) {
+    \$yaml = file_get_contents(\$composeFile);
+    \$stmt = \$db->prepare('SELECT * FROM compose_configs WHERE config_type = \"main\" LIMIT 1');
+    \$stmt->execute();
+    \$existing = \$stmt->fetch(PDO::FETCH_ASSOC);
+    if (\$existing) {
+        \$stmt = \$db->prepare('UPDATE compose_configs SET compose_yaml = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?');
+        \$stmt->execute([\$yaml, \$existing['id']]);
+    } else {
+        \$stmt = \$db->prepare('INSERT INTO compose_configs (config_type, compose_yaml, created_at, updated_at) VALUES (\"main\", ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)');
+        \$stmt->execute([\$yaml]);
+    }
+    echo 'Docker compose configuration imported successfully';
+}
+" 2>/dev/null || echo "Compose config will be imported on first settings save"
+
 echo ""
 echo "==============================="
 echo "Installation completed!"
