@@ -210,7 +210,15 @@ ACME_EOF
     chown -R www-data:www-data /opt/wharftales/data
     chmod -R 775 /opt/wharftales/data
     
+    # Set proper permissions for apps directory (needs to be writable by www-data in container)
+    chown -R www-data:www-data /opt/wharftales/apps
+    chmod -R 775 /opt/wharftales/apps
+    
     chown -R wharftales:wharftales /opt/wharftales
+    
+    # Re-apply www-data ownership to data and apps after setting wharftales ownership
+    chown -R www-data:www-data /opt/wharftales/data
+    chown -R www-data:www-data /opt/wharftales/apps
     
     # Create docker-compose.yml from template if it doesn't exist
     if [ ! -f "/opt/wharftales/docker-compose.yml" ]; then

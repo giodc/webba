@@ -82,6 +82,15 @@ EOSQL
 # Run migrations
 docker exec wharftales_gui php /var/www/html/migrate-compose-to-db.php 2>/dev/null || echo "Compose migration already applied"
 
+# Fix permissions
+echo "🔧 Fixing permissions..."
+docker exec -u root wharftales_gui chown -R www-data:www-data /app/data
+docker exec -u root wharftales_gui chmod -R 775 /app/data
+docker exec -u root wharftales_gui chown -R www-data:www-data /app/apps
+docker exec -u root wharftales_gui chmod -R 775 /app/apps
+docker exec -u root wharftales_gui bash -c "find /app/apps -type d -exec chmod 775 {} \\;"
+docker exec -u root wharftales_gui bash -c "find /app/apps -type f -exec chmod 664 {} \\;"
+
 # Show status
 echo "📊 Container status:"
 sudo docker-compose ps

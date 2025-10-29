@@ -176,6 +176,10 @@ docker exec -u root wharftales_gui chmod -R 775 /app/apps
 # Fix database permissions
 docker exec -u root wharftales_gui bash -c "if [ -f /app/data/database.sqlite ]; then chown www-data:www-data /app/data/database.sqlite && chmod 664 /app/data/database.sqlite; fi"
 
+# Ensure apps subdirectories are writable
+docker exec -u root wharftales_gui bash -c "find /app/apps -type d -exec chmod 775 {} \\;"
+docker exec -u root wharftales_gui bash -c "find /app/apps -type f -exec chmod 664 {} \\;"
+
 echo -e "${GREEN}  ✓ Permissions fixed${NC}"
 echo ""
 
