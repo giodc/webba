@@ -311,6 +311,29 @@ function runLaravelBuild($containerName, $siteType = 'laravel') {
     // Ensure critical .env values are set
     exec("docker exec {$containerName} sh -c 'grep -q \"^LOG_CHANNEL=\" /var/www/html/.env || echo \"LOG_CHANNEL=stack\" >> /var/www/html/.env'");
     exec("docker exec {$containerName} sh -c 'grep -q \"^APP_ENV=\" /var/www/html/.env || echo \"APP_ENV=production\" >> /var/www/html/.env'");
+    
+    // Sync Docker environment variables to .env file (critical for database connection)
+    $results[] = "Syncing Docker environment variables to .env...";
+    
+    // Get Docker environment variables
+    exec("docker exec {$containerName} sh -c 'printenv | grep -E \"^(DB_|REDIS_|MAIL_|AWS_)\"'", $dockerEnvOutput);
+    
+    if (!empty($dockerEnvOutput)) {
+        foreach ($dockerEnvOutput as $envLine) {
+            if (strpos($envLine, '=') !== false) {
+                list($key, $value) = explode('=', $envLine, 2);
+                $key = trim($key);
+                $value = trim($value);
+                
+                // Update or add the variable in .env
+                exec("docker exec {$containerName} sh -c 'grep -q \"^{$key}=\" /var/www/html/.env && sed -i \"s|^{$key}=.*|{$key}={$value}|\" /var/www/html/.env || echo \"{$key}={$value}\" >> /var/www/html/.env'");
+            }
+        }
+        $results[] = "✓ Synced " . count($dockerEnvOutput) . " environment variables to .env";
+    } else {
+        $results[] = "→ No Docker environment variables to sync";
+    }
+    
     $results[] = "✓ Verified .env configuration";
     
     // 5. Create required Laravel directories
@@ -347,29 +370,40 @@ function runLaravelBuild($containerName, $siteType = 'laravel') {
     
     $results[] = "✓ Set proper permissions";
     
-    // 7. Setup SQLite database and run migrations
-    $results[] = "Setting up SQLite database...";
+    // 7. Setup database and run migrations
+    $results[] = "Setting up database...";
     
-    // Check if database file exists in .env
+    // Check database configuration in .env
     exec("docker exec {$containerName} sh -c 'grep \"^DB_CONNECTION=\" /var/www/html/.env'", $dbConnectionOutput);
     $dbConnection = isset($dbConnectionOutput[0]) ? trim(str_replace('DB_CONNECTION=', '', $dbConnectionOutput[0])) : 'unknown';
     $results[] = "→ DB_CONNECTION: {$dbConnection}";
     
-    // Get database path from .env
-    exec("docker exec {$containerName} sh -c 'grep \"^DB_DATABASE=\" /var/www/html/.env'", $dbPathOutput);
-    $dbPath = isset($dbPathOutput[0]) ? trim(str_replace('DB_DATABASE=', '', $dbPathOutput[0])) : '';
-    $results[] = "→ DB_DATABASE: {$dbPath}";
+    exec("docker exec {$containerName} sh -c 'grep \"^DB_HOST=\" /var/www/html/.env'", $dbHostOutput);
+    $dbHost = isset($dbHostOutput[0]) ? trim(str_replace('DB_HOST=', '', $dbHostOutput[0])) : '';
+    if (!empty($dbHost)) {
+        $results[] = "→ DB_HOST: {$dbHost}";
+    }
+    
+    exec("docker exec {$containerName} sh -c 'grep \"^DB_DATABASE=\" /var/www/html/.env'", $dbDatabaseOutput);
+    $dbDatabase = isset($dbDatabaseOutput[0]) ? trim(str_replace('DB_DATABASE=', '', $dbDatabaseOutput[0])) : '';
+    $results[] = "→ DB_DATABASE: {$dbDatabase}";
+    
+    exec("docker exec {$containerName} sh -c 'grep \"^DB_USERNAME=\" /var/www/html/.env'", $dbUsernameOutput);
+    $dbUsername = isset($dbUsernameOutput[0]) ? trim(str_replace('DB_USERNAME=', '', $dbUsernameOutput[0])) : '';
+    if (!empty($dbUsername)) {
+        $results[] = "→ DB_USERNAME: {$dbUsername}";
+    }
     
     // If SQLite, ensure database file exists
-    if ($dbConnection === 'sqlite' && !empty($dbPath)) {
+    if ($dbConnection === 'sqlite' && !empty($dbDatabase)) {
         // Create the database file if it doesn't exist
-        exec("docker exec {$containerName} sh -c 'touch {$dbPath} 2>&1'", $touchOutput, $touchReturn);
+        exec("docker exec {$containerName} sh -c 'touch {$dbDatabase} 2>&1'", $touchOutput, $touchReturn);
         if ($touchReturn === 0) {
             $results[] = "✓ SQLite database file created/verified";
             
             // Set proper permissions on database file
-            exec("docker exec {$containerName} sh -c 'chmod 664 {$dbPath} 2>&1'");
-            exec("docker exec {$containerName} sh -c 'chown www-data:www-data {$dbPath} 2>&1'");
+            exec("docker exec {$containerName} sh -c 'chmod 664 {$dbDatabase} 2>&1'");
+            exec("docker exec {$containerName} sh -c 'chown www-data:www-data {$dbDatabase} 2>&1'");
             $results[] = "✓ Database file permissions set";
         } else {
             $results[] = "⚠ Could not create database file: " . implode("\n", $touchOutput);
