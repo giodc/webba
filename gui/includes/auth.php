@@ -25,7 +25,11 @@ if (session_status() === PHP_SESSION_NONE) {
  * Initialize authentication database
  */
 function initAuthDatabase() {
-    $db = new PDO('sqlite:/app/data/database.sqlite');
+    $dbPath = $_ENV['DB_PATH'] ?? '/app/data/database.sqlite';
+    $dir = dirname($dbPath);
+    if (!is_dir($dir)) { mkdir($dir, 0755, true); }
+    if (!is_writable($dir)) { @chmod($dir, 0775); }
+    $db = new PDO('sqlite:' . $dbPath);
     $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     
     // Create users table if not exists

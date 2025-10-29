@@ -2,6 +2,9 @@
 
 function initDatabase() {
     $dbPath = $_ENV['DB_PATH'] ?? '/app/data/database.sqlite';
+    $dir = dirname($dbPath);
+    if (!is_dir($dir)) { mkdir($dir, 0755, true); }
+    if (!is_writable($dir)) { @chmod($dir, 0775); }
     $pdo = new PDO('sqlite:' . $dbPath);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
