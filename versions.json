@@ -4,7 +4,7 @@
     "min_supported": "0.0.1",
     "update_url": "https://raw.githubusercontent.com/giodc/wharftales/main/scripts/upgrade.sh",
     "changelog_url": "https://github.com/giodc/wharftales/releases",
-    "release_notes": "Added comprehensive auto-update system with Coolify-inspired architecture. Includes automatic version checking, manual and automatic update modes, backup system, and update notifications.",
+    "release_notes": "Added comprehensive auto-update system. Includes automatic version checking, manual and automatic update modes, backup system, and update notifications.",
     "released_at": "2025-10-30"
   }
 }

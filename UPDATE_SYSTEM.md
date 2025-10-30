@@ -1,6 +1,6 @@
 # WharfTales Auto-Update System
 
-This document describes the auto-update system implementation for WharfTales, inspired by Coolify's proven approach.
+This document describes the auto-update system implementation for WharfTales.
 
 ## Overview
 
