@@ -207,6 +207,10 @@ try {
         restartWebGui();
         break;
     
+    case "test_telemetry_ping":
+        testTelemetryPingHandler();
+        break;
+    
     case "execute_docker_command":
         executeDockerCommandAPI();
         break;
@@ -2735,6 +2739,42 @@ function restartWebGui() {
             ]);
         } else {
             throw new Exception("Failed to restart Web-GUI: " . implode("\n", $output));
+        }
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode([
+            "success" => false,
+            "error" => $e->getMessage()
+        ]);
+    }
+}
+
+function testTelemetryPingHandler() {
+    require_once __DIR__ . '/includes/telemetry.php';
+    
+    try {
+        // Check if telemetry is enabled
+        if (!isTelemetryEnabled()) {
+            echo json_encode([
+                "success" => false,
+                "message" => "Telemetry is not enabled. Please enable it first."
+            ]);
+            return;
+        }
+        
+        // Send the ping
+        $result = sendTelemetryPing();
+        
+        if ($result['success']) {
+            echo json_encode([
+                "success" => true,
+                "message" => "Telemetry ping sent successfully! Check your telemetry server logs."
+            ]);
+        } else {
+            echo json_encode([
+                "success" => false,
+                "message" => $result['message']
+            ]);
         }
     } catch (Exception $e) {
         http_response_code(500);

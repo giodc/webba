@@ -430,6 +430,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['telemetry_enabled']))
                                 <strong>Thank you!</strong> Your anonymous installation ID is: <code><?= htmlspecialchars($installationId) ?></code>
                                 <br><small class="text-muted">Data is sent once per day automatically.</small>
                             </div>
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="testTelemetryPing()">
+                                <i class="bi bi-send me-2"></i>Send Test Ping Now
+                            </button>
+                            <div id="telemetryTestResult" class="mt-2"></div>
                             <?php endif; ?>
                         </form>
                     </div>
@@ -741,6 +745,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['telemetry_enabled']))
                 }
             } catch (error) {
                 alert('Error: ' + error.message);
+            }
+        }
+        
+        async function testTelemetryPing() {
+            const resultDiv = document.getElementById('telemetryTestResult');
+            const button = event.target;
+            const originalText = button.innerHTML;
+            
+            button.disabled = true;
+            button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Sending...';
+            resultDiv.innerHTML = '';
+            
+            try {
+                const response = await fetch('/api.php?action=test_telemetry_ping', {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    resultDiv.innerHTML = `
+                        <div class="alert alert-success alert-dismissible fade show">
+                            <i class="bi bi-check-circle me-2"></i>
+                            <strong>Success!</strong> ${result.message}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="alert alert-danger alert-dismissible fade show">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            <strong>Failed!</strong> ${result.message || result.error}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="alert alert-danger alert-dismissible fade show">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <strong>Error!</strong> ${error.message}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                `;
+            } finally {
+                button.disabled = false;
+                button.innerHTML = originalText;
             }
         }
     </script>
