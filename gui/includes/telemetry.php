@@ -52,7 +52,7 @@ function setTelemetryEnabled($enabled) {
  */
 function getTelemetryEndpoint() {
     // Default endpoint - you can change this to your own server
-    return 'https://telemetry.wharftales.org/ping';
+    return 'https://telemetry.wharftales.org/api/ping';
 }
 
 /**
