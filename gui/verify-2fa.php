@@ -111,12 +111,11 @@ $csrfToken = generateCSRFToken();
         .logo-icon {
             width: 64px;
             height: 64px;
-            background: #1f2937;
             border-radius: 1rem;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 1.5rem;
+            margin: 0 auto 0.5rem;
             color: white;
             font-size: 2rem;
         }

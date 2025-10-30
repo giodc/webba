@@ -147,11 +147,55 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
     </div>
     <?php endif; ?>
 
+    <?php 
+    // Check database configuration for navigation menu
+    $dbType = $site['db_type'] ?? 'none';
+    $hasDedicatedDb = false;
+    
+    // Check if site has a database
+    if ($site['type'] === 'wordpress' && $dbType === 'dedicated') {
+        $hasDedicatedDb = true;
+    } elseif ($site['type'] === 'php' && in_array($dbType, ['mysql', 'postgresql'])) {
+        $hasDedicatedDb = true;
+    } elseif ($site['type'] === 'laravel' && in_array($dbType, ['mysql', 'postgresql'])) {
+        $hasDedicatedDb = true;
+    }
+    
+    $dbContainerExists = false;
+    if ($hasDedicatedDb) {
+        $dbCheck = [];
+        exec("docker ps -a --filter name=" . escapeshellarg($site['container_name'] . '_db') . " --format '{{.Names}}' 2>&1", $dbCheck, $returnCode);
+        $dbContainerExists = ($returnCode === 0 && !empty($dbCheck) && trim($dbCheck[0]) === $site['container_name'] . '_db');
+    }
+    ?>
+
     <!-- Main Content with Two Columns -->
     <div class="container-fluid mt-4 px-4">
         <div class="row">
-            <!-- Left Sidebar -->
-            <div class="col-md-3 p-0">
+            <!-- Mobile Navigation Select (visible only on mobile) -->
+            <div class="col-12 mb-3 d-md-none">
+                <select class="form-select" id="mobile-nav-select">
+                    <option value="overview" selected>📊 Overview</option>
+                    <option value="settings">⚙️ Settings</option>
+                    <option value="domain">🌐 Domain & SSL</option>
+                    <option value="container">📦 Container</option>
+                    <option value="files">📁 Files & Volumes</option>
+                    <option value="logs">💻 Logs</option>
+                    <?php if ($hasDedicatedDb && $dbContainerExists): ?>
+                    <option value="database">🗄️ Database</option>
+                    <?php endif; ?>
+                    <option value="redis">⚡ Redis Cache</option>
+                    <option value="sftp">🔌 SFTP Access</option>
+                    <option value="backup">💾 Backup & Restore</option>
+                    <?php if (isAdmin()): ?>
+                    <option value="compose">📝 Docker Compose</option>
+                    <?php endif; ?>
+                    <option value="danger">⚠️ Danger Zone</option>
+                </select>
+            </div>
+            
+            <!-- Left Sidebar (hidden on mobile) -->
+            <div class="col-md-3 p-0 d-none d-md-block">
                 <div class="sidebar">
                     <nav>
                         <a href="#overview" class="sidebar-nav-item active" data-section="overview">
@@ -178,27 +222,6 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                             <i class="bi bi-terminal"></i>
                             <span>Logs</span>
                         </a>
-                        <?php 
-                        // Only show database tab if site has dedicated database AND container exists
-                        $dbType = $site['db_type'] ?? 'none';
-                        $hasDedicatedDb = false;
-                        
-                        // Check if site has a database
-                        if ($site['type'] === 'wordpress' && $dbType === 'dedicated') {
-                            $hasDedicatedDb = true;
-                        } elseif ($site['type'] === 'php' && in_array($dbType, ['mysql', 'postgresql'])) {
-                            $hasDedicatedDb = true;
-                        } elseif ($site['type'] === 'laravel' && in_array($dbType, ['mysql', 'postgresql'])) {
-                            $hasDedicatedDb = true;
-                        }
-                        
-                        $dbContainerExists = false;
-                        if ($hasDedicatedDb) {
-                            $dbCheck = [];
-                            exec("docker ps -a --filter name=" . escapeshellarg($site['container_name'] . '_db') . " --format '{{.Names}}' 2>&1", $dbCheck, $returnCode);
-                            $dbContainerExists = ($returnCode === 0 && !empty($dbCheck) && trim($dbCheck[0]) === $site['container_name'] . '_db');
-                        }
-                        ?>
                         <?php if ($hasDedicatedDb && $dbContainerExists): ?>
                         <a href="#database" class="sidebar-nav-item" data-section="database">
                             <i class="bi bi-database"></i>
@@ -1180,7 +1203,51 @@ QUEUE_CONNECTION=redis</code></pre>
         const userPermission = '<?= $userPermission ?>';
         const canEdit = <?= $canEdit ? 'true' : 'false' ?>;
 
-        // Navigation
+        // Navigation function
+        function navigateToSection(section) {
+            // Skip if no section (e.g., external links like Docker Compose editor)
+            if (!section) {
+                return;
+            }
+            
+            // Handle compose link separately (external)
+            if (section === 'compose') {
+                window.open('/compose-editor.php?site_id=<?= $siteId ?>', '_blank');
+                return;
+            }
+            
+            // Update active state in sidebar
+            document.querySelectorAll('.sidebar-nav-item').forEach(i => i.classList.remove('active'));
+            const sidebarItem = document.querySelector(`[data-section="${section}"]`);
+            if (sidebarItem) {
+                sidebarItem.classList.add('active');
+            }
+            
+            // Update mobile select
+            const mobileSelect = document.getElementById('mobile-nav-select');
+            if (mobileSelect) {
+                mobileSelect.value = section;
+            }
+            
+            // Show section
+            document.querySelectorAll('.content-section').forEach(s => s.style.display = 'none');
+            const sectionElement = document.getElementById(section + '-section');
+            if (sectionElement) {
+                sectionElement.style.display = 'block';
+            }
+            
+            // Update URL with clean path for bookmarking
+            const siteId = <?= $siteId ?>;
+            const newUrl = section === 'overview' ? `/edit/${siteId}/` : `/edit/${siteId}/${section}/`;
+            window.history.pushState({}, '', newUrl);
+            
+            // Scroll to top on mobile
+            if (window.innerWidth < 768) {
+                window.scrollTo(0, 0);
+            }
+        }
+        
+        // Sidebar navigation
         document.querySelectorAll('.sidebar-nav-item').forEach(item => {
             item.addEventListener('click', function(e) {
                 const section = this.dataset.section;
@@ -1191,24 +1258,17 @@ QUEUE_CONNECTION=redis</code></pre>
                 }
                 
                 e.preventDefault();
-                
-                // Update active state
-                document.querySelectorAll('.sidebar-nav-item').forEach(i => i.classList.remove('active'));
-                this.classList.add('active');
-                
-                // Show section
-                document.querySelectorAll('.content-section').forEach(s => s.style.display = 'none');
-                const sectionElement = document.getElementById(section + '-section');
-                if (sectionElement) {
-                    sectionElement.style.display = 'block';
-                }
-                
-                // Update URL with clean path for bookmarking
-                const siteId = <?= $siteId ?>;
-                const newUrl = section === 'overview' ? `/edit/${siteId}/` : `/edit/${siteId}/${section}/`;
-                window.history.pushState({}, '', newUrl);
+                navigateToSection(section);
             });
         });
+        
+        // Mobile select navigation
+        const mobileSelect = document.getElementById('mobile-nav-select');
+        if (mobileSelect) {
+            mobileSelect.addEventListener('change', function() {
+                navigateToSection(this.value);
+            });
+        }
         
         // Load active tab from URL on page load
         const activeTab = '<?= htmlspecialchars($activeTab) ?>';
