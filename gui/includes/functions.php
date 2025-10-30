@@ -839,24 +839,49 @@ function checkForUpdates($forceCheck = false) {
     $versionsUrl = getSetting($db, 'versions_url', 'https://raw.githubusercontent.com/giodc/wharftales/main/versions.json');
     
     try {
-        // Set timeout for the request
-        $context = stream_context_create([
-            'http' => [
-                'timeout' => 10,
-                'user_agent' => 'WharfTales/' . $currentVersion
-            ]
-        ]);
+        $response = false;
         
-        $response = @file_get_contents($versionsUrl, false, $context);
+        // Check if URL is a local file path
+        if (strpos($versionsUrl, 'http') !== 0) {
+            // Local file
+            if (file_exists($versionsUrl)) {
+                $response = file_get_contents($versionsUrl);
+            }
+        } else {
+            // Remote URL - Set timeout for the request
+            $context = stream_context_create([
+                'http' => [
+                    'timeout' => 10,
+                    'user_agent' => 'WharfTales/' . $currentVersion,
+                    'ignore_errors' => true
+                ],
+                'ssl' => [
+                    'verify_peer' => true,
+                    'verify_peer_name' => true
+                ]
+            ]);
+            
+            $response = @file_get_contents($versionsUrl, false, $context);
+            
+            // Check HTTP response code
+            if (isset($http_response_header)) {
+                $statusLine = $http_response_header[0];
+                if (strpos($statusLine, '404') !== false) {
+                    throw new Exception('versions.json not found (404). Please commit and push the file to your repository.');
+                } elseif (strpos($statusLine, '200') === false) {
+                    throw new Exception('Failed to fetch versions.json: ' . $statusLine);
+                }
+            }
+        }
         
         if ($response === false) {
-            throw new Exception('Failed to fetch versions.json');
+            throw new Exception('Failed to fetch versions.json from: ' . $versionsUrl);
         }
         
         $versions = json_decode($response, true);
         
         if (!isset($versions['wharftales']['latest'])) {
-            throw new Exception('Invalid versions.json format');
+            throw new Exception('Invalid versions.json format - missing wharftales.latest field');
         }
         
         $latestVersion = $versions['wharftales']['latest'];
