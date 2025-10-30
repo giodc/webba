@@ -794,3 +794,189 @@ function markCertificateRemoved($db, $siteId) {
         return false;
     }
 }
+
+/**
+ * Get current WharfTales version
+ */
+function getCurrentVersion() {
+    $versionFile = '/var/www/html/../VERSION';
+    if (file_exists($versionFile)) {
+        return trim(file_get_contents($versionFile));
+    }
+    return 'unknown';
+}
+
+/**
+ * Check for WharfTales updates
+ * Returns array with update information
+ */
+function checkForUpdates($forceCheck = false) {
+    global $db;
+    
+    if (!$db) {
+        return ['error' => 'Database not initialized'];
+    }
+    
+    // Get update check settings
+    $updateCheckEnabled = getSetting($db, 'update_check_enabled', '1');
+    if ($updateCheckEnabled !== '1' && !$forceCheck) {
+        return ['update_available' => false, 'reason' => 'Update check disabled'];
+    }
+    
+    // Check last update check time to avoid too frequent checks
+    $lastCheck = getSetting($db, 'last_update_check', '0');
+    $checkFrequency = getSetting($db, 'update_check_frequency', '86400'); // Default: 24 hours
+    
+    if (!$forceCheck && (time() - intval($lastCheck)) < intval($checkFrequency)) {
+        // Return cached result if available
+        $cachedResult = getSetting($db, 'cached_update_info', null);
+        if ($cachedResult) {
+            return json_decode($cachedResult, true);
+        }
+    }
+    
+    $currentVersion = getCurrentVersion();
+    $versionsUrl = getSetting($db, 'versions_url', 'https://raw.githubusercontent.com/giodc/wharftales/main/versions.json');
+    
+    try {
+        // Set timeout for the request
+        $context = stream_context_create([
+            'http' => [
+                'timeout' => 10,
+                'user_agent' => 'WharfTales/' . $currentVersion
+            ]
+        ]);
+        
+        $response = @file_get_contents($versionsUrl, false, $context);
+        
+        if ($response === false) {
+            throw new Exception('Failed to fetch versions.json');
+        }
+        
+        $versions = json_decode($response, true);
+        
+        if (!isset($versions['wharftales']['latest'])) {
+            throw new Exception('Invalid versions.json format');
+        }
+        
+        $latestVersion = $versions['wharftales']['latest'];
+        $minSupported = $versions['wharftales']['min_supported'] ?? '0.0.1';
+        
+        // Update last check time
+        setSetting($db, 'last_update_check', (string)time());
+        
+        // Compare versions
+        $updateAvailable = version_compare($latestVersion, $currentVersion, '>');
+        $isSupported = version_compare($currentVersion, $minSupported, '>=');
+        
+        $result = [
+            'update_available' => $updateAvailable,
+            'current_version' => $currentVersion,
+            'latest_version' => $latestVersion,
+            'min_supported_version' => $minSupported,
+            'is_supported' => $isSupported,
+            'changelog_url' => $versions['wharftales']['changelog_url'] ?? '',
+            'release_notes' => $versions['wharftales']['release_notes'] ?? '',
+            'released_at' => $versions['wharftales']['released_at'] ?? '',
+            'update_url' => $versions['wharftales']['update_url'] ?? '',
+            'checked_at' => date('Y-m-d H:i:s')
+        ];
+        
+        // Cache the result
+        setSetting($db, 'cached_update_info', json_encode($result));
+        
+        // Store update notification if available
+        if ($updateAvailable) {
+            setSetting($db, 'update_notification', '1');
+        } else {
+            setSetting($db, 'update_notification', '0');
+        }
+        
+        return $result;
+        
+    } catch (Exception $e) {
+        error_log('Update check failed: ' . $e->getMessage());
+        
+        // Update last check time even on failure to avoid hammering the server
+        setSetting($db, 'last_update_check', (string)time());
+        
+        return [
+            'update_available' => false,
+            'error' => $e->getMessage(),
+            'current_version' => $currentVersion
+        ];
+    }
+}
+
+/**
+ * Trigger update process
+ * Returns array with status information
+ */
+function triggerUpdate($skipBackup = false) {
+    global $db;
+    
+    if (!$db) {
+        return ['success' => false, 'error' => 'Database not initialized'];
+    }
+    
+    // Check if update is already in progress
+    $updateInProgress = getSetting($db, 'update_in_progress', '0');
+    if ($updateInProgress === '1') {
+        return ['success' => false, 'error' => 'Update already in progress'];
+    }
+    
+    // Mark update as in progress
+    setSetting($db, 'update_in_progress', '1');
+    setSetting($db, 'update_started_at', date('Y-m-d H:i:s'));
+    
+    // Build command
+    $command = '/opt/wharftales/scripts/upgrade.sh';
+    if ($skipBackup) {
+        $command .= ' "" true';
+    }
+    
+    // Execute upgrade script in background
+    $logFile = '/opt/wharftales/logs/upgrade-' . date('Y-m-d-H-i-s') . '.log';
+    $command .= ' >> ' . escapeshellarg($logFile) . ' 2>&1 &';
+    
+    exec($command, $output, $returnCode);
+    
+    // Store log file path
+    setSetting($db, 'last_update_log', $logFile);
+    
+    return [
+        'success' => true,
+        'message' => 'Update started in background',
+        'log_file' => $logFile
+    ];
+}
+
+/**
+ * Get update status
+ */
+function getUpdateStatus() {
+    global $db;
+    
+    if (!$db) {
+        return ['in_progress' => false];
+    }
+    
+    $inProgress = getSetting($db, 'update_in_progress', '0');
+    $startedAt = getSetting($db, 'update_started_at', '');
+    $logFile = getSetting($db, 'last_update_log', '');
+    
+    // Check if update process is still running
+    if ($inProgress === '1') {
+        // If started more than 10 minutes ago, consider it failed
+        if ($startedAt && (time() - strtotime($startedAt)) > 600) {
+            setSetting($db, 'update_in_progress', '0');
+            $inProgress = '0';
+        }
+    }
+    
+    return [
+        'in_progress' => $inProgress === '1',
+        'started_at' => $startedAt,
+        'log_file' => $logFile
+    ];
+}

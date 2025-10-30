@@ -196,6 +196,36 @@ function updateDashboardTraefikConfig($domain, $enableSSL) {
     }
 }
 
+// Handle update settings
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_settings'])) {
+    $updateCheckEnabled = isset($_POST['update_check_enabled']) ? '1' : '0';
+    $autoUpdateEnabled = isset($_POST['auto_update_enabled']) ? '1' : '0';
+    $updateCheckFrequency = $_POST['update_check_frequency'] ?? '86400';
+    $versionsUrl = trim($_POST['versions_url'] ?? '');
+    
+    setSetting($db, 'update_check_enabled', $updateCheckEnabled);
+    setSetting($db, 'auto_update_enabled', $autoUpdateEnabled);
+    setSetting($db, 'update_check_frequency', $updateCheckFrequency);
+    
+    if (!empty($versionsUrl)) {
+        setSetting($db, 'versions_url', $versionsUrl);
+    }
+    
+    $successMessage = 'Update settings saved successfully!';
+}
+
+// Handle manual update check
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['check_updates'])) {
+    $updateInfo = checkForUpdates(true);
+    if (isset($updateInfo['error'])) {
+        $errorMessage = 'Update check failed: ' . $updateInfo['error'];
+    } else if ($updateInfo['update_available']) {
+        $successMessage = 'Update available! Version ' . $updateInfo['latest_version'] . ' is ready to install.';
+    } else {
+        $successMessage = 'You are running the latest version (' . $updateInfo['current_version'] . ')';
+    }
+}
+
 // Handle telemetry toggle
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['telemetry_enabled'])) {
     $enabled = $_POST['telemetry_enabled'] === '1';
@@ -212,6 +242,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['telemetry_enabled']))
     // Refresh telemetry status
     $telemetryEnabled = isTelemetryEnabled();
 }
+
+// Get update settings
+$updateCheckEnabled = getSetting($db, 'update_check_enabled', '1');
+$autoUpdateEnabled = getSetting($db, 'auto_update_enabled', '0');
+$updateCheckFrequency = getSetting($db, 'update_check_frequency', '86400');
+$versionsUrl = getSetting($db, 'versions_url', 'https://raw.githubusercontent.com/giodc/wharftales/main/versions.json');
+$currentVersion = getCurrentVersion();
+
+// Check for updates (non-blocking, uses cache if recent)
+$updateInfo = checkForUpdates(false);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -375,14 +415,93 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['telemetry_enabled']))
                         <i class="bi bi-arrow-up-circle me-2"></i>System Updates
                     </div>
                     <div class="card-body">
-                        <div id="updateCheckSection">
-                            <button class="btn btn-primary" onclick="checkForUpdates()">
-                                <i class="bi bi-search me-2"></i>Check for Updates
-                            </button>
+                        <!-- Current Version Info -->
+                        <div class="alert alert-<?= ($updateInfo['update_available'] ?? false) ? 'warning' : 'success' ?> mb-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    <strong>Current Version:</strong> <?= htmlspecialchars($currentVersion) ?>
+                                    <?php if ($updateInfo['update_available'] ?? false): ?>
+                                        <br><strong>Latest Version:</strong> <?= htmlspecialchars($updateInfo['latest_version']) ?>
+                                        <span class="badge bg-warning text-dark ms-2">Update Available!</span>
+                                    <?php else: ?>
+                                        <span class="badge bg-success ms-2">Up to date</span>
+                                    <?php endif; ?>
+                                </div>
+                                <?php if ($updateInfo['update_available'] ?? false): ?>
+                                <button class="btn btn-warning btn-sm" onclick="showUpdateModal()">
+                                    <i class="bi bi-download me-1"></i>Update Now
+                                </button>
+                                <?php endif; ?>
+                            </div>
                         </div>
-                        <div id="updateInfoSection" style="display: none;">
-                            <!-- Update info will be loaded here -->
+
+                        <!-- Update Settings Form -->
+                        <form method="POST">
+                            <input type="hidden" name="update_settings" value="1">
+                            
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="update_check_enabled" 
+                                           name="update_check_enabled" <?= $updateCheckEnabled === '1' ? 'checked' : '' ?>>
+                                    <label class="form-check-label" for="update_check_enabled">
+                                        <strong>Enable Update Checks</strong>
+                                    </label>
+                                </div>
+                                <div class="form-text">
+                                    Periodically check for new WharfTales versions
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="auto_update_enabled" 
+                                           name="auto_update_enabled" <?= $autoUpdateEnabled === '1' ? 'checked' : '' ?>>
+                                    <label class="form-check-label" for="auto_update_enabled">
+                                        <strong>Enable Automatic Updates</strong>
+                                    </label>
+                                </div>
+                                <div class="form-text">
+                                    <i class="bi bi-exclamation-triangle me-1 text-warning"></i>
+                                    Automatically install updates when available (recommended for testing environments only)
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="update_check_frequency" class="form-label">Update Check Frequency</label>
+                                <select class="form-select" id="update_check_frequency" name="update_check_frequency">
+                                    <option value="3600" <?= $updateCheckFrequency === '3600' ? 'selected' : '' ?>>Every Hour</option>
+                                    <option value="21600" <?= $updateCheckFrequency === '21600' ? 'selected' : '' ?>>Every 6 Hours</option>
+                                    <option value="43200" <?= $updateCheckFrequency === '43200' ? 'selected' : '' ?>>Every 12 Hours</option>
+                                    <option value="86400" <?= $updateCheckFrequency === '86400' ? 'selected' : '' ?>>Daily (Recommended)</option>
+                                    <option value="604800" <?= $updateCheckFrequency === '604800' ? 'selected' : '' ?>>Weekly</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="versions_url" class="form-label">Versions URL</label>
+                                <input type="url" class="form-control" id="versions_url" name="versions_url" 
+                                       value="<?= htmlspecialchars($versionsUrl) ?>">
+                                <div class="form-text">
+                                    URL to check for version information (advanced users only)
+                                </div>
+                            </div>
+
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-save me-2"></i>Save Update Settings
+                                </button>
+                                <button type="submit" name="check_updates" value="1" class="btn btn-secondary">
+                                    <i class="bi bi-arrow-clockwise me-2"></i>Check Now
+                                </button>
+                            </div>
+                        </form>
+
+                        <?php if (isset($updateInfo['checked_at'])): ?>
+                        <div class="mt-3 text-muted small">
+                            <i class="bi bi-clock me-1"></i>Last checked: <?= htmlspecialchars($updateInfo['checked_at']) ?>
                         </div>
+                        <?php endif; ?>
                     </div>
                 </div>
 
@@ -796,6 +915,133 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['telemetry_enabled']))
                 button.innerHTML = originalText;
             }
         }
+
+        // Update Modal Functions
+        function showUpdateModal() {
+            const modal = new bootstrap.Modal(document.getElementById('updateModal'));
+            modal.show();
+        }
+
+        async function startUpdate(skipBackup = false) {
+            const btn = document.getElementById('updateBtn');
+            const status = document.getElementById('updateStatus');
+            const originalText = btn.innerHTML;
+            
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Starting update...';
+            
+            status.innerHTML = `
+                <div class="alert alert-info">
+                    <div class="spinner-border spinner-border-sm me-2"></div>
+                    Update process started. This may take a few minutes...
+                </div>
+            `;
+            
+            try {
+                const response = await fetch('/api.php?action=trigger_update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ skip_backup: skipBackup })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    status.innerHTML = `
+                        <div class="alert alert-success">
+                            <i class="bi bi-check-circle me-2"></i>
+                            Update started successfully! The page will reload in 30 seconds...
+                        </div>
+                    `;
+                    
+                    // Reload page after 30 seconds
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 30000);
+                } else {
+                    status.innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            Failed to start update: ${result.error || 'Unknown error'}
+                        </div>
+                    `;
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }
+            } catch (error) {
+                status.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        Error: ${error.message}
+                    </div>
+                `;
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
     </script>
+
+    <!-- Update Modal -->
+    <div class="modal fade" id="updateModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title">
+                        <i class="bi bi-arrow-up-circle me-2"></i>Update WharfTales
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <?php if ($updateInfo['update_available'] ?? false): ?>
+                    <div class="alert alert-info">
+                        <strong>Current Version:</strong> <?= htmlspecialchars($updateInfo['current_version']) ?><br>
+                        <strong>New Version:</strong> <?= htmlspecialchars($updateInfo['latest_version']) ?>
+                    </div>
+                    
+                    <?php if (!empty($updateInfo['release_notes'])): ?>
+                    <div class="mb-3">
+                        <h6>Release Notes:</h6>
+                        <p><?= htmlspecialchars($updateInfo['release_notes']) ?></p>
+                    </div>
+                    <?php endif; ?>
+                    
+                    <?php if (!empty($updateInfo['changelog_url'])): ?>
+                    <p>
+                        <a href="<?= htmlspecialchars($updateInfo['changelog_url']) ?>" target="_blank" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-journal-text me-1"></i>View Full Changelog
+                        </a>
+                    </p>
+                    <?php endif; ?>
+                    
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <strong>Important:</strong> The update process will:
+                        <ul class="mb-0 mt-2">
+                            <li>Create a backup of your current installation</li>
+                            <li>Pull the latest code from the repository</li>
+                            <li>Restart Docker containers</li>
+                            <li>May cause brief downtime (1-2 minutes)</li>
+                        </ul>
+                    </div>
+                    
+                    <div id="updateStatus"></div>
+                    <?php else: ?>
+                    <div class="alert alert-success">
+                        <i class="bi bi-check-circle me-2"></i>
+                        You are already running the latest version!
+                    </div>
+                    <?php endif; ?>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <?php if ($updateInfo['update_available'] ?? false): ?>
+                    <button type="button" class="btn btn-warning" id="updateBtn" onclick="startUpdate(false)">
+                        <i class="bi bi-download me-2"></i>Update Now
+                    </button>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

@@ -86,14 +86,25 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                 </li>
             </ul>
             <ul class="navbar-nav">
+                <?php
+                // Check for updates notification
+                $updateNotification = getSetting($db, 'update_notification', '0');
+                if ($updateNotification === '1'):
+                    $cachedUpdate = getSetting($db, 'cached_update_info', null);
+                    $updateData = $cachedUpdate ? json_decode($cachedUpdate, true) : null;
+                ?>
                 <li class="nav-item">
-                    <a class="nav-link position-relative text-success fw-semibold" href="#" onclick="showUpdateModal(); return false;" id="updateLink" style="display: none;">
+                    <a class="nav-link position-relative text-warning fw-semibold" href="/settings.php#updates" title="Update Available">
                         <i class="bi bi-arrow-up-circle me-1"></i>Update Available
-                        <span class="position-absolute top-0 start-100 translate-middle p-1 bg-success border border-light rounded-circle">
+                        <?php if ($updateData && isset($updateData['latest_version'])): ?>
+                        <span class="badge bg-warning text-dark ms-1"><?= htmlspecialchars($updateData['latest_version']) ?></span>
+                        <?php endif; ?>
+                        <span class="position-absolute top-0 start-100 translate-middle p-1 bg-warning border border-light rounded-circle">
                             <span class="visually-hidden">Update available</span>
                         </span>
                     </a>
                 </li>
+                <?php endif; ?>
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                         <i class="bi bi-person-circle me-1"></i><?= htmlspecialchars($currentUser['username']) ?>

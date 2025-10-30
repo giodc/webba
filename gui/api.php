@@ -305,6 +305,14 @@ try {
     case "change_php_version":
         changePHPVersionHandler($db);
         break;
+    
+    case "trigger_update":
+        triggerUpdateHandler($db);
+        break;
+    
+    case "check_update_status":
+        checkUpdateStatusHandler($db);
+        break;
         
     default:
         ob_clean();
@@ -4018,6 +4026,58 @@ function fixLaravelPermissionsHandler($db, $siteId) {
         } else {
             throw new Exception($result['message']);
         }
+        
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    }
+}
+
+/**
+ * Trigger system update
+ */
+function triggerUpdateHandler($db) {
+    try {
+        // Only admins can trigger updates
+        if (!isAdmin()) {
+            http_response_code(403);
+            throw new Exception("Only administrators can trigger updates");
+        }
+        
+        // Get request body
+        $input = file_get_contents('php://input');
+        $data = json_decode($input, true);
+        $skipBackup = $data['skip_backup'] ?? false;
+        
+        $result = triggerUpdate($skipBackup);
+        
+        if ($result['success']) {
+            echo json_encode([
+                'success' => true,
+                'message' => $result['message'],
+                'log_file' => $result['log_file']
+            ]);
+        } else {
+            throw new Exception($result['error']);
+        }
+        
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    }
+}
+
+/**
+ * Check update status
+ */
+function checkUpdateStatusHandler($db) {
+    try {
+        $status = getUpdateStatus();
+        
+        echo json_encode([
+            'success' => true,
+            'status' => $status
+        ]);
         
     } catch (Exception $e) {
         http_response_code(500);
