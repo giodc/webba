@@ -173,6 +173,42 @@ function getSetting($pdo, $key, $default = null) {
     return $result ? $result['value'] : $default;
 }
 
+/**
+ * Redirect from :9000 to SSL URL if dashboard has SSL enabled
+ * This prevents exposing the insecure :9000 port when SSL is configured
+ */
+function redirectToSSLIfEnabled() {
+    // Check if request is coming from port 9000
+    $serverPort = $_SERVER['SERVER_PORT'] ?? '80';
+    
+    // Only redirect if accessing via port 9000
+    if ($serverPort != '9000') {
+        return;
+    }
+    
+    // Initialize database to check settings
+    try {
+        $db = initDatabase();
+        $dashboardSSL = getSetting($db, 'dashboard_ssl', '0');
+        $dashboardDomain = getSetting($db, 'dashboard_domain', '');
+        
+        // If SSL is enabled and domain is configured, redirect
+        if ($dashboardSSL === '1' && !empty($dashboardDomain)) {
+            $protocol = 'https';
+            $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
+            $redirectUrl = $protocol . '://' . $dashboardDomain . $requestUri;
+            
+            // Perform permanent redirect (301)
+            header('Location: ' . $redirectUrl, true, 301);
+            exit;
+        }
+    } catch (Exception $e) {
+        // If there's an error checking settings, don't redirect
+        // This ensures the dashboard remains accessible even if there's a DB issue
+        error_log('SSL redirect check failed: ' . $e->getMessage());
+    }
+}
+
 function setSetting($pdo, $key, $value) {
     $stmt = $pdo->prepare("INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)");
     return $stmt->execute([$key, $value]);

@@ -2,6 +2,9 @@
 require_once 'includes/functions.php';
 require_once 'includes/auth.php';
 
+// Redirect to SSL URL if dashboard has SSL enabled and request is from :9000
+redirectToSSLIfEnabled();
+
 // Require admin authentication
 requireAdmin();
 
