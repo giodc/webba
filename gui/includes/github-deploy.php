@@ -592,3 +592,101 @@ function syncEnvToLaravel($containerName, $envVars = []) {
         'details' => implode("\n", $results)
     ];
 }
+
+/**
+ * Sync Docker environment variables to Laravel .env file
+ * This is called after container restart to ensure database credentials persist
+ * 
+ * @param string $containerName Docker container name
+ * @return array Result with success status
+ */
+function syncDockerEnvToLaravel($containerName) {
+    try {
+        // Check if .env exists
+        exec("docker exec {$containerName} test -f /var/www/html/.env 2>&1", $testOutput, $testReturn);
+        if ($testReturn !== 0) {
+            return ['success' => false, 'message' => 'No .env file found in container'];
+        }
+        
+        // Read current .env file
+        exec("docker exec {$containerName} cat /var/www/html/.env 2>/dev/null", $currentEnvLines, $envReadReturn);
+        
+        if ($envReadReturn !== 0) {
+            return ['success' => false, 'message' => 'Could not read .env file'];
+        }
+        
+        // Get Docker environment variables
+        exec("docker exec {$containerName} sh -c 'printenv | grep -E \"^(DB_|REDIS_|MAIL_|AWS_)\"'", $dockerEnvOutput);
+        
+        if (empty($dockerEnvOutput)) {
+            return ['success' => true, 'message' => 'No Docker environment variables to sync'];
+        }
+        
+        // Parse Docker env vars into associative array
+        $dockerEnvVars = [];
+        foreach ($dockerEnvOutput as $envLine) {
+            if (strpos($envLine, '=') !== false) {
+                list($key, $value) = explode('=', $envLine, 2);
+                $dockerEnvVars[trim($key)] = trim($value);
+            }
+        }
+        
+        // Update or add variables in .env content
+        $updatedEnvLines = [];
+        $processedKeys = [];
+        
+        foreach ($currentEnvLines as $line) {
+            $trimmedLine = trim($line);
+            
+            // Keep comments and empty lines
+            if (empty($trimmedLine) || strpos($trimmedLine, '#') === 0) {
+                $updatedEnvLines[] = $line;
+                continue;
+            }
+            
+            // Check if this line has a key we need to update
+            if (strpos($trimmedLine, '=') !== false) {
+                list($key) = explode('=', $trimmedLine, 2);
+                $key = trim($key);
+                
+                if (isset($dockerEnvVars[$key])) {
+                    // Update with Docker value
+                    $updatedEnvLines[] = $key . '=' . $dockerEnvVars[$key];
+                    $processedKeys[] = $key;
+                } else {
+                    // Keep original line
+                    $updatedEnvLines[] = $line;
+                }
+            } else {
+                $updatedEnvLines[] = $line;
+            }
+        }
+        
+        // Add new variables that weren't in .env
+        foreach ($dockerEnvVars as $key => $value) {
+            if (!in_array($key, $processedKeys)) {
+                $updatedEnvLines[] = $key . '=' . $value;
+            }
+        }
+        
+        // Write updated .env file using base64 to avoid escaping issues
+        $newEnvContent = implode("\n", $updatedEnvLines);
+        $base64Content = base64_encode($newEnvContent);
+        exec("docker exec {$containerName} sh -c 'echo \"{$base64Content}\" | base64 -d > /var/www/html/.env' 2>&1", $writeOutput, $writeReturn);
+        
+        if ($writeReturn !== 0) {
+            return ['success' => false, 'message' => 'Failed to write .env file: ' . implode("\n", $writeOutput)];
+        }
+        
+        // Clear Laravel config cache
+        exec("docker exec {$containerName} sh -c 'cd /var/www/html && php artisan config:clear 2>&1'");
+        
+        return [
+            'success' => true,
+            'message' => 'Synced ' . count($dockerEnvVars) . ' environment variables to .env'
+        ];
+        
+    } catch (Exception $e) {
+        return ['success' => false, 'message' => 'Error: ' . $e->getMessage()];
+    }
+}

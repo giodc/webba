@@ -1423,9 +1423,28 @@ function restartContainer($db, $id) {
         
         if ($result['success']) {
             updateSiteStatus($db, $id, "running");
+            
+            // For Laravel sites, sync environment variables after restart
+            if ($site['type'] === 'laravel') {
+                // Wait a moment for container to be fully up
+                sleep(2);
+                
+                // Sync Docker env vars to Laravel .env file
+                require_once __DIR__ . '/includes/github-deploy.php';
+                $syncResult = syncDockerEnvToLaravel($site['container_name']);
+                
+                if ($syncResult['success']) {
+                    $message = "Container restarted successfully. Environment variables synced.";
+                } else {
+                    $message = "Container restarted successfully. Warning: " . $syncResult['message'];
+                }
+            } else {
+                $message = "Container restarted successfully";
+            }
+            
             echo json_encode([
                 "success" => true,
-                "message" => "Container restarted successfully"
+                "message" => $message
             ]);
         } else {
             throw new Exception("Failed to restart container: " . $result['output']);
@@ -1451,9 +1470,28 @@ function startContainer($db, $id) {
         
         if ($result['success']) {
             updateSiteStatus($db, $id, "running");
+            
+            // For Laravel sites, sync environment variables after start
+            if ($site['type'] === 'laravel') {
+                // Wait a moment for container to be fully up
+                sleep(2);
+                
+                // Sync Docker env vars to Laravel .env file
+                require_once __DIR__ . '/includes/github-deploy.php';
+                $syncResult = syncDockerEnvToLaravel($site['container_name']);
+                
+                if ($syncResult['success']) {
+                    $message = "Container started successfully. Environment variables synced.";
+                } else {
+                    $message = "Container started successfully. Warning: " . $syncResult['message'];
+                }
+            } else {
+                $message = "Container started successfully";
+            }
+            
             echo json_encode([
                 "success" => true,
-                "message" => "Container started successfully"
+                "message" => $message
             ]);
         } else {
             throw new Exception("Failed to start container: " . $result['output']);
