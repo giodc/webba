@@ -315,21 +315,70 @@ function runLaravelBuild($containerName, $siteType = 'laravel') {
     // Sync Docker environment variables to .env file (critical for database connection)
     $results[] = "Syncing Docker environment variables to .env...";
     
+    // Read current .env file
+    exec("docker exec {$containerName} cat /var/www/html/.env 2>/dev/null", $currentEnvLines, $envReadReturn);
+    
+    if ($envReadReturn !== 0) {
+        $currentEnvLines = [];
+    }
+    
     // Get Docker environment variables
     exec("docker exec {$containerName} sh -c 'printenv | grep -E \"^(DB_|REDIS_|MAIL_|AWS_)\"'", $dockerEnvOutput);
     
     if (!empty($dockerEnvOutput)) {
+        // Parse Docker env vars into associative array
+        $dockerEnvVars = [];
         foreach ($dockerEnvOutput as $envLine) {
             if (strpos($envLine, '=') !== false) {
                 list($key, $value) = explode('=', $envLine, 2);
-                $key = trim($key);
-                $value = trim($value);
-                
-                // Update or add the variable in .env
-                exec("docker exec {$containerName} sh -c 'grep -q \"^{$key}=\" /var/www/html/.env && sed -i \"s|^{$key}=.*|{$key}={$value}|\" /var/www/html/.env || echo \"{$key}={$value}\" >> /var/www/html/.env'");
+                $dockerEnvVars[trim($key)] = trim($value);
             }
         }
-        $results[] = "✓ Synced " . count($dockerEnvOutput) . " environment variables to .env";
+        
+        // Update or add variables in .env content
+        $updatedEnvLines = [];
+        $processedKeys = [];
+        
+        foreach ($currentEnvLines as $line) {
+            $trimmedLine = trim($line);
+            
+            // Keep comments and empty lines
+            if (empty($trimmedLine) || strpos($trimmedLine, '#') === 0) {
+                $updatedEnvLines[] = $line;
+                continue;
+            }
+            
+            // Check if this line has a key we need to update
+            if (strpos($trimmedLine, '=') !== false) {
+                list($key) = explode('=', $trimmedLine, 2);
+                $key = trim($key);
+                
+                if (isset($dockerEnvVars[$key])) {
+                    // Update with Docker value
+                    $updatedEnvLines[] = $key . '=' . $dockerEnvVars[$key];
+                    $processedKeys[] = $key;
+                } else {
+                    // Keep original line
+                    $updatedEnvLines[] = $line;
+                }
+            } else {
+                $updatedEnvLines[] = $line;
+            }
+        }
+        
+        // Add new variables that weren't in .env
+        foreach ($dockerEnvVars as $key => $value) {
+            if (!in_array($key, $processedKeys)) {
+                $updatedEnvLines[] = $key . '=' . $value;
+            }
+        }
+        
+        // Write updated .env file using base64 to avoid escaping issues
+        $newEnvContent = implode("\n", $updatedEnvLines);
+        $base64Content = base64_encode($newEnvContent);
+        exec("docker exec {$containerName} sh -c 'echo \"{$base64Content}\" | base64 -d > /var/www/html/.env'");
+        
+        $results[] = "✓ Synced " . count($dockerEnvVars) . " environment variables to .env";
     } else {
         $results[] = "→ No Docker environment variables to sync";
     }
