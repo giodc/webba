@@ -162,6 +162,33 @@ All update settings stored in `settings` table:
 3. Check logs: `/opt/wharftales/logs/`
 4. Manually check: `curl https://raw.githubusercontent.com/giodc/wharftales/main/versions.json`
 
+### Port Conflict Error (Address Already in Use)
+If you see: `failed to bind host port for 0.0.0.0:80: address already in use`
+
+**Quick Fix:**
+```bash
+/opt/wharftales/scripts/fix-port-conflict.sh
+```
+
+**Manual Fix:**
+```bash
+# Stop containers
+cd /opt/wharftales
+docker-compose down
+
+# Wait for ports to be released
+sleep 5
+
+# Start containers
+docker-compose up -d
+```
+
+**If nginx is running on host:**
+```bash
+sudo systemctl stop nginx
+sudo systemctl disable nginx
+```
+
 ### Update Hangs
 1. Check if git repository is clean: `cd /opt/wharftales && git status`
 2. Check Docker containers: `docker-compose ps`

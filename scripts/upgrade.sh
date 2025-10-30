@@ -85,11 +85,38 @@ echo "New version: $NEW_VERSION" | tee -a "$LOGFILE"
 # Update docker containers
 echo "Updating Docker containers..." | tee -a "$LOGFILE"
 
+# Stop containers gracefully to release ports
+echo "Stopping containers to release ports..." | tee -a "$LOGFILE"
+docker-compose down 2>&1 | tee -a "$LOGFILE"
+
+# Wait for ports to be released
+echo "Waiting for ports to be released..." | tee -a "$LOGFILE"
+sleep 3
+
+# Verify critical ports are free
+echo "Checking if ports 80 and 443 are available..." | tee -a "$LOGFILE"
+for i in {1..10}; do
+    if ! ss -tlnp | grep -q ':80 '; then
+        echo "✓ Port 80 is available" | tee -a "$LOGFILE"
+        break
+    fi
+    if [ $i -eq 10 ]; then
+        echo "✗ Port 80 is still in use after 10 seconds" | tee -a "$LOGFILE"
+        echo "Checking what's using port 80..." | tee -a "$LOGFILE"
+        ss -tlnp | grep ':80 ' | tee -a "$LOGFILE"
+        exit 1
+    fi
+    echo "Port 80 still in use, waiting... ($i/10)" | tee -a "$LOGFILE"
+    sleep 1
+done
+
 # Pull latest images
+echo "Pulling latest images..." | tee -a "$LOGFILE"
 docker-compose pull 2>&1 | tee -a "$LOGFILE"
 
-# Recreate containers
-docker-compose up -d --force-recreate --remove-orphans 2>&1 | tee -a "$LOGFILE"
+# Start containers with new images
+echo "Starting containers..." | tee -a "$LOGFILE"
+docker-compose up -d --remove-orphans 2>&1 | tee -a "$LOGFILE"
 
 if [ $? -eq 0 ]; then
     echo "✓ Docker containers updated successfully" | tee -a "$LOGFILE"
