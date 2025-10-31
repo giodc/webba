@@ -827,6 +827,16 @@ function markCertificateRemoved($db, $siteId) {
 }
 
 /**
+ * Normalize version string for comparison
+ * Strips alpha, beta, rc, dev suffixes
+ */
+function normalizeVersion($version) {
+    // Remove common suffixes like "alpha", "beta", "rc", "dev"
+    $normalized = preg_replace('/\s*(alpha|beta|rc|dev).*$/i', '', trim($version));
+    return $normalized;
+}
+
+/**
  * Get current WharfTales version
  */
 function getCurrentVersion() {
@@ -921,9 +931,14 @@ function checkForUpdates($forceCheck = false) {
         // Update last check time
         setSetting($db, 'last_update_check', (string)time());
         
-        // Compare versions
-        $updateAvailable = version_compare($latestVersion, $currentVersion, '>');
-        $isSupported = version_compare($currentVersion, $minSupported, '>=');
+        // Normalize versions for comparison (strip alpha, beta, rc, dev suffixes)
+        $normalizedCurrent = normalizeVersion($currentVersion);
+        $normalizedLatest = normalizeVersion($latestVersion);
+        $normalizedMinSupported = normalizeVersion($minSupported);
+        
+        // Compare versions using normalized versions
+        $updateAvailable = version_compare($normalizedLatest, $normalizedCurrent, '>');
+        $isSupported = version_compare($normalizedCurrent, $normalizedMinSupported, '>=');
         
         $result = [
             'update_available' => $updateAvailable,

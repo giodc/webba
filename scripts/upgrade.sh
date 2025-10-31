@@ -130,6 +130,13 @@ else
         echo "Restored from backup" | tee -a "$LOGFILE"
     fi
     
+    # Clear update_in_progress flag on failure
+    docker exec wharftales_gui php -r "
+    \$db = new PDO('sqlite:/app/data/database.sqlite');
+    \$stmt = \$db->prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)');
+    \$stmt->execute(['update_in_progress', '0']);
+    " 2>&1 | tee -a "$LOGFILE"
+    
     exit 1
 fi
 
@@ -158,5 +165,14 @@ echo "Upgrade completed successfully!" | tee -a "$LOGFILE"
 echo "Version: $CURRENT_VERSION → $NEW_VERSION" | tee -a "$LOGFILE"
 echo "Time: $(date)" | tee -a "$LOGFILE"
 echo "========================================" | tee -a "$LOGFILE"
+
+# Clear update_in_progress flag in database
+echo "Clearing update_in_progress flag..." | tee -a "$LOGFILE"
+docker exec wharftales_gui php -r "
+\$db = new PDO('sqlite:/app/data/database.sqlite');
+\$stmt = \$db->prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)');
+\$stmt->execute(['update_in_progress', '0']);
+echo 'Update flag cleared' . PHP_EOL;
+" 2>&1 | tee -a "$LOGFILE"
 
 exit 0
