@@ -867,7 +867,7 @@ function checkForUpdates($forceCheck = false) {
     }
     
     $currentVersion = getCurrentVersion();
-    $versionsUrl = getSetting($db, 'versions_url', 'https://raw.githubusercontent.com/giodc/wharftales/main/versions.json');
+    $versionsUrl = getSetting($db, 'versions_url', 'https://raw.githubusercontent.com/giodc/wharftales/refs/heads/master/versions.json');
     
     try {
         $response = false;

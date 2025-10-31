@@ -16,12 +16,12 @@ The update system needs `versions.json` to be accessible. You have two options:
 
 2. **Verify it's accessible:**
    ```bash
-   curl https://raw.githubusercontent.com/giodc/wharftales/main/versions.json
+   curl https://raw.githubusercontent.com/giodc/wharftales/refs/heads/master/versions.json
    ```
 
 3. **The system will automatically use:**
    ```
-   https://raw.githubusercontent.com/giodc/wharftales/main/versions.json
+   https://raw.githubusercontent.com/giodc/wharftales/refs/heads/master/versions.json
    ```
 
 ### Option 2: Use Local File (For Testing)
@@ -137,7 +137,7 @@ php /opt/wharftales/scripts/check-updates-cron.php
 **Solutions:**
 1. Check if file exists on GitHub:
    ```bash
-   curl -I https://raw.githubusercontent.com/giodc/wharftales/main/versions.json
+   curl -I https://raw.githubusercontent.com/giodc/wharftales/refs/heads/master/versions.json
    ```
 
 2. If 404, commit and push the file:

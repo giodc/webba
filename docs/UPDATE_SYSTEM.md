@@ -160,7 +160,7 @@ All update settings stored in `settings` table:
 1. Check internet connectivity
 2. Verify versions.json URL is accessible
 3. Check logs: `/opt/wharftales/logs/`
-4. Manually check: `curl https://raw.githubusercontent.com/giodc/wharftales/main/versions.json`
+4. Manually check: `curl https://raw.githubusercontent.com/giodc/wharftales/refs/heads/master/versions.json`
 
 ### Port Conflict Error (Address Already in Use)
 If you see: `failed to bind host port for 0.0.0.0:80: address already in use`
