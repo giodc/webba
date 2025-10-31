@@ -53,7 +53,7 @@ $csrfToken = generateCSRFToken();
     <link href="css/custom.css" rel="stylesheet">
     <style>
         body {
-            background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+            background: #0A0A0A;
             min-height: 100vh;
             display: flex;
             align-items: center;

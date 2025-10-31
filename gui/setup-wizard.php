@@ -1,6 +1,7 @@
 <?php
 require_once 'includes/functions.php';
 require_once 'includes/auth.php';
+require_once 'includes/telemetry.php';
 
 // Redirect to SSL URL if dashboard has SSL enabled and request is from :9000
 redirectToSSLIfEnabled();
@@ -30,6 +31,8 @@ $customWildcardDomain = getSetting($db, 'custom_wildcard_domain', '');
 $dashboardDomain = getSetting($db, 'dashboard_domain', '');
 $dashboardSsl = getSetting($db, 'dashboard_ssl_enabled', '0');
 $letsencryptEmail = getSetting($db, 'letsencrypt_email', '');
+$telemetryEnabled = isTelemetryEnabled();
+$installationId = getInstallationId();
 
 $currentUser = getCurrentUser();
 ?>
@@ -143,6 +146,7 @@ $currentUser = getCurrentUser();
                 <div class="step-dot" data-step="3">3</div>
                 <div class="step-dot" data-step="4">4</div>
                 <div class="step-dot" data-step="5">5</div>
+                <div class="step-dot" data-step="6">6</div>
             </div>
 
             <!-- Step 1: Welcome -->
@@ -157,6 +161,7 @@ $currentUser = getCurrentUser();
                         <li>Custom domain for this dashboard (optional)</li>
                         <li>SSL certificate for dashboard (optional)</li>
                         <li>Let's Encrypt email for SSL certificates</li>
+                        <li>Anonymous usage statistics (optional)</li>
                     </ul>
                 </div>
 
@@ -323,14 +328,61 @@ $currentUser = getCurrentUser();
                     <button class="btn btn-outline-secondary btn-setup" onclick="prevStep()">
                         <i class="bi bi-arrow-left me-2"></i>Back
                     </button>
-                    <button class="btn btn-success btn-setup" onclick="completeSetup()">
+                    <div>
+                        <button class="btn btn-outline-secondary btn-setup me-2" onclick="skipStep()">
+                            Skip
+                        </button>
+                        <button class="btn btn-dark btn-setup" onclick="saveAndNext('letsencryptEmail', 'letsencrypt_email')">
+                            Next <i class="bi bi-arrow-right ms-2"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 6: Telemetry -->
+            <div class="setup-step" data-step="6">
+                <h3><i class="bi bi-graph-up me-2"></i>Anonymous Usage Statistics</h3>
+                <p>Help improve WharfTales by sharing anonymous usage data</p>
+
+                <div class="info-box">
+                    <strong><i class="bi bi-shield-check me-2"></i>Privacy First:</strong>
+                    <ul class="mb-0 mt-2">
+                        <li>Completely anonymous - no personal data collected</li>
+                        <li>Only basic metrics: version, site count, PHP version</li>
+                        <li>Helps us understand usage patterns and prioritize features</li>
+                        <li>You can disable this anytime from Settings</li>
+                    </ul>
+                </div>
+
+                <div class="alert alert-info">
+                    <strong><i class="bi bi-info-circle me-2"></i>What we collect:</strong>
+                    <ul class="mb-0 mt-2">
+                        <li><strong>Installation ID:</strong> <code><?= htmlspecialchars($installationId) ?></code></li>
+                        <li><strong>WharfTales version</strong></li>
+                        <li><strong>PHP version</strong></li>
+                        <li><strong>Number of sites</strong> (not their names or domains)</li>
+                    </ul>
+                </div>
+
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="enableTelemetry" <?= $telemetryEnabled ? 'checked' : '' ?>>
+                    <label class="form-check-label" for="enableTelemetry">
+                        <strong>Enable anonymous usage statistics</strong>
+                    </label>
+                </div>
+
+                <div class="d-flex justify-content-between mt-4">
+                    <button class="btn btn-outline-secondary btn-setup" onclick="prevStep()">
+                        <i class="bi bi-arrow-left me-2"></i>Back
+                    </button>
+                    <button class="btn btn-success btn-setup" onclick="completeTelemetryAndSetup()">
                         <i class="bi bi-check-circle me-2"></i>Complete Setup
                     </button>
                 </div>
             </div>
 
-            <!-- Step 6: Completion -->
-            <div class="setup-step" data-step="6">
+            <!-- Step 7: Completion -->
+            <div class="setup-step" data-step="7">
                 <div class="text-center">
                     <i class="bi bi-check-circle-fill success-icon"></i>
                     <h3 class="mt-3">Setup Complete!</h3>
@@ -357,7 +409,7 @@ $currentUser = getCurrentUser();
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         let currentStep = 1;
-        const totalSteps = 6;
+        const totalSteps = 7;
 
         function updateStepIndicator() {
             document.querySelectorAll('.step-dot').forEach(dot => {
@@ -461,27 +513,25 @@ $currentUser = getCurrentUser();
             nextStep();
         }
 
-        async function completeSetup() {
-            const email = document.getElementById('letsencryptEmail').value.trim();
+        async function completeTelemetryAndSetup() {
+            const telemetryEnabled = document.getElementById('enableTelemetry').checked;
             
-            // Save email if provided
-            if (email) {
-                try {
-                    const response = await fetch('/api.php?action=update_setting', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ key: 'letsencrypt_email', value: email })
-                    });
-                    
-                    const result = await response.json();
-                    if (!result.success) {
-                        alert('Failed to save email: ' + (result.error || 'Unknown error'));
-                        return;
-                    }
-                } catch (error) {
-                    alert('Network error: ' + error.message);
+            // Save telemetry preference
+            try {
+                const response = await fetch('/api.php?action=update_setting', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key: 'telemetry_enabled', value: telemetryEnabled ? '1' : '0' })
+                });
+                
+                const result = await response.json();
+                if (!result.success) {
+                    alert('Failed to save telemetry setting: ' + (result.error || 'Unknown error'));
                     return;
                 }
+            } catch (error) {
+                alert('Network error: ' + error.message);
+                return;
             }
             
             // Mark setup as completed
@@ -502,7 +552,7 @@ $currentUser = getCurrentUser();
                 return;
             }
             
-            showStep(6);
+            showStep(7);
         }
 
         // Initialize
