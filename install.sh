@@ -149,6 +149,9 @@ if [ "$UPDATE_MODE" = true ]; then
     docker exec -u root wharftales_gui bash -c "find /app/apps -type d -exec chmod 775 {} \\;" 2>/dev/null || true
     docker exec -u root wharftales_gui bash -c "find /app/apps -type f -exec chmod 664 {} \\;" 2>/dev/null || true
     
+    echo "Ensuring database file exists with proper permissions..."
+    docker exec -u root wharftales_gui bash -c "touch /app/data/database.sqlite && chown www-data:www-data /app/data/database.sqlite && chmod 664 /app/data/database.sqlite"
+    
     # Run database migrations
     echo "Running database migrations..."
     sleep 2
@@ -156,9 +159,6 @@ if [ "$UPDATE_MODE" = true ]; then
     docker exec wharftales_gui php /var/www/html/migrate-php-version.php 2>/dev/null || echo "PHP version migration completed or already applied"
     docker exec wharftales_gui php /var/www/html/migrations/add_github_fields.php 2>/dev/null || echo "GitHub fields migration completed or already applied"
     docker exec wharftales_gui php /var/www/html/migrations/fix-site-permissions-database.php 2>/dev/null || echo "Site permissions migration completed or already applied"
-    
-    echo "Ensuring database file has correct permissions..."
-    docker exec -u root wharftales_gui bash -c "if [ -f /app/data/database.sqlite ]; then chown www-data:www-data /app/data/database.sqlite && chmod 664 /app/data/database.sqlite; fi"
     
     echo "Importing docker-compose configurations to database..."
     docker exec wharftales_gui php /var/www/html/migrate-compose-to-db.php 2>/dev/null || echo "Compose migration completed or already applied"
@@ -333,6 +333,9 @@ docker exec -u root wharftales_gui chmod -R 775 /app/apps
 docker exec -u root wharftales_gui bash -c "find /app/apps -type d -exec chmod 775 {} \\;" 2>/dev/null || true
 docker exec -u root wharftales_gui bash -c "find /app/apps -type f -exec chmod 664 {} \\;" 2>/dev/null || true
 
+echo "Creating database file with proper permissions..."
+docker exec -u root wharftales_gui bash -c "touch /app/data/database.sqlite && chown www-data:www-data /app/data/database.sqlite && chmod 664 /app/data/database.sqlite"
+
 echo "Initializing database..."
 sleep 2
 docker exec wharftales_gui php -r "
@@ -341,8 +344,8 @@ require '/var/www/html/includes/functions.php';
 echo 'Database initialized successfully\n';
 " || echo "Database initialization failed - will be created on first access"
 
-echo "Setting database permissions..."
-docker exec -u root wharftales_gui bash -c "if [ -f /app/data/database.sqlite ]; then chown www-data:www-data /app/data/database.sqlite && chmod 664 /app/data/database.sqlite; fi"
+echo "Verifying database permissions..."
+docker exec -u root wharftales_gui bash -c "chown www-data:www-data /app/data/database.sqlite && chmod 664 /app/data/database.sqlite"
 
 echo "Running database migrations..."
 docker exec wharftales_gui php /var/www/html/migrate-rbac-2fa.php 2>/dev/null || echo "Migration will run on first access"

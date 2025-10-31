@@ -223,12 +223,6 @@ $csrfToken = generateCSRFToken();
             </form>
         </div>
 
-        <div class="text-center mt-4">
-            <small style="color: rgba(255,255,255,0.6);">
-                <i class="bi bi-shield-check me-1"></i>
-                Secure setup with bcrypt password hashing
-            </small>
-        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
