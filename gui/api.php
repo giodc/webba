@@ -12,23 +12,27 @@ header('Content-Type: application/json');
 
 // Set error handler to catch all errors and return JSON
 set_error_handler(function($errno, $errstr, $errfile, $errline) {
+    while (ob_get_level() > 1) { ob_end_clean(); }
     ob_clean();
     http_response_code(500);
     echo json_encode([
         'success' => false,
         'error' => $errstr . ' in ' . $errfile . ' on line ' . $errline
     ]);
+    while (ob_get_level() > 0) { ob_end_flush(); }
     exit;
 });
 
 // Set exception handler
 set_exception_handler(function($exception) {
+    while (ob_get_level() > 1) { ob_end_clean(); }
     ob_clean();
     http_response_code(500);
     echo json_encode([
         'success' => false,
         'error' => 'Exception: ' . $exception->getMessage()
     ]);
+    while (ob_get_level() > 0) { ob_end_flush(); }
     exit;
 });
 
@@ -39,30 +43,55 @@ try {
     require_once 'includes/github-deploy.php';
     require_once 'includes/laravel-helpers.php';
 } catch (Throwable $e) {
+    while (ob_get_level() > 1) { ob_end_clean(); }
     ob_clean();
     http_response_code(500);
     echo json_encode(['success' => false, 'error' => 'Failed to load dependencies: ' . $e->getMessage()]);
+    while (ob_get_level() > 0) { ob_end_flush(); }
     exit;
 }
 
 // Require authentication for all API calls
 if (!isLoggedIn()) {
-    ob_clean();
+    while (ob_get_level()) {
+        ob_end_clean();
+    }
     http_response_code(401);
-    echo json_encode(['success' => false, 'error' => 'Unauthorized']);
-    exit;
+    die(json_encode(['success' => false, 'error' => 'Unauthorized']));
 }
 
 try {
     $db = initDatabase();
 } catch (Throwable $e) {
+    while (ob_get_level() > 1) { ob_end_clean(); }
     ob_clean();
     http_response_code(500);
     echo json_encode(['success' => false, 'error' => 'Database initialization failed: ' . $e->getMessage()]);
+    while (ob_get_level() > 0) { ob_end_flush(); }
     exit;
 }
 
 $action = $_GET["action"] ?? "";
+
+// Clean ALL output buffer levels before processing any action to prevent JSON corruption
+while (ob_get_level() > 1) {
+    ob_end_clean();
+}
+ob_clean();
+
+// Helper function to output JSON safely
+function outputJSON($data, $statusCode = 200) {
+    while (ob_get_level() > 1) {
+        ob_end_clean();
+    }
+    ob_clean();
+    if ($statusCode !== 200) {
+        http_response_code($statusCode);
+    }
+    echo json_encode($data);
+    ob_end_flush();
+    exit;
+}
 
 // Wrap entire switch in try-catch to ensure JSON responses
 try {
@@ -120,7 +149,7 @@ try {
         break;
     
     case "check_updates":
-        checkForUpdates();
+        checkForUpdatesHandler($db);
         break;
     
     case "perform_update":
@@ -315,11 +344,13 @@ try {
         break;
         
     default:
+        while (ob_get_level() > 1) { ob_end_clean(); }
         ob_clean();
         http_response_code(400);
         echo json_encode(["success" => false, "error" => "Invalid action: " . $action]);
     }
 } catch (Throwable $e) {
+    while (ob_get_level() > 1) { ob_end_clean(); }
     ob_clean();
     http_response_code(500);
     echo json_encode([
@@ -1212,12 +1243,14 @@ function getSiteData($db, $id) {
             throw new Exception("Site not found");
         }
 
+        ob_clean();
         echo json_encode([
             "success" => true,
             "site" => $site
         ]);
 
     } catch (Exception $e) {
+        ob_clean();
         http_response_code(400);
         echo json_encode([
             "success" => false,
@@ -1318,6 +1351,7 @@ function updateSiteData($db) {
             }
         }
 
+        ob_clean();
         echo json_encode([
             "success" => true,
             "message" => $message,
@@ -1327,6 +1361,7 @@ function updateSiteData($db) {
         ]);
 
     } catch (Exception $e) {
+        ob_clean();
         http_response_code(400);
         echo json_encode([
             "success" => false,
@@ -1454,6 +1489,7 @@ function restartContainer($db, $id) {
                 $message = "Container restarted successfully";
             }
             
+            ob_clean();
             echo json_encode([
                 "success" => true,
                 "message" => $message
@@ -1463,6 +1499,7 @@ function restartContainer($db, $id) {
         }
 
     } catch (Exception $e) {
+        ob_clean();
         http_response_code(400);
         echo json_encode([
             "success" => false,
@@ -1501,6 +1538,7 @@ function startContainer($db, $id) {
                 $message = "Container started successfully";
             }
             
+            ob_clean();
             echo json_encode([
                 "success" => true,
                 "message" => $message
@@ -1510,6 +1548,7 @@ function startContainer($db, $id) {
         }
 
     } catch (Exception $e) {
+        ob_clean();
         http_response_code(400);
         echo json_encode([
             "success" => false,
@@ -1529,6 +1568,7 @@ function stopContainer($db, $id) {
         
         if ($result['success']) {
             updateSiteStatus($db, $id, "stopped");
+            ob_clean();
             echo json_encode([
                 "success" => true,
                 "message" => "Container stopped successfully"
@@ -1538,6 +1578,7 @@ function stopContainer($db, $id) {
         }
 
     } catch (Exception $e) {
+        ob_clean();
         http_response_code(400);
         echo json_encode([
             "success" => false,
@@ -1714,6 +1755,7 @@ function getContainerStats($db, $id) {
             $memPercent = round($totalMemPercent, 2);
         }
         
+        ob_clean();
         echo json_encode([
             "success" => true,
             "stats" => [
@@ -1728,6 +1770,7 @@ function getContainerStats($db, $id) {
         ]);
 
     } catch (Exception $e) {
+        ob_clean();
         http_response_code(400);
         echo json_encode([
             "success" => false,
@@ -1869,21 +1912,23 @@ function changePasswordHandler($db) {
 // UPDATE SYSTEM HANDLERS
 // ============================================
 
-function checkForUpdates() {
+function checkForUpdatesHandler($db) {
     try {
-        require_once 'includes/updater.php';
-        $updater = new Updater();
-        $info = $updater->getUpdateInfo();
+        $updateInfo = checkForUpdates(false);
         
-        // Update last check time
-        setLastUpdateCheck(time());
-        
+        ob_clean();
         echo json_encode([
             'success' => true,
-            'data' => $info
+            'data' => [
+                'update_available' => $updateInfo['update_available'] ?? false,
+                'current_version' => $updateInfo['current_version'] ?? 'unknown',
+                'latest_version' => $updateInfo['latest_version'] ?? 'unknown',
+            ],
+            'info' => $updateInfo
         ]);
         
     } catch (Exception $e) {
+        ob_clean();
         http_response_code(500);
         echo json_encode([
             'success' => false,
@@ -1893,11 +1938,18 @@ function checkForUpdates() {
 }
 
 function performSystemUpdate() {
+    global $db;
     try {
-        require_once 'includes/updater.php';
-        $updater = new Updater();
-        $result = $updater->performUpdate();
+        // Only admins can trigger updates
+        if (!isAdmin()) {
+            ob_clean();
+            http_response_code(403);
+            throw new Exception("Only administrators can trigger updates");
+        }
         
+        $result = triggerUpdate(false);
+        
+        ob_clean();
         if ($result['success']) {
             echo json_encode($result);
         } else {
@@ -1906,6 +1958,7 @@ function performSystemUpdate() {
         }
         
     } catch (Exception $e) {
+        ob_clean();
         http_response_code(500);
         echo json_encode([
             'success' => false,
@@ -1915,19 +1968,19 @@ function performSystemUpdate() {
 }
 
 function getUpdateInformation() {
+    global $db;
     try {
-        require_once 'includes/updater.php';
-        $updater = new Updater();
-        $info = $updater->getUpdateInfo();
-        $changelog = $updater->getChangelog(10);
+        $updateInfo = checkForUpdates(true);
         
+        ob_clean();
         echo json_encode([
             'success' => true,
-            'info' => $info,
-            'changelog' => $changelog
+            'info' => $updateInfo,
+            'changelog' => []
         ]);
         
     } catch (Exception $e) {
+        ob_clean();
         http_response_code(500);
         echo json_encode([
             'success' => false,
@@ -1937,17 +1990,23 @@ function getUpdateInformation() {
 }
 
 function getUpdateLogs() {
+    global $db;
     try {
-        require_once 'includes/updater.php';
-        $updater = new Updater();
-        $logs = $updater->getUpdateLogs(100);
+        $logFile = getSetting($db, 'last_update_log', '');
+        $logs = [];
         
+        if ($logFile && file_exists($logFile)) {
+            $logs = file($logFile, FILE_IGNORE_NEW_LINES);
+        }
+        
+        ob_clean();
         echo json_encode([
             'success' => true,
             'logs' => $logs
         ]);
         
     } catch (Exception $e) {
+        ob_clean();
         http_response_code(500);
         echo json_encode([
             'success' => false,
@@ -3054,12 +3113,14 @@ function getSiteContainers($db, $siteId) {
             }
         }
         
+        ob_clean();
         echo json_encode([
             "success" => true,
             "containers" => $containers
         ]);
         
     } catch (Exception $e) {
+        ob_clean();
         http_response_code(500);
         echo json_encode([
             "success" => false,
@@ -4040,6 +4101,7 @@ function triggerUpdateHandler($db) {
     try {
         // Only admins can trigger updates
         if (!isAdmin()) {
+            ob_clean();
             http_response_code(403);
             throw new Exception("Only administrators can trigger updates");
         }
@@ -4051,6 +4113,7 @@ function triggerUpdateHandler($db) {
         
         $result = triggerUpdate($skipBackup);
         
+        ob_clean();
         if ($result['success']) {
             echo json_encode([
                 'success' => true,
@@ -4062,6 +4125,7 @@ function triggerUpdateHandler($db) {
         }
         
     } catch (Exception $e) {
+        ob_clean();
         http_response_code(500);
         echo json_encode(['success' => false, 'error' => $e->getMessage()]);
     }
@@ -4074,14 +4138,21 @@ function checkUpdateStatusHandler($db) {
     try {
         $status = getUpdateStatus();
         
+        ob_clean();
         echo json_encode([
             'success' => true,
             'status' => $status
         ]);
         
     } catch (Exception $e) {
+        ob_clean();
         http_response_code(500);
         echo json_encode(['success' => false, 'error' => $e->getMessage()]);
     }
+}
+
+// Flush ALL output buffer levels to ensure response is sent
+while (ob_get_level() > 0) {
+    ob_end_flush();
 }
 ?>
