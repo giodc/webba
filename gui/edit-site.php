@@ -206,28 +206,33 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                             <i class="bi bi-gear"></i>
                             <span>Settings</span>
                         </a>
+                        <?php if ($site['type'] !== 'mariadb'): ?>
                         <a href="#domain" class="sidebar-nav-item" data-section="domain">
                             <i class="bi bi-globe"></i>
                             <span>Domain & SSL</span>
                         </a>
+                        <?php endif; ?>
                         <a href="#container" class="sidebar-nav-item" data-section="container">
                             <i class="bi bi-box"></i>
                             <span>Container</span>
                         </a>
+                        <?php if ($site['type'] !== 'mariadb'): ?>
                         <a href="#files" class="sidebar-nav-item" data-section="files">
                             <i class="bi bi-folder"></i>
                             <span>Files & Volumes</span>
                         </a>
+                        <?php endif; ?>
                         <a href="#logs" class="sidebar-nav-item" data-section="logs">
                             <i class="bi bi-terminal"></i>
                             <span>Logs</span>
                         </a>
-                        <?php if ($hasDedicatedDb && $dbContainerExists): ?>
+                        <?php if (($hasDedicatedDb && $dbContainerExists) || $site['type'] === 'mariadb'): ?>
                         <a href="#database" class="sidebar-nav-item" data-section="database">
                             <i class="bi bi-database"></i>
                             <span>Database</span>
                         </a>
                         <?php endif; ?>
+                        <?php if ($site['type'] !== 'mariadb'): ?>
                         <a href="#redis" class="sidebar-nav-item" data-section="redis">
                             <i class="bi bi-lightning-charge"></i>
                             <span>Redis Cache</span>
@@ -236,6 +241,7 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                             <i class="bi bi-hdd-network"></i>
                             <span>SFTP Access</span>
                         </a>
+                        <?php endif; ?>
                         <a href="#backup" class="sidebar-nav-item" data-section="backup">
                             <i class="bi bi-cloud-download"></i>
                             <span>Backup & Restore</span>
@@ -298,11 +304,16 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                                 <div class="info-row">
                                     <div class="info-label">Database Type</div>
                                     <div class="info-value">
-                                        <span class="badge bg-<?= ($site['db_type'] ?? 'shared') === 'dedicated' ? 'info' : 'secondary' ?>">
-                                            <i class="bi bi-database me-1"></i><?= ucfirst($site['db_type'] ?? 'shared') ?>
+                                        <?php 
+                                        $dbType = $site['db_type'] ?? 'dedicated';
+                                        $badgeColor = $dbType === 'dedicated' ? 'info' : ($dbType === 'custom' ? 'warning' : 'secondary');
+                                        $dbDescription = $dbType === 'dedicated' ? 'Separate MariaDB container' : ($dbType === 'custom' ? 'External database connection' : 'Shared global database');
+                                        ?>
+                                        <span class="badge bg-<?= $badgeColor ?>">
+                                            <i class="bi bi-database me-1"></i><?= ucfirst($dbType) ?>
                                         </span>
                                         <small class="text-muted ms-2">
-                                            <?= ($site['db_type'] ?? 'shared') === 'dedicated' ? 'Separate MariaDB container' : 'Shared global database' ?>
+                                            <?= $dbDescription ?>
                                         </small>
                                     </div>
                                 </div>
@@ -468,7 +479,8 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                     </div>
                 </div>
                 
-                <!-- PHP Version -->
+                <!-- PHP Version (not applicable for MariaDB) -->
+                <?php if ($site['type'] !== 'mariadb'): ?>
                 <div class="card mt-3">
                     <div class="card-header">
                         <i class="bi bi-code-slash me-2"></i>PHP Version
@@ -499,6 +511,7 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                         </div>
                     </div>
                 </div>
+                <?php endif; ?>
                 
                 <!-- Environment Variables -->
                 <div class="card mt-3">
@@ -625,15 +638,90 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                             </div>
                             <div class="mb-3">
                                 <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="sslEnabled" <?= $site['ssl'] ? 'checked' : '' ?>>
+                                    <input class="form-check-input" type="checkbox" id="sslEnabled" <?= $site['ssl'] ? 'checked' : '' ?> onchange="toggleSSLOptions()">
                                     <label class="form-check-label" for="sslEnabled">
                                         Enable HTTPS (Let's Encrypt)
                                     </label>
                                 </div>
                                 <div class="form-text">Requires custom domain with valid DNS pointing to your server</div>
                             </div>
+                            
+                            <!-- SSL Configuration Options -->
+                            <div id="sslConfigOptions" style="display: <?= $site['ssl'] ? 'block' : 'none' ?>;">
+                                <div class="card bg-light mb-3">
+                                    <div class="card-body">
+                                        <h6 class="card-title">SSL Challenge Method</h6>
+                                        <?php 
+                                        $sslConfig = $site['ssl_config'] ? json_decode($site['ssl_config'], true) : null;
+                                        $currentChallenge = $sslConfig['challenge'] ?? 'http';
+                                        $currentProvider = $sslConfig['provider'] ?? '';
+                                        $currentCredentials = $sslConfig['credentials'] ?? [];
+                                        ?>
+                                        <div class="mb-3">
+                                            <select class="form-select" id="sslChallengeMethod" onchange="toggleSSLChallengeFields(this.value)">
+                                                <option value="http" <?= $currentChallenge === 'http' ? 'selected' : '' ?>>HTTP Challenge (Port 80 required)</option>
+                                                <option value="dns" <?= $currentChallenge === 'dns' ? 'selected' : '' ?>>DNS Challenge (Works behind firewall)</option>
+                                            </select>
+                                            <div class="form-text">
+                                                <strong>HTTP:</strong> Simple, requires port 80 accessible<br>
+                                                <strong>DNS:</strong> Works behind firewall, supports wildcards
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- DNS Provider Options -->
+                                        <div id="dnsProviderConfig" style="display: <?= $currentChallenge === 'dns' ? 'block' : 'none' ?>;">
+                                            <div class="mb-3">
+                                                <label class="form-label">DNS Provider</label>
+                                                <select class="form-select" id="dnsProvider" onchange="showDNSProviderFields(this.value)">
+                                                    <option value="">Select Provider</option>
+                                                    <option value="cloudflare" <?= $currentProvider === 'cloudflare' ? 'selected' : '' ?>>Cloudflare</option>
+                                                    <option value="route53" <?= $currentProvider === 'route53' ? 'selected' : '' ?>>AWS Route53</option>
+                                                    <option value="digitalocean" <?= $currentProvider === 'digitalocean' ? 'selected' : '' ?>>DigitalOcean</option>
+                                                </select>
+                                            </div>
+                                            
+                                            <!-- Cloudflare Fields -->
+                                            <div id="cloudflareFields" class="dns-provider-fields" style="display: <?= $currentProvider === 'cloudflare' ? 'block' : 'none' ?>;">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Cloudflare API Token</label>
+                                                    <input type="password" class="form-control" id="cfApiToken" placeholder="Enter new token or leave empty to keep existing">
+                                                    <div class="form-text">
+                                                        <?= !empty($currentCredentials['cf_api_token']) ? '<span class="text-success"><i class="bi bi-check-circle"></i> Token configured</span><br>' : '' ?>
+                                                        <strong>Create token at:</strong> <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank">Cloudflare Dashboard</a><br>
+                                                        <strong>Required permissions:</strong> Zone → DNS → Edit, Zone → Zone → Read<br>
+                                                        Leave empty to keep existing token
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Route53 Fields -->
+                                            <div id="route53Fields" class="dns-provider-fields" style="display: <?= $currentProvider === 'route53' ? 'block' : 'none' ?>;">
+                                                <div class="row mb-3">
+                                                    <div class="col-md-6">
+                                                        <label class="form-label">AWS Access Key ID</label>
+                                                        <input type="text" class="form-control" id="awsAccessKey" placeholder="Leave empty to keep existing">
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label">AWS Secret Access Key</label>
+                                                        <input type="password" class="form-control" id="awsSecretKey" placeholder="Leave empty to keep existing">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- DigitalOcean Fields -->
+                                            <div id="digitaloceanFields" class="dns-provider-fields" style="display: <?= $currentProvider === 'digitalocean' ? 'block' : 'none' ?>;">
+                                                <div class="mb-3">
+                                                    <label class="form-label">DigitalOcean API Token</label>
+                                                    <input type="password" class="form-control" id="doAuthToken" placeholder="Leave empty to keep existing">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
                             <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-circle me-2"></i>Update Domain
+                                <i class="bi bi-check-circle me-2"></i>Update Domain & SSL Settings
                             </button>
                         </form>
                     </div>
@@ -757,7 +845,12 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
             // Show database section for any site with a database
             $showDatabaseSection = false;
             $dbType = $site['db_type'] ?? 'none';
-            if ($site['type'] === 'wordpress' && $dbType === 'dedicated') {
+            $isMariaDBInstance = ($site['type'] === 'mariadb');
+            
+            if ($isMariaDBInstance) {
+                $showDatabaseSection = true;
+                $dbType = 'mariadb';
+            } elseif ($site['type'] === 'wordpress' && in_array($dbType, ['dedicated', 'custom'])) {
                 $showDatabaseSection = true;
             } elseif ($site['type'] === 'php' && in_array($dbType, ['mysql', 'postgresql'])) {
                 $showDatabaseSection = true;
@@ -770,16 +863,210 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
             <div id="database-section" class="content-section" style="display: none;">
                 <div class="card mb-4">
                     <div class="card-header bg-dark text-white">
-                        <i class="bi bi-database me-2"></i>Dedicated Database (<?= strtoupper($dbType) ?>)
+                        <i class="bi bi-database me-2"></i>
+                        <?php if ($isMariaDBInstance): ?>
+                            MariaDB Database Instance
+                        <?php else: ?>
+                            <?= $dbType === 'custom' ? 'Custom External Database' : 'Dedicated Database' ?> (<?= strtoupper($dbType) ?>)
+                        <?php endif; ?>
                     </div>
                     <div class="card-body">
-                        <div class="alert alert-info">
+                        <div class="alert alert-<?= $isMariaDBInstance ? 'success' : ($dbType === 'custom' ? 'warning' : 'info') ?>">
                             <i class="bi bi-info-circle me-2"></i>
-                            This site has a dedicated <?= $dbType === 'postgresql' ? 'PostgreSQL' : 'MariaDB' ?> container running separately.
+                            <?php if ($isMariaDBInstance): ?>
+                                <strong>Standalone MariaDB Instance:</strong> This is a dedicated database server that can be used by multiple applications.
+                            <?php elseif ($dbType === 'custom'): ?>
+                                This site connects to an external database server. You can edit the connection details below.
+                            <?php else: ?>
+                                This site has a dedicated <?= $dbType === 'postgresql' ? 'PostgreSQL' : 'MariaDB' ?> container running separately.
+                            <?php endif; ?>
                         </div>
 
                         <h6 class="mb-3">Database Connection Information</h6>
                         
+                        <?php if ($dbType === 'custom'): ?>
+                        <!-- Custom Database - Editable Fields -->
+                        <form id="customDbForm">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Database Host</label>
+                                    <input type="text" class="form-control" id="dbHost" name="db_host" value="<?= htmlspecialchars($site['db_host'] ?? '') ?>" <?= $canEdit ? '' : 'readonly' ?>>
+                                    <small class="text-muted">Database server hostname or IP</small>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Database Port</label>
+                                    <input type="number" class="form-control" id="dbPort" name="db_port" value="<?= htmlspecialchars($site['db_port'] ?? 3306) ?>" <?= $canEdit ? '' : 'readonly' ?>>
+                                    <small class="text-muted">Default MySQL/MariaDB port is 3306</small>
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Database Name</label>
+                                    <input type="text" class="form-control" id="dbName" name="db_name" value="<?= htmlspecialchars($site['db_name'] ?? '') ?>" <?= $canEdit ? '' : 'readonly' ?>>
+                                    <small class="text-muted">Name of the database</small>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Database User</label>
+                                    <input type="text" class="form-control" id="dbUser" name="db_user" value="<?= htmlspecialchars($site['db_user'] ?? '') ?>" <?= $canEdit ? '' : 'readonly' ?>>
+                                    <small class="text-muted">Database username</small>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Database Password</label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" id="dbPassword" name="db_password" value="<?= htmlspecialchars($site['db_password'] ?? '') ?>" <?= $canEdit ? '' : 'readonly' ?>>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="togglePasswordVisibility('dbPassword')">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="copyToClipboard('dbPassword')">
+                                        <i class="bi bi-clipboard"></i>
+                                    </button>
+                                </div>
+                                <small class="text-muted">Database password</small>
+                            </div>
+                            
+                            <?php if ($canEdit): ?>
+                            <button type="button" class="btn btn-primary" onclick="saveCustomDatabaseSettings()">
+                                <i class="bi bi-save me-2"></i>Save Database Settings
+                            </button>
+                            <div class="alert alert-warning mt-3">
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                <strong>Note:</strong> Changing database settings will require restarting the container for changes to take effect.
+                            </div>
+                            <?php endif; ?>
+                        </form>
+                        <?php elseif ($isMariaDBInstance): ?>
+                        <!-- MariaDB Instance - Show credentials -->
+                        <?php 
+                        $dbCredentials = json_decode($site['db_password'] ?? '{}', true);
+                        $rootPassword = $dbCredentials['root'] ?? '';
+                        $userPassword = $dbCredentials['user'] ?? '';
+                        ?>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Database Host</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="dbHost" value="<?= htmlspecialchars($site['container_name']) ?>" readonly>
+                                    <button class="btn btn-outline-secondary" onclick="copyToClipboard('dbHost')">
+                                        <i class="bi bi-clipboard"></i>
+                                    </button>
+                                </div>
+                                <small class="text-muted">Container name for internal connections</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Database Port</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="dbPort" value="3306" readonly>
+                                    <button class="btn btn-outline-secondary" onclick="copyToClipboard('dbPort')">
+                                        <i class="bi bi-clipboard"></i>
+                                    </button>
+                                </div>
+                                <small class="text-muted">Internal MariaDB port</small>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Database Name</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="dbName" value="<?= htmlspecialchars($site['db_name'] ?? 'defaultdb') ?>" readonly>
+                                    <button class="btn btn-outline-secondary" onclick="copyToClipboard('dbName')">
+                                        <i class="bi bi-clipboard"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Database User</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="dbUser" value="<?= htmlspecialchars($site['db_user'] ?? 'dbuser') ?>" readonly>
+                                    <button class="btn btn-outline-secondary" onclick="copyToClipboard('dbUser')">
+                                        <i class="bi bi-clipboard"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">User Password</label>
+                            <div class="input-group">
+                                <input type="password" class="form-control font-monospace" id="dbPassword" value="<?= htmlspecialchars($userPassword) ?>" readonly>
+                                <button class="btn btn-outline-secondary" onclick="togglePasswordVisibility('dbPassword')">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                                <button class="btn btn-outline-secondary" onclick="copyToClipboard('dbPassword')">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted">Password for regular database user</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Root Password</label>
+                            <div class="input-group">
+                                <input type="password" class="form-control font-monospace" id="dbRootPassword" value="<?= htmlspecialchars($rootPassword) ?>" readonly>
+                                <button class="btn btn-outline-secondary" onclick="togglePasswordVisibility('dbRootPassword')">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                                <button class="btn btn-outline-secondary" onclick="copyToClipboard('dbRootPassword')">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted">Root password for administrative access</small>
+                        </div>
+                        
+                        <hr>
+                        
+                        <h6 class="mb-3">External Network Access</h6>
+                        <?php if ($site['db_port'] ?? false): ?>
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            <strong>External Access Enabled:</strong> Port <?= htmlspecialchars($site['db_port']) ?> is exposed to external network
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">External Port</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" value="<?= htmlspecialchars($site['db_port']) ?>" readonly>
+                                <button class="btn btn-outline-secondary" onclick="copyToClipboard('dbPort')">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted">Connect from outside: mysql -h YOUR_SERVER_IP -P <?= htmlspecialchars($site['db_port']) ?> -u <?= htmlspecialchars($site['db_user'] ?? 'dbuser') ?> -p</small>
+                        </div>
+                        <?php if ($canEdit): ?>
+                        <button type="button" class="btn btn-warning" onclick="toggleExternalAccess(false)">
+                            <i class="bi bi-shield-lock me-2"></i>Disable External Access
+                        </button>
+                        <div class="form-text mt-2">
+                            <i class="bi bi-info-circle me-1"></i>
+                            This will remove port exposure and make the database accessible only from the Docker network
+                        </div>
+                        <?php endif; ?>
+                        <?php else: ?>
+                        <div class="alert alert-success">
+                            <i class="bi bi-shield-check me-2"></i>
+                            <strong>Secure Mode:</strong> Database is only accessible from the internal Docker network
+                        </div>
+                        <?php if ($canEdit): ?>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Enable External Access</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="externalPort" placeholder="3306" value="3306" min="1024" max="65535">
+                                <button type="button" class="btn btn-primary" onclick="toggleExternalAccess(true)">
+                                    <i class="bi bi-globe me-2"></i>Enable
+                                </button>
+                            </div>
+                            <small class="text-muted">Choose a port to expose (1024-65535). Make sure the port is not already in use.</small>
+                        </div>
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            <strong>Security Warning:</strong> Enabling external access will expose your database to the internet. Make sure to use strong passwords and consider firewall rules.
+                        </div>
+                        <?php endif; ?>
+                        <?php endif; ?>
+                        <?php else: ?>
+                        <!-- Dedicated Database - Read-only Fields -->
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">Database Host</label>
@@ -837,6 +1124,7 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                             </div>
                             <small class="text-muted">Keep this password secure</small>
                         </div>
+                        <?php endif; ?>
 
                         <hr>
 
@@ -886,6 +1174,31 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                     <div class="card-body">
                         <p class="text-muted">Connect to your database using these commands:</p>
                         
+                        <?php if ($isMariaDBInstance): ?>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">MySQL CLI (from host)</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control font-monospace" id="mysqlCommand" 
+                                       value="docker exec -it <?= htmlspecialchars($site['container_name']) ?> mysql -u <?= htmlspecialchars($site['db_user'] ?? 'dbuser') ?> -p <?= htmlspecialchars($site['db_name'] ?? 'defaultdb') ?>" readonly>
+                                <button class="btn btn-outline-secondary" onclick="copyToClipboard('mysqlCommand')">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted">Run this command in your terminal to access MySQL CLI</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Database Backup</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control font-monospace" id="backupCommand" 
+                                       value="docker exec <?= htmlspecialchars($site['container_name']) ?> mysqldump -u <?= htmlspecialchars($site['db_user'] ?? 'dbuser') ?> -p <?= htmlspecialchars($site['db_name'] ?? 'defaultdb') ?> > backup.sql" readonly>
+                                <button class="btn btn-outline-secondary" onclick="copyToClipboard('backupCommand')">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted">Creates a SQL backup file</small>
+                        </div>
+                        <?php else: ?>
                         <div class="mb-3">
                             <label class="form-label fw-bold">MySQL CLI (from host)</label>
                             <div class="input-group">
@@ -909,6 +1222,7 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                             </div>
                             <small class="text-muted">Creates a SQL backup file</small>
                         </div>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
@@ -1463,25 +1777,51 @@ QUEUE_CONNECTION=redis</code></pre>
             const domain = document.getElementById('siteDomain').value;
             const ssl = document.getElementById('sslEnabled').checked;
             
-            if (!confirm('Changing the domain will require a container restart. Continue?')) {
+            // Gather SSL configuration
+            const sslConfig = {
+                challenge: document.getElementById('sslChallengeMethod')?.value || 'http',
+                provider: null,
+                credentials: {}
+            };
+            
+            if (sslConfig.challenge === 'dns') {
+                sslConfig.provider = document.getElementById('dnsProvider')?.value;
+                
+                // Gather credentials based on provider
+                if (sslConfig.provider === 'cloudflare') {
+                    const token = document.getElementById('cfApiToken')?.value;
+                    if (token) sslConfig.credentials.cf_api_token = token;
+                } else if (sslConfig.provider === 'route53') {
+                    const accessKey = document.getElementById('awsAccessKey')?.value;
+                    const secretKey = document.getElementById('awsSecretKey')?.value;
+                    if (accessKey) sslConfig.credentials.aws_access_key = accessKey;
+                    if (secretKey) sslConfig.credentials.aws_secret_key = secretKey;
+                } else if (sslConfig.provider === 'digitalocean') {
+                    const token = document.getElementById('doAuthToken')?.value;
+                    if (token) sslConfig.credentials.do_auth_token = token;
+                }
+            }
+            
+            if (!confirm('Updating SSL settings will require a container restart. Continue?')) {
                 return;
             }
             
             try {
-                const response = await fetch('/api.php?action=update_site', {
+                const response = await fetch('/api.php?action=update_site_ssl', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         site_id: siteId,
                         name: siteName,
                         domain: domain,
-                        ssl: ssl
+                        ssl: ssl,
+                        ssl_config: sslConfig
                     })
                 });
                 
                 const result = await response.json();
                 if (result.success) {
-                    alert(result.message);
+                    alert(result.message || 'SSL settings updated successfully!');
                     location.reload();
                 } else {
                     alert('Error: ' + result.error);
@@ -2488,6 +2828,122 @@ QUEUE_CONNECTION=redis</code></pre>
         document.querySelector('[data-section="settings"]').addEventListener('click', function() {
             loadEnvVars();
         });
+        
+        // Custom Database Settings
+        async function saveCustomDatabaseSettings() {
+            if (!confirm('Save database settings and restart container? This will cause brief downtime.')) {
+                return;
+            }
+            
+            const formData = new FormData(document.getElementById('customDbForm'));
+            const data = {
+                id: siteId,
+                db_host: formData.get('db_host'),
+                db_port: formData.get('db_port'),
+                db_name: formData.get('db_name'),
+                db_user: formData.get('db_user'),
+                db_password: formData.get('db_password')
+            };
+            
+            try {
+                const response = await fetch('/api.php?action=update_custom_database', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('success', 'Database settings saved and container restarted!');
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    showAlert('danger', 'Error: ' + result.error);
+                }
+            } catch (error) {
+                showAlert('danger', 'Network error: ' + error.message);
+            }
+        }
+        
+        // Toggle external network access for MariaDB
+        async function toggleExternalAccess(enable) {
+            const action = enable ? 'enable' : 'disable';
+            const message = enable 
+                ? 'Enable external network access? This will expose your database to the internet.' 
+                : 'Disable external network access? The database will only be accessible from the Docker network.';
+            
+            if (!confirm(message)) {
+                return;
+            }
+            
+            let port = null;
+            if (enable) {
+                port = document.getElementById('externalPort').value;
+                if (!port || port < 1024 || port > 65535) {
+                    showAlert('danger', 'Please enter a valid port number (1024-65535)');
+                    return;
+                }
+            }
+            
+            showAlert('info', `${enable ? 'Enabling' : 'Disabling'} external access...`);
+            
+            try {
+                const response = await fetch('/api.php?action=toggle_mariadb_external_access', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        id: siteId,
+                        enable: enable,
+                        port: port
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('success', `External access ${enable ? 'enabled' : 'disabled'} successfully! Reloading...`);
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    showAlert('danger', 'Error: ' + result.error);
+                }
+            } catch (error) {
+                showAlert('danger', 'Network error: ' + error.message);
+            }
+        }
+        
+        // SSL Configuration Helper Functions
+        function toggleSSLOptions() {
+            const sslEnabled = document.getElementById('sslEnabled').checked;
+            const sslConfigOptions = document.getElementById('sslConfigOptions');
+            if (sslConfigOptions) {
+                sslConfigOptions.style.display = sslEnabled ? 'block' : 'none';
+            }
+        }
+        
+        function toggleSSLChallengeFields(challenge) {
+            const dnsProviderConfig = document.getElementById('dnsProviderConfig');
+            if (dnsProviderConfig) {
+                dnsProviderConfig.style.display = challenge === 'dns' ? 'block' : 'none';
+            }
+        }
+        
+        function showDNSProviderFields(provider) {
+            // Hide all DNS provider fields
+            document.querySelectorAll('.dns-provider-fields').forEach(el => {
+                el.style.display = 'none';
+            });
+            
+            // Show selected provider's fields
+            if (provider) {
+                const fieldId = provider + 'Fields';
+                const field = document.getElementById(fieldId);
+                if (field) {
+                    field.style.display = 'block';
+                }
+            }
+        }
+        
+        // Cloudflare auth toggle removed - now only uses API Token
     </script>
 </body>
 </html>

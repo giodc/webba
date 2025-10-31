@@ -142,17 +142,27 @@ function showDNSProviderFields(provider) {
     }
 }
 
+// Cloudflare auth toggle removed - now only uses API Token
+
 function toggleTypeOptions(type) {
     const wpOptions = document.getElementById("wordpressOptions");
     const phpOptions = document.getElementById("phpOptions");
     const laravelOptions = document.getElementById("laravelOptions");
+    const mariadbOptions = document.getElementById("mariadbOptions");
     const phpVersionRow = document.getElementById("phpVersionRow");
+    const domainSslRow = document.getElementById("domainSslRow");
+    const domainInput = document.getElementById("domainInput");
 
     // Hide all options first
     wpOptions.style.display = "none";
     phpOptions.style.display = "none";
     laravelOptions.style.display = "none";
+    mariadbOptions.style.display = "none";
     phpVersionRow.style.display = "none";
+    
+    // Show domain/SSL by default and make domain required
+    domainSslRow.style.display = "flex";
+    if (domainInput) domainInput.required = true;
 
     if (type === "wordpress") {
         wpOptions.style.display = "block";
@@ -193,6 +203,22 @@ function toggleTypeOptions(type) {
                 laravelGithubRepo.dataset.listenerAdded = "true";
             }
         }, 100);
+    } else if (type === "mariadb") {
+        mariadbOptions.style.display = "block";
+        
+        // Hide domain and SSL for database services (not needed)
+        domainSslRow.style.display = "none";
+        if (domainInput) domainInput.required = false;
+        
+        // Auto-generate passwords if empty
+        const rootPasswordField = document.querySelector("input[name=\"mariadb_root_password\"]");
+        const userPasswordField = document.querySelector("input[name=\"mariadb_password\"]");
+        if (!rootPasswordField.value) {
+            rootPasswordField.value = generatePassword(24);
+        }
+        if (!userPasswordField.value) {
+            userPasswordField.value = generatePassword(20);
+        }
     }
 }
 
@@ -203,6 +229,17 @@ function generatePassword(length) {
         password += charset.charAt(Math.floor(Math.random() * charset.length));
     }
     return password;
+}
+
+function toggleCustomDbFields() {
+    const dbType = document.getElementById("wpDbType").value;
+    const customDbFields = document.getElementById("customDbFields");
+    
+    if (dbType === "custom") {
+        customDbFields.style.display = "block";
+    } else {
+        customDbFields.style.display = "none";
+    }
 }
 
 async function createSite(event) {

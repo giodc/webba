@@ -11,10 +11,15 @@ services:
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
       - "--entrypoints.websecure-alt.address=:8443"
+      - "--certificatesresolvers.letsencrypt.acme.email=info@giodc.com"
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
-      - "--certificatesresolvers.letsencrypt.acme.email=test@example.com"
       - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.letsencrypt-dns.acme.dnschallenge=true"
+      - "--certificatesresolvers.letsencrypt-dns.acme.dnschallenge.provider=cloudflare"
+      - "--certificatesresolvers.letsencrypt-dns.acme.dnschallenge.delaybeforecheck=0"
+      - "--certificatesresolvers.letsencrypt-dns.acme.email=info@giodc.com"
+      - "--certificatesresolvers.letsencrypt-dns.acme.storage=/letsencrypt/acme-dns.json"
       # Access logs
       - "--accesslog=true"
       - "--accesslog.format=json"
@@ -29,6 +34,8 @@ services:
       - "80:80"
       - "443:443"
       - "8443:8443"  # Alternative HTTPS port for dashboard
+    env_file:
+      - ./data/traefik-dns.env
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./ssl:/letsencrypt
@@ -59,27 +66,14 @@ services:
       - ./gui:/var/www/html
     environment:
       - DB_PATH=/app/data/database.sqlite
-    
+
     
     
     labels:
       - traefik.enable=true
-      - traefik.http.routers.webgui.rule=Host(`dashboard.development.giodc.com`)
+      - traefik.http.routers.webgui.rule=Host(`dashboard.local.wharftales.org`)
       - traefik.http.routers.webgui.entrypoints=web
       - traefik.http.services.webgui.loadbalancer.server.port=80
-      # Standard HTTPS on port 443
-      - traefik.http.routers.webgui-secure.rule=Host(`dashboard.development.giodc.com`)
-      - traefik.http.routers.webgui-secure.entrypoints=websecure
-      - traefik.http.routers.webgui-secure.tls=true
-      - traefik.http.routers.webgui-secure.tls.certresolver=letsencrypt
-      # Alternative HTTPS on port 8443 (extra security)
-      - traefik.http.routers.webgui-alt.rule=Host(`dashboard.development.giodc.com`)
-      - traefik.http.routers.webgui-alt.entrypoints=websecure-alt
-      - traefik.http.routers.webgui-alt.tls=true
-      - traefik.http.routers.webgui-alt.tls.certresolver=letsencrypt
-      - traefik.http.middlewares.webgui-redirect.redirectscheme.scheme=https
-      - traefik.http.middlewares.webgui-redirect.redirectscheme.permanent=true
-      - traefik.http.routers.webgui.middlewares=webgui-redirect
     networks:
       - wharftales
     restart: unless-stopped

@@ -8,6 +8,9 @@ redirectToSSLIfEnabled();
 // Require authentication
 requireAuth();
 
+// Initialize database
+$db = initDatabase();
+
 $currentUser = getCurrentUser();
 
 // Get log type from query parameter
@@ -43,9 +46,9 @@ if ($logType === 'acme') {
         $logContent = "ACME file not found at: $acmeFile";
     }
 } else {
-    // Read container logs
+    // Read container logs with timestamps
     $containerName = 'wharftales_traefik';
-    $command = "docker logs --tail " . intval($lines) . " " . escapeshellarg($containerName) . " 2>&1";
+    $command = "docker logs --timestamps --tail " . intval($lines) . " " . escapeshellarg($containerName) . " 2>&1";
     exec($command, $output, $returnCode);
     
     if ($returnCode === 0) {
@@ -86,6 +89,7 @@ if ($logType === 'acme') {
         .log-viewer .success {
             color: #4ec9b0;
         }
+        .log-viewer .info {
             color: #9cdcfe;
         }
     </style>
@@ -127,6 +131,13 @@ if ($logType === 'acme') {
                         <button class="btn btn-success ms-3" onclick="location.reload()">
                             <i class="bi bi-arrow-clockwise"></i> Refresh
                         </button>
+                        
+                        <div class="form-check form-switch d-inline-block ms-3">
+                            <input class="form-check-input" type="checkbox" id="autoRefresh" onchange="toggleAutoRefresh()">
+                            <label class="form-check-label" for="autoRefresh">
+                                Auto-refresh (<span id="refreshCountdown">5</span>s)
+                            </label>
+                        </div>
                     </div>
                 </div>
 
@@ -184,41 +195,175 @@ if ($logType === 'acme') {
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        let autoRefreshInterval = null;
+        let countdownInterval = null;
+        let countdown = 5;
+        const REFRESH_INTERVAL = 5000; // 5 seconds
+        
         // Auto-scroll to bottom
-        const logViewer = document.querySelector('.log-viewer');
-        if (logViewer) {
-            logViewer.scrollTop = logViewer.scrollHeight;
+        function scrollToBottom() {
+            const logViewer = document.querySelector('.log-viewer');
+            if (logViewer) {
+                logViewer.scrollTop = logViewer.scrollHeight;
+            }
         }
         
+        // Initial scroll
+        scrollToBottom();
+        
         // Highlight error/warning lines
-        const logContent = document.getElementById('logContent');
-        if (logContent) {
-            const text = logContent.textContent;
-            const lines = text.split('\n');
-            let html = '';
-            
-            lines.forEach(line => {
-                if (line.toLowerCase().includes('error') || line.toLowerCase().includes('failed')) {
-                    html += '<span class="error">' + escapeHtml(line) + '</span>\n';
-                } else if (line.toLowerCase().includes('warn')) {
-                    html += '<span class="warning">' + escapeHtml(line) + '</span>\n';
-                } else if (line.toLowerCase().includes('certificate') || line.toLowerCase().includes('success')) {
-                    html += '<span class="success">' + escapeHtml(line) + '</span>\n';
-                } else if (line.toLowerCase().includes('acme')) {
-                    html += '<span class="info">' + escapeHtml(line) + '</span>\n';
-                } else {
-                    html += escapeHtml(line) + '\n';
-                }
-            });
-            
-            logContent.innerHTML = html;
+        function highlightLogs() {
+            const logContent = document.getElementById('logContent');
+            if (logContent) {
+                const text = logContent.textContent;
+                const lines = text.split('\n');
+                let html = '';
+                
+                lines.forEach(line => {
+                    // Extract timestamp if present (format: 2025-10-31T21:45:00.123456789Z)
+                    const timestampMatch = line.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z)\s+(.*)$/);
+                    let timestamp = '';
+                    let logLine = line;
+                    
+                    if (timestampMatch) {
+                        timestamp = '<span style="color: #858585;">' + escapeHtml(timestampMatch[1]) + '</span> ';
+                        logLine = timestampMatch[2];
+                    }
+                    
+                    if (logLine.toLowerCase().includes('error') || logLine.toLowerCase().includes('failed')) {
+                        html += timestamp + '<span class="error">' + escapeHtml(logLine) + '</span>\n';
+                    } else if (logLine.toLowerCase().includes('warn')) {
+                        html += timestamp + '<span class="warning">' + escapeHtml(logLine) + '</span>\n';
+                    } else if (logLine.toLowerCase().includes('certificate') || logLine.toLowerCase().includes('success')) {
+                        html += timestamp + '<span class="success">' + escapeHtml(logLine) + '</span>\n';
+                    } else if (logLine.toLowerCase().includes('acme')) {
+                        html += timestamp + '<span class="info">' + escapeHtml(logLine) + '</span>\n';
+                    } else {
+                        html += timestamp + escapeHtml(logLine) + '\n';
+                    }
+                });
+                
+                logContent.innerHTML = html;
+            }
         }
+        
+        // Initial highlight
+        highlightLogs();
         
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         }
+        
+        function copyLogs() {
+            const logContent = document.getElementById('logContent');
+            const text = logContent.textContent;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Logs copied to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                alert('Failed to copy logs to clipboard');
+            });
+        }
+        
+        // Auto-refresh functionality
+        function toggleAutoRefresh() {
+            const checkbox = document.getElementById('autoRefresh');
+            
+            if (checkbox.checked) {
+                startAutoRefresh();
+            } else {
+                stopAutoRefresh();
+            }
+        }
+        
+        function startAutoRefresh() {
+            countdown = 5;
+            updateCountdown();
+            
+            // Start countdown
+            countdownInterval = setInterval(() => {
+                countdown--;
+                updateCountdown();
+                
+                if (countdown <= 0) {
+                    refreshLogs();
+                    countdown = 5;
+                }
+            }, 1000);
+        }
+        
+        function stopAutoRefresh() {
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+                countdownInterval = null;
+            }
+            document.getElementById('refreshCountdown').textContent = '5';
+        }
+        
+        function updateCountdown() {
+            document.getElementById('refreshCountdown').textContent = countdown;
+        }
+        
+        async function refreshLogs() {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const response = await fetch(window.location.pathname + '?' + urlParams.toString());
+                const html = await response.text();
+                
+                // Extract log content from response
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const newLogContent = doc.getElementById('logContent');
+                
+                if (newLogContent) {
+                    const currentLogContent = document.getElementById('logContent');
+                    const wasAtBottom = isScrolledToBottom();
+                    
+                    currentLogContent.textContent = newLogContent.textContent;
+                    highlightLogs();
+                    
+                    // Auto-scroll if user was at bottom
+                    if (wasAtBottom) {
+                        scrollToBottom();
+                    }
+                    
+                    // Show refresh indicator
+                    showRefreshIndicator();
+                }
+            } catch (error) {
+                console.error('Failed to refresh logs:', error);
+            }
+        }
+        
+        function isScrolledToBottom() {
+            const logViewer = document.querySelector('.log-viewer');
+            if (!logViewer) return false;
+            
+            const threshold = 50; // pixels from bottom
+            return (logViewer.scrollHeight - logViewer.scrollTop - logViewer.clientHeight) < threshold;
+        }
+        
+        function showRefreshIndicator() {
+            const btn = document.querySelector('.btn-success');
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<i class="bi bi-check-circle"></i> Updated';
+            btn.classList.remove('btn-success');
+            btn.classList.add('btn-info');
+            
+            setTimeout(() => {
+                btn.innerHTML = originalHTML;
+                btn.classList.remove('btn-info');
+                btn.classList.add('btn-success');
+            }, 1000);
+        }
+        
+        // Clean up on page unload
+        window.addEventListener('beforeunload', () => {
+            stopAutoRefresh();
+        });
     </script>
 </body>
 </html>

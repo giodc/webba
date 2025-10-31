@@ -34,11 +34,17 @@ function generateTraefikSSLLabels($site, $sslConfig) {
     ];
     
     if ($site['ssl'] && $sslConfig) {
+        // Determine which certificate resolver to use based on challenge type
+        $certResolver = 'letsencrypt'; // Default to HTTP challenge
+        if (isset($sslConfig['challenge']) && $sslConfig['challenge'] === 'dns') {
+            $certResolver = 'letsencrypt-dns'; // Use DNS challenge resolver
+        }
+        
         // Add HTTPS router
         $labels[] = "traefik.http.routers.{$containerName}-secure.rule=Host(`{$domain}`)";
         $labels[] = "traefik.http.routers.{$containerName}-secure.entrypoints=websecure";
         $labels[] = "traefik.http.routers.{$containerName}-secure.tls=true";
-        $labels[] = "traefik.http.routers.{$containerName}-secure.tls.certresolver=letsencrypt";
+        $labels[] = "traefik.http.routers.{$containerName}-secure.tls.certresolver={$certResolver}";
         
         // Add HTTP to HTTPS redirect
         $labels[] = "traefik.http.routers.{$containerName}.middlewares=redirect-to-https";
@@ -54,8 +60,8 @@ function updateTraefikDNSConfig($dnsProvider, $credentials) {
     
     switch ($dnsProvider) {
         case 'cloudflare':
-            $envVars['CF_API_EMAIL'] = $credentials['cf_email'] ?? '';
-            $envVars['CF_API_KEY'] = $credentials['cf_api_key'] ?? '';
+            // API Token method (secure, scoped permissions)
+            $envVars['CF_DNS_API_TOKEN'] = $credentials['cf_api_token'] ?? '';
             break;
             
         case 'route53':
@@ -132,18 +138,133 @@ function getGlobalDNSProvider() {
 }
 
 function updateTraefikForDNSChallenge($dnsProvider, $credentials) {
-    // This function would update the Traefik docker-compose.yml
-    // For now, we'll create an environment file that can be loaded
+    $composePath = '/opt/wharftales/docker-compose.yml';
     
-    $envFile = '/app/data/traefik-dns.env';
+    if (!file_exists($composePath)) {
+        error_log("Docker compose file not found at: $composePath");
+        return false;
+    }
+    
+    // Read current docker-compose.yml
+    $composeContent = file_get_contents($composePath);
+    
+    // Get environment variables for DNS provider
     $envVars = updateTraefikDNSConfig($dnsProvider, $credentials);
     
+    // Save environment file
+    $envFile = '/app/data/traefik-dns.env';
     $envContent = "";
     foreach ($envVars as $key => $value) {
         $envContent .= "{$key}={$value}\n";
     }
     
-    file_put_contents($envFile, $envContent);
+    // Check if we can write to the file
+    $canWrite = (!file_exists($envFile) || is_writable($envFile));
+    
+    if ($canWrite) {
+        // Try to write directly
+        $result = @file_put_contents($envFile, $envContent);
+        if ($result !== false) {
+            @chmod($envFile, 0664);
+        } else {
+            $canWrite = false; // Failed, use alternative method
+        }
+    }
+    
+    if (!$canWrite) {
+        // Use alternative method: temp file + shell command
+        $tempFile = tempnam(sys_get_temp_dir(), 'traefik_dns_');
+        file_put_contents($tempFile, $envContent);
+        
+        // Use shell to write (runs with container's default permissions)
+        exec("cat " . escapeshellarg($tempFile) . " > " . escapeshellarg($envFile) . " 2>&1", $output, $ret);
+        unlink($tempFile);
+        
+        if ($ret !== 0) {
+            error_log("Failed to write traefik-dns.env: " . implode("\n", $output));
+            return false;
+        }
+        
+        // Try to set proper permissions on the newly created file
+        @chmod($envFile, 0664);
+    }
+    
+    // Parse and modify the docker-compose.yml content
+    $lines = explode("\n", $composeContent);
+    $newLines = [];
+    $inTraefikService = false;
+    $inTraefikCommand = false;
+    $dnsResolverAdded = false;
+    $envFileAdded = false;
+    
+    for ($i = 0; $i < count($lines); $i++) {
+        $line = $lines[$i];
+        
+        // Detect traefik service
+        if (preg_match('/^  traefik:\s*$/', $line)) {
+            $inTraefikService = true;
+            $newLines[] = $line;
+            continue;
+        }
+        
+        // Exit traefik service when we hit another top-level service
+        if ($inTraefikService && preg_match('/^  \w+:\s*$/', $line)) {
+            $inTraefikService = false;
+        }
+        
+        // Detect command section in traefik
+        if ($inTraefikService && preg_match('/^\s+command:\s*$/', $line)) {
+            $inTraefikCommand = true;
+            $newLines[] = $line;
+            continue;
+        }
+        
+        // Exit command section
+        if ($inTraefikCommand && !preg_match('/^\s+- "/', $line) && !preg_match('/^\s+#/', $line)) {
+            $inTraefikCommand = false;
+        }
+        
+        // Skip existing letsencrypt-dns resolver lines to avoid duplicates
+        if ($inTraefikCommand && strpos($line, 'letsencrypt-dns') !== false) {
+            continue;
+        }
+        
+        // Add DNS resolver after the HTTP resolver (letsencrypt) storage line
+        if ($inTraefikCommand && !$dnsResolverAdded && strpos($line, 'certificatesresolvers.letsencrypt.acme.storage') !== false) {
+            $newLines[] = $line;
+            // Add DNS resolver configuration
+            $newLines[] = '      - "--certificatesresolvers.letsencrypt-dns.acme.dnschallenge=true"';
+            $newLines[] = '      - "--certificatesresolvers.letsencrypt-dns.acme.dnschallenge.provider=' . $dnsProvider . '"';
+            $newLines[] = '      - "--certificatesresolvers.letsencrypt-dns.acme.dnschallenge.delaybeforecheck=0"';
+            $newLines[] = '      - "--certificatesresolvers.letsencrypt-dns.acme.email=info@giodc.com"';
+            $newLines[] = '      - "--certificatesresolvers.letsencrypt-dns.acme.storage=/letsencrypt/acme-dns.json"';
+            $dnsResolverAdded = true;
+            continue;
+        }
+        
+        // Add env_file before volumes in traefik service
+        if ($inTraefikService && !$envFileAdded && preg_match('/^\s+volumes:\s*$/', $line)) {
+            if (strpos($composeContent, 'traefik-dns.env') === false) {
+                $newLines[] = '    env_file:';
+                $newLines[] = '      - ./data/traefik-dns.env';
+            }
+            $envFileAdded = true;
+        }
+        
+        $newLines[] = $line;
+    }
+    
+    // Write updated docker-compose.yml
+    $newContent = implode("\n", $newLines);
+    file_put_contents($composePath, $newContent);
+    
+    // Recreate Traefik container with new configuration
+    exec('cd /opt/wharftales && docker-compose up -d --force-recreate traefik 2>&1', $output, $returnCode);
+    
+    if ($returnCode !== 0) {
+        error_log("Failed to restart Traefik: " . implode("\n", $output));
+        return false;
+    }
     
     return true;
 }

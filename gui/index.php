@@ -198,6 +198,7 @@ $customWildcardDomain = getSetting($db, 'custom_wildcard_domain', '');
                                     <option value="wordpress">WordPress (Optimized)</option>
                                     <option value="php">PHP Application</option>
                                     <option value="laravel">Laravel</option>
+                                    <option value="mariadb">MariaDB Database</option>
                                 </select>
                             </div>
                         </div>
@@ -218,12 +219,12 @@ $customWildcardDomain = getSetting($db, 'custom_wildcard_domain', '');
                             </div>
                         </div>
 
-                        <div class="row mb-3">
+                        <div class="row mb-3" id="domainSslRow">
                             <div class="col-md-6">
                                 <label class="form-label">Domain</label>
                                 <div class="input-group">
-                                    <input type="text" class="form-control" name="domain" required placeholder="mysite">
-                                    <select class="form-select" name="domain_suffix" style="max-width: 200px;" onchange="toggleSSLOptions(this.value)">
+                                    <input type="text" class="form-control" name="domain" id="domainInput" placeholder="mysite">
+                                    <select class="form-select" name="domain_suffix" id="domainSuffix" style="max-width: 200px;" onchange="toggleSSLOptions(this.value)">
                                         <option value=".test.local">.test.local (Local)</option>
                                         <option value=".localhost">.localhost (Local)</option>
                                         <?php if (!empty($customWildcardDomain)): ?>
@@ -285,18 +286,14 @@ $customWildcardDomain = getSetting($db, 'custom_wildcard_domain', '');
                                 
                                 <!-- Cloudflare Fields -->
                                 <div id="cloudflareFields" class="dns-provider-fields" style="display: none;">
-                                    <div class="row mb-3">
-                                        <div class="col-md-6">
-                                            <label class="form-label">Cloudflare Email</label>
-                                            <input type="email" class="form-control" name="cf_email" placeholder="your@email.com">
+                                    <div class="mb-3">
+                                        <label class="form-label">Cloudflare API Token</label>
+                                        <input type="password" class="form-control" name="cf_api_token" placeholder="API Token with Zone:DNS:Edit permissions" required>
+                                        <div class="form-text">
+                                            <strong>Create token at:</strong> <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank">Cloudflare Dashboard</a><br>
+                                            <strong>Required permissions:</strong> Zone → DNS → Edit, Zone → Zone → Read<br>
+                                            <strong>Zone Resources:</strong> Include → Specific zone → your domain
                                         </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label">Cloudflare API Key</label>
-                                            <input type="password" class="form-control" name="cf_api_key" placeholder="Global API Key">
-                                        </div>
-                                    </div>
-                                    <div class="form-text mb-3">
-                                        Get your API key from: <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank">Cloudflare Dashboard</a>
                                     </div>
                                 </div>
                                 
@@ -370,14 +367,51 @@ $customWildcardDomain = getSetting($db, 'custom_wildcard_domain', '');
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Database Configuration</label>
-                                <select class="form-select" name="wp_db_type" id="wpDbType">
-                                    <option value="shared" selected>Shared Database (Recommended - uses global MariaDB)</option>
-                                    <option value="dedicated">Dedicated Database (Separate MariaDB container per site)</option>
+                                <select class="form-select" name="wp_db_type" id="wpDbType" onchange="toggleCustomDbFields()">
+                                    <option value="dedicated" selected>Dedicated Database (Separate MariaDB container per site)</option>
+                                    <option value="custom">Custom Database (Connect to external database)</option>
                                 </select>
                                 <div class="form-text">
                                     <i class="bi bi-info-circle me-1"></i>
-                                    <strong>Shared:</strong> Faster, uses less resources, easier to manage<br>
-                                    <strong>Dedicated:</strong> Complete isolation, better for high-traffic sites
+                                    <strong>Dedicated:</strong> Complete isolation, automatic setup, recommended for most sites<br>
+                                    <strong>Custom:</strong> Connect to an existing external database server
+                                </div>
+                            </div>
+                            
+                            <!-- Custom Database Fields -->
+                            <div id="customDbFields" style="display: none;">
+                                <div class="alert alert-info">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    <strong>Custom Database:</strong> Enter your external database connection details below.
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Database Host</label>
+                                        <input type="text" class="form-control" name="wp_db_host" placeholder="db.example.com or IP address">
+                                        <div class="form-text">Database server hostname or IP</div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Database Port</label>
+                                        <input type="number" class="form-control" name="wp_db_port" value="3306" placeholder="3306">
+                                        <div class="form-text">Default MySQL/MariaDB port is 3306</div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Database Name</label>
+                                        <input type="text" class="form-control" name="wp_db_name" placeholder="wordpress">
+                                        <div class="form-text">Name of the database to use</div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Database User</label>
+                                        <input type="text" class="form-control" name="wp_db_user" placeholder="wp_user">
+                                        <div class="form-text">Database username</div>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Database Password</label>
+                                    <input type="password" class="form-control" name="wp_db_password" placeholder="Enter database password">
+                                    <div class="form-text">Password for the database user</div>
                                 </div>
                             </div>
                         </div>
@@ -461,6 +495,57 @@ $customWildcardDomain = getSetting($db, 'custom_wildcard_domain', '');
                                     <input type="password" class="form-control" name="laravel_github_token" placeholder="ghp_...">
                                     <div class="form-text"><a href="https://github.com/settings/tokens" target="_blank">Generate token</a></div>
                                 </div>
+                            </div>
+                        </div>
+
+                        <div id="mariadbOptions" style="display: none;">
+                            <hr>
+                            <h6><i class="bi bi-database text-primary me-2"></i>MariaDB Configuration</h6>
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle me-2"></i>
+                                <strong>Standalone Database:</strong> Create a dedicated MariaDB instance that other applications can connect to.
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Root Password</label>
+                                <input type="password" class="form-control" name="mariadb_root_password" id="mariadbRootPassword" placeholder="Auto-generated secure password">
+                                <div class="form-text">Leave empty to auto-generate a secure password</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Default Database Name</label>
+                                <input type="text" class="form-control" name="mariadb_database" placeholder="defaultdb" value="defaultdb">
+                                <div class="form-text">Initial database to create</div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Database User</label>
+                                    <input type="text" class="form-control" name="mariadb_user" placeholder="dbuser" value="dbuser">
+                                    <div class="form-text">Non-root database user</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">User Password</label>
+                                    <input type="password" class="form-control" name="mariadb_password" id="mariadbPassword" placeholder="Auto-generated">
+                                    <div class="form-text">Leave empty to auto-generate</div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Port</label>
+                                <input type="number" class="form-control" name="mariadb_port" value="3306" placeholder="3306">
+                                <div class="form-text">
+                                    <i class="bi bi-exclamation-triangle text-warning me-1"></i>
+                                    External port for database access. Use different ports for multiple instances.
+                                </div>
+                            </div>
+                            
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" name="mariadb_expose" id="mariadbExpose">
+                                <label class="form-check-label" for="mariadbExpose">
+                                    <i class="bi bi-globe me-1"></i>Expose to external network
+                                </label>
+                                <div class="form-text">Allow connections from outside Docker network (less secure)</div>
                             </div>
                         </div>
                     </div>

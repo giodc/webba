@@ -88,7 +88,16 @@ logDatabaseAccess($db, $site['id'], $currentUser['id'], 'database_manager_opened
 $dbType = $site['db_type'] ?? 'shared';
 $siteType = $site['type'];
 
-if ($dbType === 'dedicated' || in_array($dbType, ['mysql', 'postgresql'])) {
+if ($siteType === 'mariadb') {
+    // MariaDB instance - standalone database
+    $dbHost = $site['container_name'];
+    $dbName = $site['db_name'] ?? 'defaultdb';
+    $dbUser = 'root'; // Use root for full access
+    
+    // Get root password from JSON stored credentials
+    $dbCredentials = json_decode($site['db_password'] ?? '{}', true);
+    $dbPassword = $dbCredentials['root'] ?? '';
+} elseif ($dbType === 'dedicated' || in_array($dbType, ['mysql', 'postgresql'])) {
     // Dedicated database (WordPress, PHP, Laravel)
     $dbHost = $site['container_name'] . '_db';
     

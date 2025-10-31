@@ -42,6 +42,7 @@ try {
     require_once 'includes/encryption.php';
     require_once 'includes/github-deploy.php';
     require_once 'includes/laravel-helpers.php';
+    require_once 'includes/ssl-config.php';
 } catch (Throwable $e) {
     while (ob_get_level() > 1) { ob_end_clean(); }
     ob_clean();
@@ -106,6 +107,10 @@ try {
 
     case "update_site":
         updateSiteData($db);
+        break;
+    
+    case "update_site_ssl":
+        updateSiteSSLConfig($db);
         break;
 
     case "check_github_updates":
@@ -342,6 +347,14 @@ try {
     case "check_update_status":
         checkUpdateStatusHandler($db);
         break;
+    
+    case "update_custom_database":
+        updateCustomDatabaseHandler($db);
+        break;
+    
+    case "toggle_mariadb_external_access":
+        toggleMariaDBExternalAccessHandler($db);
+        break;
         
     default:
         while (ob_get_level() > 1) { ob_end_clean(); }
@@ -377,20 +390,31 @@ function createSiteHandler($db) {
 
         $data = $input;
 
-        // Validate required fields
-        if (empty($data["name"]) || empty($data["type"]) || empty($data["domain"])) {
+        // Validate required fields (domain not required for MariaDB)
+        if (empty($data["name"]) || empty($data["type"])) {
             throw new Exception("Missing required fields");
+        }
+        
+        // Domain is required for web apps but not for database services
+        if ($data["type"] !== "mariadb" && empty($data["domain"])) {
+            throw new Exception("Domain is required for web applications");
         }
 
         // Generate site configuration
         $containerName = $data["type"] . "_" . preg_replace("/[^a-z0-9]/", "", strtolower($data["name"])) . "_" . time();
 
-        // Determine final domain
-        $domain = $data["domain"];
-        if ($data["domain_suffix"] !== "custom") {
-            $domain = $data["domain"] . $data["domain_suffix"];
+        // Determine final domain (not needed for MariaDB)
+        $domain = "";
+        if ($data["type"] !== "mariadb") {
+            $domain = $data["domain"];
+            if (isset($data["domain_suffix"]) && $data["domain_suffix"] !== "custom") {
+                $domain = $data["domain"] . $data["domain_suffix"];
+            } else if (isset($data["custom_domain"])) {
+                $domain = $data["custom_domain"];
+            }
         } else {
-            $domain = $data["custom_domain"];
+            // For MariaDB, use container name as "domain" for internal reference
+            $domain = $containerName;
         }
 
         // Prepare SSL configuration
@@ -407,8 +431,7 @@ function createSiteHandler($db) {
                 switch ($sslConfig["provider"]) {
                     case "cloudflare":
                         $sslConfig["credentials"] = [
-                            "cf_email" => $data["cf_email"] ?? "",
-                            "cf_api_key" => $data["cf_api_key"] ?? ""
+                            "cf_api_token" => $data["cf_api_token"] ?? ""
                         ];
                         break;
                     case "route53":
@@ -423,6 +446,12 @@ function createSiteHandler($db) {
                             "do_auth_token" => $data["do_auth_token"] ?? ""
                         ];
                         break;
+                }
+                
+                // Update Traefik configuration for DNS challenge
+                $updateResult = updateTraefikForDNSChallenge($sslConfig["provider"], $sslConfig["credentials"]);
+                if (!$updateResult) {
+                    error_log("Warning: Failed to update Traefik for DNS challenge");
                 }
             }
         }
@@ -508,6 +537,9 @@ function createSiteHandler($db) {
                     break;
                 case "laravel":
                     deployLaravel($site, $data, $db);
+                    break;
+                case "mariadb":
+                    deployMariaDB($db, $site, $data);
                     break;
             }
             $deploymentSuccess = true;
@@ -696,11 +728,20 @@ services:
     
     // Add SSL labels if SSL is enabled
     if ($site['ssl']) {
+        // Determine certificate resolver based on SSL config
+        $certResolver = 'letsencrypt'; // Default to HTTP challenge
+        if (!empty($site['ssl_config'])) {
+            $sslConfig = is_string($site['ssl_config']) ? json_decode($site['ssl_config'], true) : $site['ssl_config'];
+            if (isset($sslConfig['challenge']) && $sslConfig['challenge'] === 'dns') {
+                $certResolver = 'letsencrypt-dns'; // Use DNS challenge resolver
+            }
+        }
+        
         $compose .= "
       - traefik.http.routers.{$containerName}-secure.rule=Host(`{$domain}`)
       - traefik.http.routers.{$containerName}-secure.entrypoints=websecure
       - traefik.http.routers.{$containerName}-secure.tls=true
-      - traefik.http.routers.{$containerName}-secure.tls.certresolver=letsencrypt
+      - traefik.http.routers.{$containerName}-secure.tls.certresolver={$certResolver}
       - traefik.http.routers.{$containerName}.middlewares=redirect-to-https
       - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
       - traefik.http.middlewares.redirect-to-https.redirectscheme.permanent=true";
@@ -834,6 +875,109 @@ function deployLaravel($site, $config, $db) {
     }
 }
 
+function deployMariaDB($db, $site, $config) {
+    // Ensure container_name is set
+    if (empty($site['container_name'])) {
+        throw new Exception("CRITICAL: deployMariaDB received empty container_name for site: " . $site["name"]);
+    }
+    
+    // Generate passwords if not provided
+    $rootPassword = $config['mariadb_root_password'] ?? bin2hex(random_bytes(16));
+    $userPassword = $config['mariadb_password'] ?? bin2hex(random_bytes(12));
+    $database = $config['mariadb_database'] ?? 'defaultdb';
+    $user = $config['mariadb_user'] ?? 'dbuser';
+    $port = $config['mariadb_port'] ?? 3306;
+    
+    // Check if expose is explicitly enabled (checkbox sends 'on' when checked, nothing when unchecked)
+    $expose = isset($config['mariadb_expose']) && ($config['mariadb_expose'] === 'on' || $config['mariadb_expose'] === true || $config['mariadb_expose'] === '1');
+    
+    // Check for port conflicts if exposing
+    if ($expose) {
+        $portConflict = checkMariaDBPortConflict($db, $port, null);
+        if ($portConflict) {
+            throw new Exception("Port $port is already in use by another MariaDB instance: {$portConflict['name']}. Please choose a different port.");
+        }
+    }
+    
+    // Create MariaDB docker-compose
+    $composePath = "/app/apps/mariadb/sites/{$site['container_name']}/docker-compose.yml";
+    $mariadbCompose = createMariaDBDockerCompose($site, $config, $rootPassword, $userPassword);
+    
+    $dir = dirname($composePath);
+    if (!is_dir($dir)) {
+        mkdir($dir, 0755, true);
+    }
+    file_put_contents($composePath, $mariadbCompose);
+    
+    // Save to database
+    saveComposeConfig($db, $mariadbCompose, $site['owner_id'] ?? 1, $site['id']);
+    
+    // Save database credentials - only save port if expose is enabled
+    $stmt = $db->prepare("UPDATE sites SET db_password = ?, db_type = ?, db_host = ?, db_port = ?, db_name = ?, db_user = ? WHERE container_name = ?");
+    $stmt->execute([
+        json_encode(['root' => $rootPassword, 'user' => $userPassword]),
+        'mariadb',
+        $site['container_name'],
+        $expose ? $port : null,
+        $database,
+        $user,
+        $site['container_name']
+    ]);
+    
+    $result = executeDockerCompose($composePath, "up -d");
+    if (!$result["success"]) {
+        throw new Exception("Failed to start MariaDB: " . $result["output"]);
+    }
+}
+
+function createMariaDBDockerCompose($site, $config, $rootPassword, $userPassword) {
+    $containerName = $site["container_name"];
+    $database = $config['mariadb_database'] ?? 'defaultdb';
+    $user = $config['mariadb_user'] ?? 'dbuser';
+    $port = $config['mariadb_port'] ?? 3306;
+    $expose = isset($config['mariadb_expose']) && $config['mariadb_expose'];
+    
+    $compose = "version: '3.8'
+services:
+  {$containerName}:
+    image: mariadb:latest
+    container_name: {$containerName}
+    environment:
+      - MYSQL_ROOT_PASSWORD={$rootPassword}
+      - MYSQL_DATABASE={$database}
+      - MYSQL_USER={$user}
+      - MYSQL_PASSWORD={$userPassword}
+    volumes:
+      - {$containerName}_data:/var/lib/mysql";
+    
+    // Add port mapping if expose is enabled
+    if ($expose) {
+        $compose .= "
+    ports:
+      - \"{$port}:3306\"";
+    }
+    
+    $compose .= "
+    networks:
+      - wharftales_wharftales
+    restart: unless-stopped
+    healthcheck:
+      test: [\"CMD\", \"mysqladmin\", \"ping\", \"-h\", \"localhost\", \"-u\", \"root\", \"-p{$rootPassword}\"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  {$containerName}_data:
+
+networks:
+  wharftales_wharftales:
+    external: true";
+    
+    return $compose;
+}
+
 function createLaravelDockerCompose($site, $config, &$generatedPassword = null) {
     $containerName = $site["container_name"];
     $domain = $site["domain"];
@@ -898,11 +1042,20 @@ services:
     
     // Add SSL labels if SSL is enabled
     if ($site['ssl']) {
+        // Determine certificate resolver based on SSL config
+        $certResolver = 'letsencrypt'; // Default to HTTP challenge
+        if (!empty($site['ssl_config'])) {
+            $sslConfig = is_string($site['ssl_config']) ? json_decode($site['ssl_config'], true) : $site['ssl_config'];
+            if (isset($sslConfig['challenge']) && $sslConfig['challenge'] === 'dns') {
+                $certResolver = 'letsencrypt-dns'; // Use DNS challenge resolver
+            }
+        }
+        
         $compose .= "
       - traefik.http.routers.{$containerName}-secure.rule=Host(`{$domain}`)
       - traefik.http.routers.{$containerName}-secure.entrypoints=websecure
       - traefik.http.routers.{$containerName}-secure.tls=true
-      - traefik.http.routers.{$containerName}-secure.tls.certresolver=letsencrypt
+      - traefik.http.routers.{$containerName}-secure.tls.certresolver={$certResolver}
       - traefik.http.routers.{$containerName}.middlewares=redirect-to-https
       - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
       - traefik.http.middlewares.redirect-to-https.redirectscheme.permanent=true";
@@ -973,11 +1126,12 @@ function createWordPressDockerCompose($site, $config, &$generatedPassword = null
     $domain = $site["domain"];
     $phpVersion = $site["php_version"] ?? '8.3';
     
-    // Check database type (shared or dedicated)
-    $dbType = $config['wp_db_type'] ?? 'shared';
+    // Check database type (dedicated or custom)
+    $dbType = $config['wp_db_type'] ?? 'dedicated';
     $useDedicatedDb = ($dbType === 'dedicated');
+    $useCustomDb = ($dbType === 'custom');
     
-    // Generate random database password for this site
+    // Generate random database password for dedicated database
     $dbPassword = bin2hex(random_bytes(16)); // 32 character random password
     
     // Return the password via reference parameter
@@ -1005,15 +1159,25 @@ services:
       - WORDPRESS_DB_NAME={$dbName}
       - WORDPRESS_DB_USER={$dbUser}
       - WORDPRESS_DB_PASSWORD={$dbPassword}";
-    } else {
-        // Shared database configuration with unique table prefix
-        $tablePrefix = 'wp_' . substr(md5($site['name']), 0, 8) . '_';
+    } elseif ($useCustomDb) {
+        // Custom external database configuration
+        $dbHost = $config['wp_db_host'] ?? 'localhost';
+        $dbPort = $config['wp_db_port'] ?? 3306;
+        $dbName = $config['wp_db_name'] ?? 'wordpress';
+        $dbUser = $config['wp_db_user'] ?? 'wordpress';
+        $dbPassword = $config['wp_db_password'] ?? '';
+        
+        // Use custom password instead of generated one
+        $generatedPassword = $dbPassword;
+        
+        // Add port to host if not default
+        $dbHostWithPort = ($dbPort != 3306) ? "{$dbHost}:{$dbPort}" : $dbHost;
+        
         $compose .= "
-      - WORDPRESS_DB_HOST=wharftales_db
-      - WORDPRESS_DB_NAME=wharftales
-      - WORDPRESS_DB_USER=wharftales
-      - WORDPRESS_DB_PASSWORD=wharftales_pass
-      - WORDPRESS_TABLE_PREFIX={$tablePrefix}";
+      - WORDPRESS_DB_HOST={$dbHostWithPort}
+      - WORDPRESS_DB_NAME={$dbName}
+      - WORDPRESS_DB_USER={$dbUser}
+      - WORDPRESS_DB_PASSWORD={$dbPassword}";
     }
     
     // Add Redis configuration if optimizations are enabled
@@ -1046,11 +1210,20 @@ services:
     
     // Add SSL labels if SSL is enabled
     if ($site['ssl']) {
+        // Determine certificate resolver based on SSL config
+        $certResolver = 'letsencrypt'; // Default to HTTP challenge
+        if (!empty($site['ssl_config'])) {
+            $sslConfig = is_string($site['ssl_config']) ? json_decode($site['ssl_config'], true) : $site['ssl_config'];
+            if (isset($sslConfig['challenge']) && $sslConfig['challenge'] === 'dns') {
+                $certResolver = 'letsencrypt-dns'; // Use DNS challenge resolver
+            }
+        }
+        
         $compose .= "
       - traefik.http.routers.{$containerName}-secure.rule=Host(`{$domain}`)
       - traefik.http.routers.{$containerName}-secure.entrypoints=websecure
       - traefik.http.routers.{$containerName}-secure.tls=true
-      - traefik.http.routers.{$containerName}-secure.tls.certresolver=letsencrypt
+      - traefik.http.routers.{$containerName}-secure.tls.certresolver={$certResolver}
       - traefik.http.routers.{$containerName}.middlewares=redirect-to-https
       - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
       - traefik.http.middlewares.redirect-to-https.redirectscheme.permanent=true";
@@ -1156,10 +1329,23 @@ function deployWordPress($db, $site, $config) {
     // Save to database
     saveComposeConfig($db, $wpCompose, $site['owner_id'] ?? 1, $site['id']);
     
-    // Save the database password to the database if it was generated
-    if ($dbPassword && ($config['wp_db_type'] ?? 'shared') === 'dedicated') {
-        $stmt = $db->prepare("UPDATE sites SET db_password = ? WHERE container_name = ?");
-        $stmt->execute([$dbPassword, $site['container_name']]);
+    // Save the database credentials to the database
+    $dbType = $config['wp_db_type'] ?? 'dedicated';
+    if ($dbType === 'dedicated' && $dbPassword) {
+        $stmt = $db->prepare("UPDATE sites SET db_password = ?, db_type = ? WHERE container_name = ?");
+        $stmt->execute([$dbPassword, 'dedicated', $site['container_name']]);
+    } elseif ($dbType === 'custom') {
+        // Save custom database credentials
+        $stmt = $db->prepare("UPDATE sites SET db_type = ?, db_host = ?, db_port = ?, db_name = ?, db_user = ?, db_password = ? WHERE container_name = ?");
+        $stmt->execute([
+            'custom',
+            $config['wp_db_host'] ?? '',
+            $config['wp_db_port'] ?? 3306,
+            $config['wp_db_name'] ?? '',
+            $config['wp_db_user'] ?? '',
+            $config['wp_db_password'] ?? '',
+            $site['container_name']
+        ]);
     }
     
     // Create PHP configuration file if optimizations are enabled
@@ -1358,6 +1544,110 @@ function updateSiteData($db) {
             "needs_restart" => $needsRestart,
             "domain_changed" => $domainChanged,
             "ssl_changed" => $sslChanged
+        ]);
+
+    } catch (Exception $e) {
+        ob_clean();
+        http_response_code(400);
+        echo json_encode([
+            "success" => false,
+            "error" => $e->getMessage()
+        ]);
+    }
+}
+
+function updateSiteSSLConfig($db) {
+    try {
+        $input = json_decode(file_get_contents("php://input"), true);
+        
+        if (!$input) {
+            throw new Exception("Invalid JSON data");
+        }
+
+        $siteId = $input["site_id"];
+        $site = getSiteById($db, $siteId);
+        if (!$site) {
+            throw new Exception("Site not found");
+        }
+
+        $domainChanged = ($site['domain'] !== $input["domain"]);
+        $sslChanged = ($site['ssl'] != ($input["ssl"] ? 1 : 0));
+        
+        // Get current SSL config
+        $currentSslConfig = $site['ssl_config'] ? json_decode($site['ssl_config'], true) : null;
+        $newSslConfig = $input["ssl_config"] ?? [];
+        
+        // Merge credentials - only update if new values provided
+        if (!empty($currentSslConfig) && !empty($currentSslConfig['credentials'])) {
+            // Keep existing credentials
+            $existingCredentials = $currentSslConfig['credentials'];
+            
+            // Update only if new credentials provided
+            if (!empty($newSslConfig['credentials'])) {
+                foreach ($newSslConfig['credentials'] as $key => $value) {
+                    if (!empty($value)) {
+                        $existingCredentials[$key] = $value;
+                    }
+                }
+                $newSslConfig['credentials'] = $existingCredentials;
+            } else {
+                $newSslConfig['credentials'] = $existingCredentials;
+            }
+        }
+        
+        // Update site with new SSL configuration
+        $stmt = $db->prepare("UPDATE sites SET name = ?, domain = ?, ssl = ?, ssl_config = ? WHERE id = ?");
+        $stmt->execute([
+            $input["name"],
+            $input["domain"], 
+            $input["ssl"] ? 1 : 0,
+            json_encode($newSslConfig),
+            $siteId
+        ]);
+
+        $message = "SSL configuration updated successfully";
+        
+        // If DNS challenge is configured, update Traefik
+        if ($input["ssl"] && $newSslConfig['challenge'] === 'dns' && !empty($newSslConfig['provider'])) {
+            require_once 'includes/ssl-config.php';
+            $updateResult = updateTraefikForDNSChallenge($newSslConfig['provider'], $newSslConfig['credentials']);
+            if (!$updateResult) {
+                $message .= " (Warning: Traefik DNS configuration may need manual update)";
+            }
+        }
+        
+        // Regenerate container configuration
+        $updatedSite = getSiteById($db, $siteId);
+        $composePath = "/app/apps/{$updatedSite['type']}/sites/{$updatedSite['container_name']}/docker-compose.yml";
+        
+        if (file_exists($composePath)) {
+            // Generate new compose file based on site type
+            $newCompose = '';
+            if ($updatedSite['type'] === 'wordpress') {
+                $newCompose = createWordPressDockerCompose($updatedSite, []);
+            } elseif ($updatedSite['type'] === 'php') {
+                $newCompose = createPHPDockerCompose($updatedSite, []);
+            } elseif ($updatedSite['type'] === 'laravel') {
+                $newCompose = createLaravelDockerCompose($updatedSite, []);
+            }
+            
+            if ($newCompose) {
+                file_put_contents($composePath, $newCompose);
+                
+                // Save to database
+                saveComposeConfig($db, $newCompose, $updatedSite['owner_id'] ?? 1, $updatedSite['id']);
+                
+                // Recreate the container with new configuration
+                executeDockerCompose($composePath, "up -d --force-recreate");
+                
+                $message = "SSL configuration updated and container redeployed successfully!";
+            }
+        }
+
+        ob_clean();
+        echo json_encode([
+            "success" => true,
+            "message" => $message
         ]);
 
     } catch (Exception $e) {
@@ -3150,7 +3440,10 @@ function generateDbToken($db) {
         
         // Check if site has database access
         $hasDatabase = false;
-        if ($siteType === 'wordpress' && $dbType === 'dedicated') {
+        if ($siteType === 'mariadb') {
+            // MariaDB instances are databases themselves
+            $hasDatabase = true;
+        } elseif ($siteType === 'wordpress' && $dbType === 'dedicated') {
             $hasDatabase = true;
         } elseif ($siteType === 'php' && in_array($dbType, ['mysql', 'postgresql'])) {
             $hasDatabase = true;
@@ -4148,6 +4441,207 @@ function checkUpdateStatusHandler($db) {
         ob_clean();
         http_response_code(500);
         echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    }
+}
+
+/**
+ * Update custom database settings
+ */
+function updateCustomDatabaseHandler($db) {
+    try {
+        // Get request body
+        $input = file_get_contents('php://input');
+        $data = json_decode($input, true);
+        
+        if (!$data || !isset($data['id'])) {
+            throw new Exception("Missing required data");
+        }
+        
+        $siteId = $data['id'];
+        
+        // Check if user has permission to manage this site
+        if (!canAccessSite($_SESSION['user_id'], $siteId, 'manage')) {
+            http_response_code(403);
+            throw new Exception("You don't have permission to manage this site");
+        }
+        
+        // Get the site
+        $site = getSiteById($db, $siteId);
+        if (!$site) {
+            throw new Exception("Site not found");
+        }
+        
+        // Validate that this is a custom database site
+        if ($site['db_type'] !== 'custom') {
+            throw new Exception("This site does not use a custom database");
+        }
+        
+        // Update database credentials
+        $stmt = $db->prepare("UPDATE sites SET db_host = ?, db_port = ?, db_name = ?, db_user = ?, db_password = ? WHERE id = ?");
+        $stmt->execute([
+            $data['db_host'] ?? '',
+            $data['db_port'] ?? 3306,
+            $data['db_name'] ?? '',
+            $data['db_user'] ?? '',
+            $data['db_password'] ?? '',
+            $siteId
+        ]);
+        
+        // Regenerate docker-compose with new database settings
+        $site['db_host'] = $data['db_host'];
+        $site['db_port'] = $data['db_port'];
+        $site['db_name'] = $data['db_name'];
+        $site['db_user'] = $data['db_user'];
+        $site['db_password'] = $data['db_password'];
+        
+        $config = json_decode($site['config'], true) ?: [];
+        $config['wp_db_type'] = 'custom';
+        $config['wp_db_host'] = $data['db_host'];
+        $config['wp_db_port'] = $data['db_port'];
+        $config['wp_db_name'] = $data['db_name'];
+        $config['wp_db_user'] = $data['db_user'];
+        $config['wp_db_password'] = $data['db_password'];
+        
+        // Regenerate docker-compose
+        $dbPassword = null;
+        $wpCompose = createWordPressDockerCompose($site, $config, $dbPassword);
+        
+        $composePath = "/app/apps/wordpress/sites/{$site['container_name']}/docker-compose.yml";
+        file_put_contents($composePath, $wpCompose);
+        
+        // Save to database
+        saveComposeConfig($db, $wpCompose, $_SESSION['user_id'], $siteId);
+        
+        // Restart container
+        executeDockerCompose($composePath, "down");
+        executeDockerCompose($composePath, "up -d");
+        
+        echo json_encode([
+            'success' => true,
+            'message' => 'Database settings updated and container restarted'
+        ]);
+        
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    }
+}
+
+/**
+ * Toggle external network access for MariaDB instances
+ */
+function toggleMariaDBExternalAccessHandler($db) {
+    try {
+        // Get request body
+        $input = file_get_contents('php://input');
+        $data = json_decode($input, true);
+        
+        if (!$data || !isset($data['id']) || !isset($data['enable'])) {
+            throw new Exception("Missing required data");
+        }
+        
+        $siteId = $data['id'];
+        $enable = $data['enable'];
+        $port = $data['port'] ?? 3306;
+        
+        // Check if user has permission to manage this site
+        if (!canAccessSite($_SESSION['user_id'], $siteId, 'manage')) {
+            http_response_code(403);
+            throw new Exception("You don't have permission to manage this site");
+        }
+        
+        // Get the site
+        $site = getSiteById($db, $siteId);
+        if (!$site) {
+            throw new Exception("Site not found");
+        }
+        
+        // Validate that this is a MariaDB instance
+        if ($site['type'] !== 'mariadb') {
+            throw new Exception("This action is only available for MariaDB instances");
+        }
+        
+        // Update database port
+        if ($enable) {
+            // Validate port
+            if ($port < 1024 || $port > 65535) {
+                throw new Exception("Port must be between 1024 and 65535");
+            }
+            
+            // Check for port conflicts
+            $portConflict = checkMariaDBPortConflict($db, $port, $siteId);
+            if ($portConflict) {
+                throw new Exception("Port $port is already in use by another MariaDB instance: {$portConflict['name']}. Please choose a different port.");
+            }
+            
+            // Update site record with port
+            $stmt = $db->prepare("UPDATE sites SET db_port = ? WHERE id = ?");
+            $stmt->execute([$port, $siteId]);
+        } else {
+            // Remove port exposure
+            $stmt = $db->prepare("UPDATE sites SET db_port = NULL WHERE id = ?");
+            $stmt->execute([$siteId]);
+        }
+        
+        // Regenerate docker-compose with or without port exposure
+        $config = json_decode($site['config'], true) ?: [];
+        $config['mariadb_expose'] = $enable;
+        $config['mariadb_port'] = $enable ? $port : null;
+        
+        $dbCredentials = json_decode($site['db_password'] ?? '{}', true);
+        $rootPassword = $dbCredentials['root'] ?? '';
+        $userPassword = $dbCredentials['user'] ?? '';
+        
+        // Update site array for docker-compose generation
+        $site['db_port'] = $enable ? $port : null;
+        
+        $mariadbCompose = createMariaDBDockerCompose($site, $config, $rootPassword, $userPassword);
+        
+        $composePath = "/app/apps/mariadb/sites/{$site['container_name']}/docker-compose.yml";
+        file_put_contents($composePath, $mariadbCompose);
+        
+        // Save to database
+        saveComposeConfig($db, $mariadbCompose, $_SESSION['user_id'], $siteId);
+        
+        // Restart container
+        executeDockerCompose($composePath, "down");
+        executeDockerCompose($composePath, "up -d");
+        
+        echo json_encode([
+            'success' => true,
+            'message' => $enable ? "External access enabled on port $port" : "External access disabled"
+        ]);
+        
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    }
+}
+
+/**
+ * Check if a port is already in use by another MariaDB instance
+ * @param PDO $db Database connection
+ * @param int $port Port to check
+ * @param int|null $excludeSiteId Site ID to exclude from check (for updates)
+ * @return array|false Returns site info if conflict found, false otherwise
+ */
+function checkMariaDBPortConflict($db, $port, $excludeSiteId = null) {
+    try {
+        $query = "SELECT id, name, container_name FROM sites WHERE type = 'mariadb' AND db_port = ?";
+        $params = [$port];
+        
+        if ($excludeSiteId !== null) {
+            $query .= " AND id != ?";
+            $params[] = $excludeSiteId;
+        }
+        
+        $stmt = $db->prepare($query);
+        $stmt->execute($params);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        return $result ?: false;
+    } catch (Exception $e) {
+        return false;
     }
 }
 

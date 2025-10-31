@@ -26,6 +26,10 @@ function initDatabase() {
         sftp_port INTEGER,
         db_password TEXT,
         db_type TEXT DEFAULT 'shared',
+        db_host TEXT,
+        db_name TEXT,
+        db_user TEXT,
+        db_port INTEGER DEFAULT 3306,
         owner_id INTEGER DEFAULT 1,
         redis_enabled INTEGER DEFAULT 0,
         redis_host TEXT,
@@ -147,6 +151,18 @@ function initDatabase() {
         }
         if (!in_array('ssl_cert_issued_at', $columnNames)) {
             $pdo->exec("ALTER TABLE sites ADD COLUMN ssl_cert_issued_at DATETIME");
+        }
+        if (!in_array('db_host', $columnNames)) {
+            $pdo->exec("ALTER TABLE sites ADD COLUMN db_host TEXT");
+        }
+        if (!in_array('db_name', $columnNames)) {
+            $pdo->exec("ALTER TABLE sites ADD COLUMN db_name TEXT");
+        }
+        if (!in_array('db_user', $columnNames)) {
+            $pdo->exec("ALTER TABLE sites ADD COLUMN db_user TEXT");
+        }
+        if (!in_array('db_port', $columnNames)) {
+            $pdo->exec("ALTER TABLE sites ADD COLUMN db_port INTEGER DEFAULT 3306");
         }
     } catch (Exception $e) {
         // Columns might already exist or other error, continue
@@ -277,6 +293,7 @@ function getAppIcon($type) {
         case 'wordpress': return 'wordpress';
         case 'php': return 'code-slash';
         case 'laravel': return 'lightning';
+        case 'mariadb': return 'database';
         default: return 'app';
     }
 }
@@ -650,7 +667,13 @@ function generateComposeFile($pdo, $siteId = null) {
     $result = file_put_contents($outputPath, $config['compose_yaml']);
     
     if ($result === false) {
-        return null;
+        error_log("Failed to write compose file to: $outputPath");
+        error_log("Directory writable: " . (is_writable(dirname($outputPath)) ? 'yes' : 'no'));
+        error_log("File exists: " . (file_exists($outputPath) ? 'yes' : 'no'));
+        if (file_exists($outputPath)) {
+            error_log("File writable: " . (is_writable($outputPath) ? 'yes' : 'no'));
+        }
+        throw new Exception("Failed to write compose file to: $outputPath. Check permissions.");
     }
     
     return $outputPath;
@@ -672,21 +695,29 @@ function updateComposeParameter($pdo, $paramKey, $paramValue, $userId, $siteId =
         ];
         
         $yaml = null;
+        $foundPath = null;
         foreach ($possiblePaths as $composeFile) {
             if (file_exists($composeFile)) {
                 $yaml = file_get_contents($composeFile);
+                $foundPath = $composeFile;
+                error_log("Found compose file at: $foundPath");
                 break;
             }
         }
         
         if ($yaml) {
             // Save initial config
+            error_log("Saving initial config from: $foundPath");
             saveComposeConfig($pdo, $yaml, $userId, $siteId);
             $config = getComposeConfig($pdo, $siteId);
         }
         
         if (!$config) {
-            throw new Exception("Compose configuration not found and could not be created. Tried paths: " . implode(', ', $possiblePaths));
+            $checkedPaths = [];
+            foreach ($possiblePaths as $path) {
+                $checkedPaths[] = $path . ' (' . (file_exists($path) ? 'exists' : 'not found') . ')';
+            }
+            throw new Exception("Compose configuration not found and could not be created. Checked paths: " . implode(', ', $checkedPaths));
         }
     }
     
