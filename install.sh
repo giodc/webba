@@ -118,6 +118,13 @@ if [ "$UPDATE_MODE" = true ]; then
     mkdir -p /opt/wharftales/data/backups
     chown -R www-data:www-data /opt/wharftales/data/backups
     
+    # Create traefik-dns.env if it doesn't exist
+    if [ ! -f "/opt/wharftales/data/traefik-dns.env" ]; then
+        echo "Creating traefik-dns.env file..."
+        touch /opt/wharftales/data/traefik-dns.env
+        chmod 600 /opt/wharftales/data/traefik-dns.env
+    fi
+    
     # Rebuild and restart containers
     echo "Rebuilding containers..."
     docker-compose build --no-cache web-gui
@@ -184,13 +191,6 @@ EOSQL
     echo "==============================="
     echo "WharfTales has been updated to the latest version."
     echo "Access the dashboard at: http://your-server-ip:9000"
-    echo ""
-    echo "New features in this update:"
-    echo "  • User Management with Role-Based Access Control"
-    echo "  • Optional Two-Factor Authentication (2FA/TOTP)"
-    echo "  • Site Permissions and Ownership"
-    echo "  • Redis Support for PHP and Laravel apps"
-    echo "  • Audit Logging"
     exit 0
 else
     echo "Setting up directories..."
@@ -211,6 +211,11 @@ else
     
     # Create required directories
     mkdir -p /opt/wharftales/{data,nginx/sites,ssl,apps,web}
+    
+    # Create empty traefik-dns.env file (used for DNS challenge credentials)
+    echo "Creating traefik-dns.env file..."
+    touch /opt/wharftales/data/traefik-dns.env
+    chmod 600 /opt/wharftales/data/traefik-dns.env
     
     # Create ACME file for SSL certificates
     echo "Creating ACME file for SSL certificates..."
