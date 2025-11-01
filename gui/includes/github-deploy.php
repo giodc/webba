@@ -42,7 +42,7 @@ function deployFromGitHub($site, $containerName) {
         if ($returnCode !== 0) {
             // Install git
             $gitInstallOutput = [];
-            exec("docker exec {$containerName} sh -c 'apt-get update && apt-get install -y git 2>&1'", $gitInstallOutput, $gitInstallReturn);
+            exec("docker exec -u root {$containerName} sh -c 'apt-get update && apt-get install -y git 2>&1'", $gitInstallOutput, $gitInstallReturn);
             if ($gitInstallReturn !== 0) {
                 return ['success' => false, 'message' => 'Failed to install git in container: ' . implode("\n", $gitInstallOutput)];
             }
@@ -196,7 +196,7 @@ function forceDeployFromGitHub($site, $containerName) {
         if ($returnCode !== 0) {
             // Install git
             $gitInstallOutput = [];
-            exec("docker exec {$containerName} sh -c 'apt-get update && apt-get install -y git 2>&1'", $gitInstallOutput, $gitInstallReturn);
+            exec("docker exec -u root {$containerName} sh -c 'apt-get update && apt-get install -y git 2>&1'", $gitInstallOutput, $gitInstallReturn);
             if ($gitInstallReturn !== 0) {
                 return ['success' => false, 'message' => 'Failed to install git in container: ' . implode("\n", $gitInstallOutput)];
             }
