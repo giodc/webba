@@ -88,10 +88,15 @@ if [ "$UPDATE_MODE" = true ]; then
     echo "Pulling latest version from GitHub..."
     git pull origin master
     
-    # Restore docker-compose.yml from backup (preserve user settings)
+    # Preserve user settings from old docker-compose.yml
     if [ -f "$BACKUP_DIR/docker-compose.yml" ]; then
-        echo "Restoring docker-compose.yml to preserve your settings..."
-        cp "$BACKUP_DIR/docker-compose.yml" docker-compose.yml
+        echo "Preserving user email from old docker-compose.yml..."
+        # Extract email from backup
+        OLD_EMAIL=$(grep -oP 'letsencrypt\.acme\.email=\K[^"]+' "$BACKUP_DIR/docker-compose.yml" || echo "")
+        if [ ! -z "$OLD_EMAIL" ]; then
+            echo "Updating email to: $OLD_EMAIL"
+            sed -i "s/letsencrypt\.acme\.email=info@giodc\.com/letsencrypt.acme.email=$OLD_EMAIL/" docker-compose.yml
+        fi
     fi
     
     # Restore acme.json from backup (preserve SSL certificates)
