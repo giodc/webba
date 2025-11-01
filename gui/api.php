@@ -701,6 +701,13 @@ services:
     container_name: {$containerName}
     volumes:
       - {$containerName}_data:/var/www/html
+    command: >
+      bash -c \"a2enmod rewrite && 
+      echo '<Directory /var/www/html>' > /etc/apache2/conf-available/allow-override.conf &&
+      echo '  AllowOverride All' >> /etc/apache2/conf-available/allow-override.conf &&
+      echo '</Directory>' >> /etc/apache2/conf-available/allow-override.conf &&
+      a2enconf allow-override &&
+      apache2-foreground\"
     environment:";
     
     if ($useDedicatedDb) {
