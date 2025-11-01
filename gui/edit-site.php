@@ -595,6 +595,9 @@ $containerStatus = getDockerContainerStatus($site['container_name']);
                                     <button type="button" class="btn btn-sm btn-primary" onclick="pullFromGithubRepo()">
                                         <i class="bi bi-download me-1"></i>Pull Latest Changes
                                     </button>
+                                    <button type="button" class="btn btn-sm btn-danger" onclick="forcePullFromGithubRepo()">
+                                        <i class="bi bi-exclamation-triangle me-1"></i>Force Pull (Override)
+                                    </button>
                                     <?php if ($site['type'] === 'laravel'): ?>
                                     <button type="button" class="btn btn-sm btn-success" onclick="runLaravelBuild()">
                                         <i class="bi bi-hammer me-1"></i>Build Laravel
@@ -1728,6 +1731,29 @@ QUEUE_CONNECTION=redis</code></pre>
             }
         }
         
+        // Force Pull from GitHub (override local changes)
+        async function forcePullFromGithubRepo() {
+            if (!confirm('⚠️ WARNING: Force Pull from GitHub?\n\nThis will:\n- DISCARD ALL LOCAL CHANGES\n- Reset to remote repository state\n- Override all modified files\n\nThis action CANNOT be undone!\n\nAre you sure you want to continue?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api.php?action=force_pull_from_github&id=${siteId}`, {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(result.message || 'Successfully force pulled from GitHub!');
+                    location.reload();
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('Network error: ' + error.message);
+            }
+        }
+        
         // Run Laravel Build
         async function runLaravelBuild() {
             if (!confirm('Run Laravel build steps?\n\nThis will:\n- Install Composer dependencies\n- Run migrations\n- Install NPM dependencies\n- Build frontend assets\n- Cache configuration')) {
@@ -2070,7 +2096,7 @@ QUEUE_CONNECTION=redis</code></pre>
             }
         }
 
-        function deleteSite(id) {
+        async function deleteSite(id) {
             if (!confirm('Are you sure you want to delete this site? This action cannot be undone!')) {
                 return;
             }
@@ -2079,7 +2105,21 @@ QUEUE_CONNECTION=redis</code></pre>
                 return;
             }
             
-            window.location.href = '/api.php?action=delete_site&id=' + id;
+            try {
+                const response = await fetch('/api.php?action=delete_site&id=' + id);
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('success', 'Site deleted successfully. Redirecting to dashboard...');
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 1500);
+                } else {
+                    showAlert('danger', result.error || 'Failed to delete site');
+                }
+            } catch (error) {
+                showAlert('danger', 'Network error: ' + error.message);
+            }
         }
         
         function showAlert(type, message) {

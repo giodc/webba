@@ -30,11 +30,22 @@ function deployFromGitHub($site, $containerName) {
     
     // Clone or pull repository
     try {
+        // Check if container exists and is running
+        exec("docker ps --filter name={$containerName} --format '{{.Names}}' 2>&1", $containerCheck, $containerCheckReturn);
+        if (empty($containerCheck) || !in_array($containerName, $containerCheck)) {
+            return ['success' => false, 'message' => "Container '{$containerName}' is not running. Please start the container first."];
+        }
+        
         // Check if git is installed in container
-        exec("docker exec {$containerName} which git 2>&1", $output, $returnCode);
+        $gitCheckOutput = [];
+        exec("docker exec {$containerName} which git 2>&1", $gitCheckOutput, $returnCode);
         if ($returnCode !== 0) {
             // Install git
-            exec("docker exec {$containerName} apt-get update && docker exec {$containerName} apt-get install -y git 2>&1");
+            $gitInstallOutput = [];
+            exec("docker exec {$containerName} sh -c 'apt-get update && apt-get install -y git 2>&1'", $gitInstallOutput, $gitInstallReturn);
+            if ($gitInstallReturn !== 0) {
+                return ['success' => false, 'message' => 'Failed to install git in container: ' . implode("\n", $gitInstallOutput)];
+            }
         }
         
         // Check if repo already exists
@@ -45,11 +56,13 @@ function deployFromGitHub($site, $containerName) {
             // First, mark directory as safe to avoid "dubious ownership" error
             exec("docker exec {$containerName} sh -c 'git config --global --add safe.directory /var/www/html 2>&1'");
             
+            $pullOutput = [];
             $pullCmd = "docker exec {$containerName} sh -c 'cd /var/www/html && git pull origin {$githubBranch} 2>&1'";
             exec($pullCmd, $pullOutput, $pullReturn);
             
             if ($pullReturn !== 0) {
-                return ['success' => false, 'message' => 'Failed to pull from GitHub: ' . implode("\n", $pullOutput)];
+                $errorMsg = !empty($pullOutput) ? implode("\n", $pullOutput) : 'Unknown error (no output)';
+                return ['success' => false, 'message' => 'Failed to pull from GitHub: ' . $errorMsg];
             }
             
             $message = 'Successfully pulled latest changes from GitHub';
@@ -60,11 +73,13 @@ function deployFromGitHub($site, $containerName) {
             exec("docker exec {$containerName} sh -c 'mkdir -p /var/www/html'");
             
             // Clone directly into /var/www/html
+            $cloneOutput = [];
             $cloneCmd = "docker exec {$containerName} sh -c 'cd /var/www && git clone -b {$githubBranch} {$repoUrl} html 2>&1'";
             exec($cloneCmd, $cloneOutput, $cloneReturn);
             
             if ($cloneReturn !== 0) {
-                return ['success' => false, 'message' => 'Failed to clone from GitHub: ' . implode("\n", $cloneOutput)];
+                $errorMsg = !empty($cloneOutput) ? implode("\n", $cloneOutput) : 'Unknown error (no output)';
+                return ['success' => false, 'message' => 'Failed to clone from GitHub: ' . $errorMsg];
             }
             
             // Mark directory as safe for future git operations
@@ -141,6 +156,134 @@ function normalizeGitHubUrl($repo, $token = null) {
     }
     
     return $url;
+}
+
+/**
+ * Force deploy code from GitHub repository to container (override all local changes)
+ * 
+ * @param array $site Site configuration with github_repo, github_branch, github_token
+ * @param string $containerName Docker container name
+ * @return array Result with success status and message
+ */
+function forceDeployFromGitHub($site, $containerName) {
+    $githubRepo = $site['github_repo'] ?? null;
+    $githubBranch = $site['github_branch'] ?? 'main';
+    $githubToken = $site['github_token'] ?? null;
+    
+    if (empty($githubRepo)) {
+        return ['success' => false, 'message' => 'No GitHub repository configured'];
+    }
+    
+    // Decrypt GitHub token if present
+    if ($githubToken) {
+        $githubToken = decryptGitHubToken($githubToken);
+    }
+    
+    // Normalize repository URL
+    $repoUrl = normalizeGitHubUrl($githubRepo, $githubToken);
+    
+    // Force pull repository
+    try {
+        // Check if container exists and is running
+        exec("docker ps --filter name={$containerName} --format '{{.Names}}' 2>&1", $containerCheck, $containerCheckReturn);
+        if (empty($containerCheck) || !in_array($containerName, $containerCheck)) {
+            return ['success' => false, 'message' => "Container '{$containerName}' is not running. Please start the container first."];
+        }
+        
+        // Check if git is installed in container
+        $gitCheckOutput = [];
+        exec("docker exec {$containerName} which git 2>&1", $gitCheckOutput, $returnCode);
+        if ($returnCode !== 0) {
+            // Install git
+            $gitInstallOutput = [];
+            exec("docker exec {$containerName} sh -c 'apt-get update && apt-get install -y git 2>&1'", $gitInstallOutput, $gitInstallReturn);
+            if ($gitInstallReturn !== 0) {
+                return ['success' => false, 'message' => 'Failed to install git in container: ' . implode("\n", $gitInstallOutput)];
+            }
+        }
+        
+        // Check if repo already exists
+        exec("docker exec {$containerName} test -d /var/www/html/.git 2>/dev/null", $output, $returnCode);
+        
+        if ($returnCode === 0) {
+            // Repository exists, force reset and pull
+            // First, mark directory as safe to avoid "dubious ownership" error
+            exec("docker exec {$containerName} sh -c 'git config --global --add safe.directory /var/www/html 2>&1'");
+            
+            // Fetch latest changes
+            $fetchOutput = [];
+            $fetchCmd = "docker exec {$containerName} sh -c 'cd /var/www/html && git fetch origin {$githubBranch} 2>&1'";
+            exec($fetchCmd, $fetchOutput, $fetchReturn);
+            
+            if ($fetchReturn !== 0) {
+                $errorMsg = !empty($fetchOutput) ? implode("\n", $fetchOutput) : 'Unknown error (no output)';
+                return ['success' => false, 'message' => 'Failed to fetch from GitHub: ' . $errorMsg];
+            }
+            
+            // Force reset to remote branch (DISCARDS ALL LOCAL CHANGES)
+            $resetOutput = [];
+            $resetCmd = "docker exec {$containerName} sh -c 'cd /var/www/html && git reset --hard origin/{$githubBranch} 2>&1'";
+            exec($resetCmd, $resetOutput, $resetReturn);
+            
+            if ($resetReturn !== 0) {
+                $errorMsg = !empty($resetOutput) ? implode("\n", $resetOutput) : 'Unknown error (no output)';
+                return ['success' => false, 'message' => 'Failed to reset repository: ' . $errorMsg];
+            }
+            
+            // Clean untracked files and directories
+            $cleanCmd = "docker exec {$containerName} sh -c 'cd /var/www/html && git clean -fd 2>&1'";
+            exec($cleanCmd, $cleanOutput, $cleanReturn);
+            
+            $message = 'Successfully force pulled from GitHub (all local changes discarded)';
+        } else {
+            // Clone repository (same as regular deploy)
+            // Clear the html directory completely and clone fresh
+            exec("docker exec {$containerName} sh -c 'rm -rf /var/www/html'");
+            exec("docker exec {$containerName} sh -c 'mkdir -p /var/www/html'");
+            
+            // Clone directly into /var/www/html
+            $cloneOutput = [];
+            $cloneCmd = "docker exec {$containerName} sh -c 'cd /var/www && git clone -b {$githubBranch} {$repoUrl} html 2>&1'";
+            exec($cloneCmd, $cloneOutput, $cloneReturn);
+            
+            if ($cloneReturn !== 0) {
+                $errorMsg = !empty($cloneOutput) ? implode("\n", $cloneOutput) : 'Unknown error (no output)';
+                return ['success' => false, 'message' => 'Failed to clone from GitHub: ' . $errorMsg];
+            }
+            
+            // Mark directory as safe for future git operations
+            exec("docker exec {$containerName} sh -c 'git config --global --add safe.directory /var/www/html 2>&1'");
+            
+            $message = 'Successfully cloned repository from GitHub';
+        }
+        
+        // Set proper permissions
+        exec("docker exec {$containerName} chown -R www-data:www-data /var/www/html");
+        exec("docker exec {$containerName} chmod -R 755 /var/www/html");
+        
+        // Run Laravel build steps if it's a Laravel site
+        $siteType = $site['type'] ?? '';
+        if ($siteType === 'laravel') {
+            $buildResult = runLaravelBuild($containerName, $siteType);
+            if (!$buildResult['success']) {
+                return $buildResult;
+            }
+            $message .= "\n" . ($buildResult['details'] ?? '');
+        }
+        
+        // Get current commit hash
+        exec("docker exec {$containerName} sh -c 'cd /var/www/html && git rev-parse HEAD 2>/dev/null'", $commitOutput);
+        $commitHash = trim($commitOutput[0] ?? '');
+        
+        return [
+            'success' => true,
+            'message' => $message,
+            'commit_hash' => $commitHash
+        ];
+        
+    } catch (Exception $e) {
+        return ['success' => false, 'message' => 'GitHub force deployment error: ' . $e->getMessage()];
+    }
 }
 
 /**

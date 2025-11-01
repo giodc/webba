@@ -121,6 +121,10 @@ try {
         pullFromGitHubHandler($db, $_GET["id"]);
         break;
     
+    case "force_pull_from_github":
+        forcePullFromGitHubHandler($db, $_GET["id"]);
+        break;
+    
     case "build_laravel":
         buildLaravelHandler($db, $_GET["id"]);
         break;
@@ -4289,6 +4293,55 @@ function pullFromGitHubHandler($db, $siteId) {
         
         $containerName = $site['container_name'];
         $result = deployFromGitHub($site, $containerName);
+        
+        if ($result['success']) {
+            // Update database with new commit hash and timestamp
+            if (!empty($result['commit_hash'])) {
+                $stmt = $db->prepare("UPDATE sites SET github_last_commit = ?, github_last_pull = CURRENT_TIMESTAMP WHERE id = ?");
+                $stmt->execute([$result['commit_hash'], $siteId]);
+            }
+            
+            // Run composer install if needed
+            runComposerInstall($containerName);
+            
+            echo json_encode([
+                'success' => true,
+                'message' => $result['message'],
+                'commit_hash' => $result['commit_hash'] ?? null,
+                'pull_time' => date('Y-m-d H:i:s')
+            ]);
+        } else {
+            throw new Exception($result['message']);
+        }
+        
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    }
+}
+
+/**
+ * Force pull from GitHub (override all local changes)
+ */
+function forcePullFromGitHubHandler($db, $siteId) {
+    try {
+        // Check permissions
+        if (!canManageSite($_SESSION['user_id'], $siteId)) {
+            http_response_code(403);
+            throw new Exception("You don't have permission to manage this site");
+        }
+        
+        $site = getSiteById($db, $siteId);
+        if (!$site) {
+            throw new Exception("Site not found");
+        }
+        
+        if (empty($site['github_repo'])) {
+            throw new Exception("No GitHub repository configured for this site");
+        }
+        
+        $containerName = $site['container_name'];
+        $result = forceDeployFromGitHub($site, $containerName);
         
         if ($result['success']) {
             // Update database with new commit hash and timestamp
