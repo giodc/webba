@@ -15,6 +15,11 @@ services:
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
       - "--certificatesresolvers.letsencrypt.acme.email=info@giodc.com"
       - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.letsencrypt-dns.acme.dnschallenge=true"
+      - "--certificatesresolvers.letsencrypt-dns.acme.dnschallenge.provider=cloudflare"
+      - "--certificatesresolvers.letsencrypt-dns.acme.dnschallenge.delaybeforecheck=0"
+      - "--certificatesresolvers.letsencrypt-dns.acme.email=info@giodc.com"
+      - "--certificatesresolvers.letsencrypt-dns.acme.storage=/letsencrypt/acme-dns.json"
       # Access logs
       - "--accesslog=true"
       - "--accesslog.format=json"
@@ -29,6 +34,8 @@ services:
       - "80:80"
       - "443:443"
       - "8443:8443"  # Alternative HTTPS port for dashboard
+    env_file:
+      - ./data/traefik-dns.env
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./ssl:/letsencrypt
@@ -44,9 +51,9 @@ services:
         DOCKER_GID: 988
     container_name: wharftales_gui
     ports:
-      - "9000:80"  # Dashboard accessible on port 9000
+      - "9000:8080"  # Dashboard accessible on port 9000
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      - # Removed direct Docker socket mount - using proxy instead
       - /usr/bin/docker:/usr/bin/docker:ro
       - /usr/local/bin/docker-compose:/usr/local/bin/docker-compose:ro
       - ./data:/app/data
@@ -59,12 +66,7 @@ services:
       - ./gui:/var/www/html
     environment:
       - DB_PATH=/app/data/database.sqlite
-
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.webgui.rule=Host(`Dashboard.local.wharftales.org`)
-      - traefik.http.routers.webgui.entrypoints=web
-      - traefik.http.services.webgui.loadbalancer.server.port=80
+      - DOCKER_HOST=tcp://docker-proxy:2375
     networks:
       - wharftales
     restart: unless-stopped

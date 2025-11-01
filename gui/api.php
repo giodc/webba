@@ -701,17 +701,12 @@ function createPHPDockerCompose($site, $config, &$generatedPassword = null) {
     $compose = "version: '3.8'
 services:
   {$containerName}:
-    image: php:{$phpVersion}-apache
+    build:
+      context: /app/apps/php
+      dockerfile: Dockerfile
     container_name: {$containerName}
     volumes:
       - {$containerName}_data:/var/www/html
-    command: >
-      bash -c \"a2enmod rewrite && 
-      echo '<Directory /var/www/html>' > /etc/apache2/conf-available/allow-override.conf &&
-      echo '  AllowOverride All' >> /etc/apache2/conf-available/allow-override.conf &&
-      echo '</Directory>' >> /etc/apache2/conf-available/allow-override.conf &&
-      a2enconf allow-override &&
-      apache2-foreground\"
     environment:";
     
     if ($useDedicatedDb) {
@@ -735,7 +730,7 @@ services:
       - traefik.enable=true
       - traefik.http.routers.{$containerName}.rule=Host(`{$domain}`)
       - traefik.http.routers.{$containerName}.entrypoints=web
-      - traefik.http.services.{$containerName}.loadbalancer.server.port=80";
+      - traefik.http.services.{$containerName}.loadbalancer.server.port=8080";
     
     // Add SSL labels if SSL is enabled
     if ($site['ssl']) {
@@ -972,6 +967,15 @@ services:
     networks:
       - wharftales_wharftales
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETUID
+      - SETGID
+      - DAC_OVERRIDE
     healthcheck:
       test: [\"CMD\", \"mysqladmin\", \"ping\", \"-h\", \"localhost\", \"-u\", \"root\", \"-p{$rootPassword}\"]
       interval: 30s
@@ -1005,27 +1009,12 @@ function createLaravelDockerCompose($site, $config, &$generatedPassword = null) 
     $compose = "version: '3.8'
 services:
   {$containerName}:
-    image: php:{$phpVersion}-apache
+    build:
+      context: /app/apps/laravel
+      dockerfile: Dockerfile
     container_name: {$containerName}
     volumes:
       - {$containerName}_data:/var/www/html
-    command: >
-      bash -c \"
-      echo '<VirtualHost *:80>
-        ServerAdmin webmaster@localhost
-        DocumentRoot /var/www/html/public
-        <Directory /var/www/html/public>
-          Options Indexes FollowSymLinks
-          AllowOverride All
-          Require all granted
-        </Directory>
-        ErrorLog \$\${APACHE_LOG_DIR}/error.log
-        CustomLog \$\${APACHE_LOG_DIR}/access.log combined
-      </VirtualHost>' > /etc/apache2/sites-available/000-default.conf &&
-      a2enmod rewrite &&
-      docker-php-ext-install pdo_mysql mysqli &&
-      apache2-foreground
-      \"
     environment:";
     
     if ($useDedicatedDb) {
@@ -1049,7 +1038,7 @@ services:
       - traefik.enable=true
       - traefik.http.routers.{$containerName}.rule=Host(`{$domain}`)
       - traefik.http.routers.{$containerName}.entrypoints=web
-      - traefik.http.services.{$containerName}.loadbalancer.server.port=80";
+      - traefik.http.services.{$containerName}.loadbalancer.server.port=8080";
     
     // Add SSL labels if SSL is enabled
     if ($site['ssl']) {
@@ -1151,13 +1140,13 @@ function createWordPressDockerCompose($site, $config, &$generatedPassword = null
     // Check if optimizations are enabled
     $wpOptimize = $config['wp_optimize'] ?? false;
     
-    // WordPress image with specific PHP version
-    $wpImage = "wordpress:php{$phpVersion}-apache";
-    
+    // Use custom WordPress Dockerfile with security improvements
     $compose = "version: '3.8'
 services:
   {$containerName}:
-    image: {$wpImage}
+    build:
+      context: /app/apps/wordpress
+      dockerfile: Dockerfile
     container_name: {$containerName}
     environment:";
     
@@ -1217,7 +1206,7 @@ services:
       - traefik.enable=true
       - traefik.http.routers.{$containerName}.rule=Host(`{$domain}`)
       - traefik.http.routers.{$containerName}.entrypoints=web
-      - traefik.http.services.{$containerName}.loadbalancer.server.port=80";
+      - traefik.http.services.{$containerName}.loadbalancer.server.port=8080";
     
     // Add SSL labels if SSL is enabled
     if ($site['ssl']) {

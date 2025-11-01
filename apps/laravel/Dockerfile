@@ -46,9 +46,19 @@ COPY php.ini /usr/local/etc/php/conf.d/laravel.ini
 # Copy supervisor config
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-# Don't switch to www user - supervisor will handle user switching
-# This allows root commands like composer to work when exec'ing into container
+# Configure Nginx to run on non-privileged port 8080
+RUN sed -i 's/listen 80/listen 8080/' /etc/nginx/sites-available/default \
+    && sed -i 's/listen \[::\]:80/listen [::]:8080/' /etc/nginx/sites-available/default
 
-# Expose port 9000 and start php-fpm server
-EXPOSE 9000 80
-CMD ["/usr/bin/supervisord"]
+# Create necessary directories with proper permissions for www user
+RUN mkdir -p /var/log/nginx /var/lib/nginx /run /var/log/supervisor \
+    && chown -R www:www /var/www/html /var/log/nginx /var/lib/nginx /run /var/log/supervisor \
+    && chmod -R 755 /var/log/nginx /var/lib/nginx /run /var/log/supervisor
+
+# Switch to non-root user
+# Note: Supervisor will run as www user and manage nginx/php-fpm processes
+USER www:www
+
+# Expose ports (8080 for nginx, 9000 for php-fpm)
+EXPOSE 9000 8080
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

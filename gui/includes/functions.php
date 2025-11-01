@@ -312,7 +312,8 @@ function executeDockerCommand($command) {
 function executeDockerCompose($composePath, $command) {
     $output = [];
     $returnCode = 0;
-    exec("cd " . dirname($composePath) . " && docker-compose -f " . basename($composePath) . " $command 2>&1", $output, $returnCode);
+    // Set HOME to /tmp to avoid permission issues with Docker build cache
+    exec("cd " . dirname($composePath) . " && HOME=/tmp docker-compose -f " . basename($composePath) . " $command 2>&1", $output, $returnCode);
     return [
         'success' => $returnCode === 0,
         'output' => implode("\n", $output),

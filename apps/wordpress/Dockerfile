@@ -12,7 +12,7 @@ RUN apt-get update && apt-get install -y \
     libfreetype6-dev \
     libssl-dev \
     libmcrypt-dev \
-    libzip-dev \
+    libzip-dev supervisor \
     unzip \
     && rm -rf /var/lib/apt/lists/*
 
@@ -39,10 +39,30 @@ COPY php.ini /usr/local/etc/php/conf.d/wordpress.ini
 # Copy Nginx configuration
 COPY nginx.conf /etc/nginx/sites-available/default
 
-# Copy WordPress optimization plugins
-COPY wp-config-optimized.php /tmp/wp-config-optimized.php
+
+# Copy WordPress files from source
+RUN cp -a /usr/src/wordpress/. /var/www/html/ && chown -R www-data:www-data /var/www/html
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www/html
 
-EXPOSE 80 9000
+# Configure Nginx to run on non-privileged port 8080
+RUN sed -i 's/listen 80/listen 8080/' /etc/nginx/sites-available/default \
+    && sed -i 's/listen \[::\]:80/listen [::]:8080/' /etc/nginx/sites-available/default
+
+# Create necessary directories with proper permissions for www-data
+RUN mkdir -p /var/log/nginx /var/lib/nginx /run /var/log/supervisor \
+    && chown -R www-data:www-data /var/log/nginx /var/lib/nginx /run /var/log/supervisor \
+    && chmod -R 755 /var/log/nginx /var/lib/nginx /run /var/log/supervisor
+
+# Copy supervisor configuration
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY start-wordpress.sh /usr/local/bin/start-wordpress.sh
+COPY create-wp-config.sh /usr/local/bin/create-wp-config.sh
+
+# Switch to non-root user
+USER www-data:www-data
+
+EXPOSE 8080 9000
+
+CMD ["create-wp-config.sh"]
