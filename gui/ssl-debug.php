@@ -341,9 +341,11 @@ if ($acmeJsonExists && $acmeJsonSize > 0) {
         </div>
     </div>
 
+    <?php include 'includes/modals.php'; ?>
     <?php include 'includes/footer.php'; ?>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/app.js?v=3.0.<?= time() ?>"></script>
     <script>
         async function testDomain(domain) {
             alert('Testing domain: ' + domain + '\n\nThis will open in a new tab.');

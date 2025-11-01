@@ -228,9 +228,11 @@ $pageTitle = ($siteId && $site) ? "Edit Compose: {$site['name']}" : 'Edit Main T
         </div>
     </div>
 
+    <?php include 'includes/modals.php'; ?>
     <?php include 'includes/footer.php'; ?>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/app.js?v=3.0.<?= time() ?>"></script>
     <script>
         const originalYaml = <?= json_encode($currentYaml) ?>;
         

@@ -33,51 +33,80 @@ async function apiCall(url, options = {}) {
 }
 
 document.addEventListener("DOMContentLoaded", function() {
-    createModal = new bootstrap.Modal(document.getElementById("createModal"));
-    editModal = new bootstrap.Modal(document.getElementById("editModal"));
-    passwordModal = new bootstrap.Modal(document.getElementById("passwordModal"));
-    updateModal = new bootstrap.Modal(document.getElementById("updateModal"));
-    twoFactorModal = new bootstrap.Modal(document.getElementById("twoFactorModal"));
+    // Initialize modals only if they exist on the page
+    const createModalEl = document.getElementById("createModal");
+    const editModalEl = document.getElementById("editModal");
+    const passwordModalEl = document.getElementById("passwordModal");
+    const updateModalEl = document.getElementById("updateModal");
+    const twoFactorModalEl = document.getElementById("twoFactorModal");
+    
+    if (createModalEl) createModal = new bootstrap.Modal(createModalEl);
+    if (editModalEl) editModal = new bootstrap.Modal(editModalEl);
+    if (passwordModalEl) passwordModal = new bootstrap.Modal(passwordModalEl);
+    if (updateModalEl) updateModal = new bootstrap.Modal(updateModalEl);
+    if (twoFactorModalEl) twoFactorModal = new bootstrap.Modal(twoFactorModalEl);
     
     // Check for updates on page load
     checkForUpdatesBackground();
     
-    // Auto-generate domain from name
-    document.querySelector("input[name=\"name\"]").addEventListener("input", function(e) {
-        const domain = e.target.value.toLowerCase()
-            .replace(/[^a-z0-9\s]/g, "")
-            .replace(/\s+/g, "-")
-            .substring(0, 20);
-        document.querySelector("input[name=\"domain\"]").value = domain;
-    });
+    // Auto-generate domain from name (only on dashboard)
+    const nameInput = document.querySelector("input[name=\"name\"]");
+    if (nameInput) {
+        nameInput.addEventListener("input", function(e) {
+            const domainInput = document.querySelector("input[name=\"domain\"]");
+            if (domainInput) {
+                const domain = e.target.value.toLowerCase()
+                    .replace(/[^a-z0-9\s]/g, "")
+                    .replace(/\s+/g, "-")
+                    .substring(0, 20);
+                domainInput.value = domain;
+            }
+        });
+    }
 
-    // Handle domain suffix changes
-    document.querySelector("select[name=\"domain_suffix\"]").addEventListener("change", function(e) {
-        const customField = document.getElementById("customDomainField");
-        const sslCheck = document.getElementById("sslCheck");
-        const domainSuffix = e.target.value;
+    // Handle domain suffix changes (only on dashboard)
+    const domainSuffixSelect = document.querySelector("select[name=\"domain_suffix\"]");
+    if (domainSuffixSelect) {
+        domainSuffixSelect.addEventListener("change", function(e) {
+            const customField = document.getElementById("customDomainField");
+            const sslCheck = document.getElementById("sslCheck");
+            const domainSuffix = e.target.value;
 
-        if (domainSuffix === "custom") {
-            customField.style.display = "block";
-            sslCheck.disabled = false;
-        } else {
-            customField.style.display = "none";
-            
-            // Enable SSL for custom wildcard domains (starting with .)
-            if (domainSuffix.startsWith(".")) {
+            if (domainSuffix === "custom") {
+                customField.style.display = "block";
                 sslCheck.disabled = false;
             } else {
-                sslCheck.disabled = true;
-                sslCheck.checked = false;
-                // Hide SSL challenge options when SSL is disabled
-                document.getElementById("sslChallengeOptions").style.display = "none";
+                customField.style.display = "none";
+                
+                // Enable SSL for custom wildcard domains (starting with .)
+                if (domainSuffix.startsWith(".")) {
+                    sslCheck.disabled = false;
+                } else {
+                    sslCheck.disabled = true;
+                    sslCheck.checked = false;
+                    // Hide SSL challenge options when SSL is disabled
+                    const sslChallengeOptions = document.getElementById("sslChallengeOptions");
+                    if (sslChallengeOptions) {
+                        sslChallengeOptions.style.display = "none";
+                    }
+                }
             }
-        }
-    });
+        });
+    }
 
-    // Update site statuses
-    updateAllSiteStatuses();
-    setInterval(updateAllSiteStatuses, 30000); // Check every 30 seconds
+    // Update site statuses (only on dashboard)
+    if (document.querySelector(".status-badge")) {
+        updateAllSiteStatuses();
+        setInterval(updateAllSiteStatuses, 30000); // Check every 30 seconds
+    }
+    
+    // Add password strength checker on input (for password modal)
+    const newPasswordField = document.getElementById('new_password');
+    if (newPasswordField) {
+        newPasswordField.addEventListener('input', function() {
+            checkPasswordStrength(this.value);
+        });
+    }
 });
 
 function showCreateModal() {
@@ -1094,15 +1123,6 @@ function checkPasswordStrength(password) {
     strengthText.className = 'text-' + color;
 }
 
-// Add password strength checker on input
-document.addEventListener('DOMContentLoaded', function() {
-    const newPasswordField = document.getElementById('new_password');
-    if (newPasswordField) {
-        newPasswordField.addEventListener('input', function() {
-            checkPasswordStrength(this.value);
-        });
-    }
-});
 
 // GitHub Deployment Functions
 async function checkGithubUpdates() {
