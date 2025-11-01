@@ -44,7 +44,7 @@ services:
         DOCKER_GID: 988
     container_name: wharftales_gui
     ports:
-      - "9000:80"  # Dashboard accessible on port 9000
+      - "9000:8080"  # Dashboard accessible on port 9000
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /usr/bin/docker:/usr/bin/docker:ro
@@ -64,7 +64,7 @@ services:
       - traefik.enable=true
       - traefik.http.routers.webgui.rule=Host(`Dashboard.local.wharftales.org`)
       - traefik.http.routers.webgui.entrypoints=web
-      - traefik.http.services.webgui.loadbalancer.server.port=80
+      - traefik.http.services.webgui.loadbalancer.server.port=8080
     networks:
       - wharftales
     restart: unless-stopped
