@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# Exit on error, but allow some commands to fail gracefully
 set -e
 
 echo "WharfTales Installation Script"
@@ -344,12 +345,15 @@ cd /opt/wharftales
 docker-compose build --no-cache web-gui
 
 echo "Starting services..."
+docker-compose down 2>/dev/null || true
 docker-compose up -d
 
+echo "Waiting for container to be ready..."
+sleep 5
+
 echo "Installing MySQL extensions..."
-sleep 5  # Wait for container to start
-docker exec -u root wharftales_gui docker-php-ext-install pdo_mysql mysqli 2>/dev/null || true
-docker exec wharftales_gui apache2ctl restart 2>/dev/null || true
+docker exec -u root wharftales_gui docker-php-ext-install pdo_mysql mysqli 2>/dev/null || echo "MySQL extensions already installed"
+docker exec wharftales_gui apache2ctl restart 2>/dev/null || echo "Apache restart skipped"
 
 echo "Fixing data directory permissions..."
 docker exec -u root wharftales_gui chown -R www-data:www-data /app/data
