@@ -125,6 +125,19 @@ if [ "$UPDATE_MODE" = true ]; then
         chmod 600 /opt/wharftales/data/traefik-dns.env
     fi
     
+    # Detect and update Docker GID
+    echo "Detecting Docker group ID..."
+    DOCKER_GID=$(getent group docker | cut -d: -f3)
+    if [ -z "$DOCKER_GID" ]; then
+        echo "Warning: Could not detect Docker GID, using default 999"
+        DOCKER_GID=999
+    else
+        echo "Detected Docker GID: $DOCKER_GID"
+    fi
+    
+    echo "Updating docker-compose.yml with correct Docker GID..."
+    sed -i "s/DOCKER_GID: [0-9]*/DOCKER_GID: $DOCKER_GID/" docker-compose.yml
+    
     # Rebuild and restart containers
     echo "Rebuilding containers..."
     docker-compose build --no-cache web-gui
@@ -313,6 +326,18 @@ ACME_EOF
     chmod 600 /opt/wharftales/ssl/acme.json
     chown root:root /opt/wharftales/ssl/acme.json
 fi
+
+echo "Detecting Docker group ID..."
+DOCKER_GID=$(getent group docker | cut -d: -f3)
+if [ -z "$DOCKER_GID" ]; then
+    echo "Warning: Could not detect Docker GID, using default 999"
+    DOCKER_GID=999
+else
+    echo "Detected Docker GID: $DOCKER_GID"
+fi
+
+echo "Updating docker-compose.yml with correct Docker GID..."
+sed -i "s/DOCKER_GID: [0-9]*/DOCKER_GID: $DOCKER_GID/" docker-compose.yml
 
 echo "Starting services..."
 cd /opt/wharftales
