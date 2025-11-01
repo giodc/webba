@@ -209,6 +209,8 @@ function redirectToSSLIfEnabled() {
         $dashboardDomain = getSetting($db, 'dashboard_domain', '');
         
         // If SSL is enabled and domain is configured, redirect
+        // TEMPORARILY DISABLED - uncomment when SSL is working
+        /*
         if ($dashboardSSL === '1' && !empty($dashboardDomain)) {
             $protocol = 'https';
             $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
@@ -218,6 +220,7 @@ function redirectToSSLIfEnabled() {
             header('Location: ' . $redirectUrl, true, 301);
             exit;
         }
+        */
     } catch (Exception $e) {
         // If there's an error checking settings, don't redirect
         // This ensures the dashboard remains accessible even if there's a DB issue
