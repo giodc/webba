@@ -339,8 +339,11 @@ fi
 echo "Updating docker-compose.yml with correct Docker GID..."
 sed -i "s/DOCKER_GID: [0-9]*/DOCKER_GID: $DOCKER_GID/" docker-compose.yml
 
-echo "Starting services..."
+echo "Building containers..."
 cd /opt/wharftales
+docker-compose build --no-cache web-gui
+
+echo "Starting services..."
 docker-compose up -d
 
 echo "Installing MySQL extensions..."
